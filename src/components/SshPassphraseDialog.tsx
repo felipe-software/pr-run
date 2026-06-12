@@ -1,24 +1,11 @@
 import { Card, Input, Label, Surface } from "@heroui/react";
 import { KeyRound, X } from "lucide-react";
-import { useState } from "react";
 import { AppButton } from "./atoms/AppButton";
-
-type SshPassphraseDialogProps = {
-    isOpen: boolean;
-    error?: string;
-    isSubmitting: boolean;
-    onClose: () => void;
-    onSubmit: (passphrase: string) => Promise<void>;
-};
-
-export function SshPassphraseDialog({
-    isOpen,
-    error,
-    isSubmitting,
-    onClose,
-    onSubmit,
-}: SshPassphraseDialogProps) {
-    const [passphrase, setPassphrase] = useState("");
+import { saveSshPassphrase } from "../lib/api";
+import { useSshPassphraseStore } from "../store/ssh-passphrase";
+export function SshPassphraseDialog() {
+    const { close, error, isOpen, isSaving, passphrase, setPassphrase } =
+        useSshPassphraseStore();
 
     if (!isOpen) {
         return null;
@@ -26,8 +13,7 @@ export function SshPassphraseDialog({
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        await onSubmit(passphrase);
-        setPassphrase("");
+        await saveSshPassphrase();
     }
 
     return (
@@ -73,20 +59,20 @@ export function SshPassphraseDialog({
 
                     <div className="mt-6 flex justify-end gap-2">
                         <AppButton
-                            isDisabled={isSubmitting}
+                            isDisabled={isSaving}
                             type="button"
-                            onPress={onClose}
+                            onPress={close}
                         >
                             <X className="h-4 w-4" />
                             Cancel
                         </AppButton>
                         <AppButton
-                            isDisabled={isSubmitting || !passphrase}
+                            isDisabled={isSaving || !passphrase}
                             tone="primary"
                             type="submit"
                         >
                             <KeyRound className="h-4 w-4" />
-                            {isSubmitting ? "Saving..." : "Save"}
+                            {isSaving ? "Saving..." : "Save"}
                         </AppButton>
                     </div>
                 </form>

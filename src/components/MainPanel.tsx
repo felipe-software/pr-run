@@ -18,7 +18,6 @@ type SelectedBranch = {
 
 type MainPanelProps = {
     selected: SelectedBranch | null;
-    actionMessage?: string;
     actionError?: string;
     commits: CommitInfo[];
     commitsError?: string;
@@ -33,7 +32,6 @@ type MainPanelProps = {
 
 export function MainPanel({
     selected,
-    actionMessage,
     actionError,
     commits,
     commitsError,
@@ -120,12 +118,6 @@ export function MainPanel({
                                 </AppButton>
                             </div>
                         </div>
-
-                        {actionMessage ? (
-                            <Surface className="mt-4 rounded-md border border-success/25 bg-success/10 px-3 py-2 text-sm text-success">
-                                {actionMessage}
-                            </Surface>
-                        ) : null}
 
                         {actionError ? (
                             <Surface className="mt-4 rounded-md border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger">

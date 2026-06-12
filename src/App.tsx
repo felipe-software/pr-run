@@ -1,11 +1,13 @@
-import { Card, Spinner, Surface } from "@heroui/react";
+import { Card, Spinner, Surface, toast } from "@heroui/react";
 import { AlertTriangle } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AddProjectDialog } from "./components/AddProjectDialog";
 import { MainPanel } from "./components/MainPanel";
 import { Sidebar } from "./components/Sidebar";
 import { SshPassphraseDialog } from "./components/SshPassphraseDialog";
+import { isHandledSshPromptError, prRunApi } from "./lib/api";
+import { useSshPassphraseStore } from "./store/ssh-passphrase";
 import type {
     BranchInfo,
     CommitInfo,
@@ -28,9 +30,6 @@ function App() {
     const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
     const [isAddingProject, setIsAddingProject] = useState(false);
     const [addProjectError, setAddProjectError] = useState<string>();
-    const [isSshPassphraseOpen, setIsSshPassphraseOpen] = useState(false);
-    const [isSavingSshPassphrase, setIsSavingSshPassphrase] = useState(false);
-    const [sshPassphraseError, setSshPassphraseError] = useState<string>();
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
         () => new Set(["default"]),
     );
@@ -56,7 +55,6 @@ function App() {
         Record<string, string | undefined>
     >({});
     const [selected, setSelected] = useState<SelectedBranch | null>(null);
-    const [actionMessage, setActionMessage] = useState<string>();
     const [actionError, setActionError] = useState<string>();
     const [commits, setCommits] = useState<CommitInfo[]>([]);
     const [commitsError, setCommitsError] = useState<string>();
@@ -74,7 +72,6 @@ function App() {
             : 320;
     });
     const [isResizingSidebar, setIsResizingSidebar] = useState(false);
-    const pendingGitActionRef = useRef<null | (() => Promise<void>)>(null);
 
     const groups = config?.groups ?? [];
 
@@ -134,7 +131,7 @@ function App() {
     async function loadConfig() {
         try {
             setConfigError(undefined);
-            setConfig(await window.prRun.getConfig());
+            setConfig(await prRunApi.getConfig());
         } catch (error) {
             setConfigError(errorMessage(error));
         }
@@ -149,7 +146,7 @@ function App() {
         try {
             setIsAddingProject(true);
             setAddProjectError(undefined);
-            await window.prRun.addProject(projectPath);
+            await prRunApi.addProject(projectPath);
             await loadConfig();
             setIsAddProjectOpen(false);
         } catch (error) {
@@ -198,7 +195,7 @@ function App() {
         setBranchErrors((current) => ({ ...current, [project.id]: undefined }));
 
         try {
-            const branches = await window.prRun.listBranches(project.id);
+            const branches = await prRunApi.listBranches(project.id);
             setBranchesByProject((current) => ({
                 ...current,
                 [project.id]: branches,
@@ -218,9 +215,15 @@ function App() {
             });
             return branches;
         } catch (error) {
-            openSshPassphraseIfNeeded(error, () =>
-                loadBranches(project).then(() => undefined),
-            );
+            if (isHandledSshPromptError(error)) {
+                useSshPassphraseStore
+                    .getState()
+                    .setRetryAction(() =>
+                        loadBranches(project).then(() => undefined),
+                    );
+                return;
+            }
+
             setBranchErrors((current) => ({
                 ...current,
                 [project.id]: errorMessage(error),
@@ -236,7 +239,6 @@ function App() {
 
     async function selectBranch(project: ProjectConfig, branch: BranchInfo) {
         setSelected({ project, branch });
-        setActionMessage(undefined);
         setActionError(undefined);
         setCommits([]);
         setCommitsError(undefined);
@@ -252,7 +254,7 @@ function App() {
                 new Set(current).add(branchKey),
             );
             setActionError(undefined);
-            const result = await window.prRun.checkoutBranch(
+            const result = await prRunApi.checkoutBranch(
                 project.id,
                 branch.name,
             );
@@ -263,7 +265,7 @@ function App() {
             };
 
             setSelected({ project, branch: updatedBranch });
-            setActionMessage(
+            showSuccessToast(
                 result.status === "ready"
                     ? "worktree ready"
                     : "Worktree created",
@@ -276,9 +278,15 @@ function App() {
             }));
             await loadCommitHistory(project, branch.name);
         } catch (error) {
-            openSshPassphraseIfNeeded(error, () =>
-                checkoutBranch(project, branch).then(() => undefined),
-            );
+            if (isHandledSshPromptError(error)) {
+                useSshPassphraseStore
+                    .getState()
+                    .setRetryAction(() =>
+                        checkoutBranch(project, branch).then(() => undefined),
+                    );
+                return;
+            }
+
             setActionError(errorMessage(error));
         } finally {
             setCheckingOutBranches((current) => {
@@ -295,7 +303,7 @@ function App() {
         try {
             setRemovingWorktrees((current) => new Set(current).add(branchKey));
             setActionError(undefined);
-            const result = await window.prRun.removeWorktree(
+            const result = await prRunApi.removeWorktree(
                 project.id,
                 branch.name,
             );
@@ -304,7 +312,7 @@ function App() {
                 hasWorktree: false,
             };
 
-            setActionMessage(result.message);
+            showSuccessToast(result.message);
             setBranchesByProject((current) => ({
                 ...current,
                 [project.id]: (current[project.id] ?? []).map((item) =>
@@ -318,9 +326,15 @@ function App() {
                     : current,
             );
         } catch (error) {
-            openSshPassphraseIfNeeded(error, () =>
-                removeWorktree(project, branch).then(() => undefined),
-            );
+            if (isHandledSshPromptError(error)) {
+                useSshPassphraseStore
+                    .getState()
+                    .setRetryAction(() =>
+                        removeWorktree(project, branch).then(() => undefined),
+                    );
+                return;
+            }
+
             setActionError(errorMessage(error));
         } finally {
             setRemovingWorktrees((current) => {
@@ -335,11 +349,19 @@ function App() {
         try {
             setIsLoadingCommits(true);
             setCommitsError(undefined);
-            setCommits(await window.prRun.getCommitHistory(project.id, branch));
+            setCommits(await prRunApi.getCommitHistory(project.id, branch));
         } catch (error) {
-            openSshPassphraseIfNeeded(error, () =>
-                loadCommitHistory(project, branch).then(() => undefined),
-            );
+            if (isHandledSshPromptError(error)) {
+                useSshPassphraseStore
+                    .getState()
+                    .setRetryAction(() =>
+                        loadCommitHistory(project, branch).then(
+                            () => undefined,
+                        ),
+                    );
+                return;
+            }
+
             setCommitsError(errorMessage(error));
         } finally {
             setIsLoadingCommits(false);
@@ -351,18 +373,24 @@ function App() {
             setUpdatingProjects((current) => new Set(current).add(project.id));
             setActionError(undefined);
             const result: UpdateWorktreesResult =
-                await window.prRun.updateProjectWorktrees(project.id);
+                await prRunApi.updateProjectWorktrees(project.id);
 
-            setActionMessage(result.message);
+            showSuccessToast(result.message);
             await loadBranches(project);
             if (selected?.project.id === project.id) {
                 await loadCommitHistory(project, selected.branch.name);
             }
             return result;
         } catch (error) {
-            openSshPassphraseIfNeeded(error, () =>
-                updateProject(project).then(() => undefined),
-            );
+            if (isHandledSshPromptError(error)) {
+                useSshPassphraseStore
+                    .getState()
+                    .setRetryAction(() =>
+                        updateProject(project).then(() => undefined),
+                    );
+                return;
+            }
+
             setActionError(errorMessage(error));
         } finally {
             setUpdatingProjects((current) => {
@@ -381,37 +409,10 @@ function App() {
         await loadCommitHistory(selected.project, selected.branch.name);
     }
 
-    async function saveSshPassphrase(passphrase: string) {
-        try {
-            setIsSavingSshPassphrase(true);
-            setSshPassphraseError(undefined);
-            await window.prRun.setSshPassphrase(passphrase);
-            setIsSshPassphraseOpen(false);
-            const pendingAction = pendingGitActionRef.current;
-            pendingGitActionRef.current = null;
-
-            if (pendingAction) {
-                await pendingAction();
-            }
-        } catch (error) {
-            setSshPassphraseError(errorMessage(error));
-        } finally {
-            setIsSavingSshPassphrase(false);
-        }
-    }
-
-    function openSshPassphraseIfNeeded(
-        error: unknown,
-        retryAction?: () => Promise<void>,
-    ) {
-        if (
-            errorCode(error) === "SSH_AUTH_REQUIRED" ||
-            errorAction(error) === "prompt_ssh_passphrase"
-        ) {
-            pendingGitActionRef.current = retryAction ?? null;
-            setSshPassphraseError(undefined);
-            setIsSshPassphraseOpen(true);
-        }
+    function showSuccessToast(message: string) {
+        toast.success(message, {
+            timeout: 2400,
+        });
     }
 
     if (configError) {
@@ -464,10 +465,9 @@ function App() {
                         current === "dark" ? "light" : "dark",
                     )
                 }
-                onOpenSshPassphrase={() => {
-                    setSshPassphraseError(undefined);
-                    setIsSshPassphraseOpen(true);
-                }}
+                onOpenSshPassphrase={() =>
+                    useSshPassphraseStore.getState().open(null)
+                }
                 onRemoveWorktree={removeWorktree}
                 onSelectBranch={selectBranch}
                 onToggleGroup={toggleGroup}
@@ -475,7 +475,6 @@ function App() {
             />
             <MainPanel
                 actionError={actionError}
-                actionMessage={actionMessage}
                 commits={commits}
                 commitsError={commitsError}
                 isCheckingOutWorktree={
@@ -500,51 +499,13 @@ function App() {
                 onClose={() => setIsAddProjectOpen(false)}
                 onSubmit={addProject}
             />
-            <SshPassphraseDialog
-                error={sshPassphraseError}
-                isOpen={isSshPassphraseOpen}
-                isSubmitting={isSavingSshPassphrase}
-                onClose={() => {
-                    pendingGitActionRef.current = null;
-                    setIsSshPassphraseOpen(false);
-                }}
-                onSubmit={saveSshPassphrase}
-            />
+            <SshPassphraseDialog />
         </Surface>
     );
 }
 
 function errorMessage(error: unknown) {
     return error instanceof Error ? error.message : String(error);
-}
-
-function errorCode(error: unknown) {
-    return typeof error === "object" && error !== null && "code" in error
-        ? String((error as { code: unknown }).code)
-        : undefined;
-}
-
-function errorAction(error: unknown) {
-    if (typeof error !== "object" || error === null) {
-        return undefined;
-    }
-
-    if ("action" in error && (error as { action: unknown }).action) {
-        return String((error as { action: unknown }).action);
-    }
-
-    if (!("metadata" in error)) {
-        return undefined;
-    }
-
-    const metadata = (error as { metadata: unknown }).metadata;
-
-    return typeof metadata === "object" &&
-        metadata !== null &&
-        "action" in metadata &&
-        (metadata as { action: unknown }).action
-        ? String((metadata as { action: unknown }).action)
-        : undefined;
 }
 
 function clamp(value: number, min: number, max: number) {

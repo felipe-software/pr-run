@@ -4,12 +4,10 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import * as pty from "node-pty";
 
 import type { TerminalCreateOptions } from "./types.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, "..");
 
 let backendProcess: ChildProcessWithoutNullStreams | null = null;
@@ -163,9 +161,111 @@ async function startBackend() {
     backendUrl = url;
 }
 
+function resolveExternalBackendUrl() {
+    const configuredUrl = process.env.ELECTRON_BACKEND_URL;
+
+    if (!configuredUrl) {
+        return null;
+    }
+
+    return configuredUrl.replace(/\/$/, "");
+}
+
+function shouldSkipBackendHealthcheck() {
+    return process.env.ELECTRON_SKIP_BACKEND_HEALTHCHECK === "1";
+}
+
+function isDevRendererMode() {
+    return Boolean(process.env.ELECTRON_RENDERER_URL);
+}
+
 function stopBackend() {
     if (backendProcess && !backendProcess.killed) {
         backendProcess.kill();
+    }
+}
+
+function renderLoadingPage(mainWindow: BrowserWindow, rendererUrl: string) {
+    const html = `<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>PR Run</title>
+        <style>
+            :root {
+                color-scheme: light;
+                font-family: sans-serif;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: grid;
+                place-items: center;
+                background: #f5f5f4;
+                color: #1c1917;
+            }
+
+            main {
+                max-width: 32rem;
+                padding: 2rem;
+                text-align: center;
+            }
+
+            h1 {
+                margin: 0 0 0.75rem;
+                font-size: 1.5rem;
+            }
+
+            p {
+                margin: 0;
+                line-height: 1.5;
+                color: #57534e;
+            }
+
+            code {
+                font-family: monospace;
+                background: #e7e5e4;
+                padding: 0.15rem 0.35rem;
+                border-radius: 0.35rem;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Waiting for Vite dev server</h1>
+            <p>Electron will reconnect automatically when <code>${rendererUrl}</code> becomes available.</p>
+        </main>
+    </body>
+</html>`;
+
+    void mainWindow.loadURL(
+        `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+    );
+}
+
+function scheduleRendererReload(
+    mainWindow: BrowserWindow,
+    rendererUrl: string,
+) {
+    if (mainWindow.isDestroyed()) {
+        return;
+    }
+
+    setTimeout(() => {
+        if (!mainWindow.isDestroyed()) {
+            void loadRenderer(mainWindow, rendererUrl);
+        }
+    }, 700);
+}
+
+async function loadRenderer(mainWindow: BrowserWindow, rendererUrl: string) {
+    try {
+        await mainWindow.loadURL(rendererUrl);
+    } catch {
+        renderLoadingPage(mainWindow, rendererUrl);
+        scheduleRendererReload(mainWindow, rendererUrl);
     }
 }
 
@@ -191,91 +291,135 @@ async function createWindow() {
         return { action: "deny" };
     });
 
+    mainWindow.webContents.on(
+        "console-message",
+        (_event, level, message, line, sourceId) => {
+            const source = sourceId || "renderer";
+            process.stdout.write(
+                `[pr-run-renderer:${level}] ${source}:${line} ${message}\n`,
+            );
+        },
+    );
+
+    mainWindow.webContents.on("render-process-gone", (_event, details) => {
+        process.stderr.write(
+            `[pr-run-renderer] process gone: ${details.reason}\n`,
+        );
+    });
+
+    if (isDevRendererMode()) {
+        mainWindow.webContents.openDevTools({ mode: "detach" });
+    }
+
     const rendererUrl = process.env.ELECTRON_RENDERER_URL;
 
     if (rendererUrl) {
-        await mainWindow.loadURL(rendererUrl);
+        if (isDevRendererMode()) {
+            renderLoadingPage(mainWindow, rendererUrl);
+            void loadRenderer(mainWindow, rendererUrl);
+        } else {
+            await mainWindow.loadURL(rendererUrl);
+        }
     } else {
         await mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
     }
 }
 
-app.whenReady().then(async () => {
-    Menu.setApplicationMenu(null);
+app.whenReady()
+    .then(async () => {
+        Menu.setApplicationMenu(null);
 
-    await startBackend();
+        const externalBackendUrl = resolveExternalBackendUrl();
 
-    ipcMain.handle("backend:getUrl", () => {
-        if (!backendUrl) {
-            throw new Error("Backend is not ready yet.");
+        if (externalBackendUrl) {
+            backendUrl = externalBackendUrl;
+
+            if (!shouldSkipBackendHealthcheck()) {
+                await waitForBackend(backendUrl);
+            }
+        } else {
+            await startBackend();
         }
 
-        return backendUrl;
+        ipcMain.handle("backend:getUrl", () => {
+            if (!backendUrl) {
+                throw new Error("Backend is not ready yet.");
+            }
+
+            return backendUrl;
+        });
+
+        ipcMain.handle(
+            "terminal:create",
+            (event, options: TerminalCreateOptions) => {
+                const session = createTerminalSession(event.sender.id, options);
+
+                session.process.onData((data) => {
+                    if (!event.sender.isDestroyed()) {
+                        event.sender.send("terminal:data", {
+                            id: session.id,
+                            data,
+                        });
+                    }
+                });
+
+                session.process.onExit(({ exitCode, signal }) => {
+                    terminalSessions.delete(session.id);
+
+                    if (!event.sender.isDestroyed()) {
+                        event.sender.send("terminal:exit", {
+                            id: session.id,
+                            exitCode,
+                            signal,
+                        });
+                    }
+                });
+
+                event.sender.once("destroyed", () => {
+                    closeWebContentsTerminals(event.sender.id);
+                });
+
+                return {
+                    id: session.id,
+                    shell: session.shell,
+                    cwd: session.cwd,
+                };
+            },
+        );
+
+        ipcMain.handle("terminal:input", (_event, id: string, data: string) => {
+            terminalSessions.get(id)?.process.write(data);
+        });
+
+        ipcMain.handle(
+            "terminal:resize",
+            (_event, id: string, cols: number, rows: number) => {
+                terminalSessions
+                    .get(id)
+                    ?.process.resize(Math.max(2, cols), Math.max(2, rows));
+            },
+        );
+
+        ipcMain.handle("terminal:dispose", (_event, id: string) => {
+            closeTerminalSession(id);
+        });
+
+        await createWindow();
+
+        app.on("activate", () => {
+            if (BrowserWindow.getAllWindows().length === 0) {
+                void createWindow();
+            }
+        });
+    })
+    .catch((error: unknown) => {
+        const message =
+            error instanceof Error
+                ? (error.stack ?? error.message)
+                : String(error);
+        process.stderr.write(`[pr-run-electron] failed to start: ${message}\n`);
+        app.quit();
     });
-
-    ipcMain.handle(
-        "terminal:create",
-        (event, options: TerminalCreateOptions) => {
-            const session = createTerminalSession(event.sender.id, options);
-
-            session.process.onData((data) => {
-                if (!event.sender.isDestroyed()) {
-                    event.sender.send("terminal:data", {
-                        id: session.id,
-                        data,
-                    });
-                }
-            });
-
-            session.process.onExit(({ exitCode, signal }) => {
-                terminalSessions.delete(session.id);
-
-                if (!event.sender.isDestroyed()) {
-                    event.sender.send("terminal:exit", {
-                        id: session.id,
-                        exitCode,
-                        signal,
-                    });
-                }
-            });
-
-            event.sender.once("destroyed", () => {
-                closeWebContentsTerminals(event.sender.id);
-            });
-
-            return {
-                id: session.id,
-                shell: session.shell,
-                cwd: session.cwd,
-            };
-        },
-    );
-
-    ipcMain.handle("terminal:input", (_event, id: string, data: string) => {
-        terminalSessions.get(id)?.process.write(data);
-    });
-
-    ipcMain.handle(
-        "terminal:resize",
-        (_event, id: string, cols: number, rows: number) => {
-            terminalSessions
-                .get(id)
-                ?.process.resize(Math.max(2, cols), Math.max(2, rows));
-        },
-    );
-
-    ipcMain.handle("terminal:dispose", (_event, id: string) => {
-        closeTerminalSession(id);
-    });
-
-    await createWindow();
-
-    app.on("activate", () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            void createWindow();
-        }
-    });
-});
 
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {

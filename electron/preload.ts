@@ -80,6 +80,9 @@ async function requestMany<T>(path: string, init?: RequestInit): Promise<T[]> {
 }
 
 contextBridge.exposeInMainWorld("prRun", {
+    async getBackendUrl() {
+        return getBackendUrl();
+    },
     async getConfig() {
         return requestOne<ProjectsConfig>("/config");
     },
