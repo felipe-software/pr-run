@@ -1,11 +1,19 @@
 {
-  "files": [],
-  "references": [
-    {
-      "path": "./tsconfig.app.json"
-    },
-    {
-      "path": "./tsconfig.electron.json"
+    "files": [],
+    "references": [
+        {
+            "path": "./tsconfig.app.json"
+        },
+        {
+            "path": "./tsconfig.electron.json"
+        }
+    ],
+    "compilerOptions": {
+        "strict": true,
+        "strictNullChecks": true,
+        "noImplicitAny": true,
+        "paths": {
+            "@/*": ["./src/*"]
+        }
     }
-  ]
 }
