@@ -16,7 +16,7 @@ import type {
 import {
     type PendingRequest,
     useSshPassphraseStore,
-} from "@/store/ssh-passphrase";
+} from "@/lib/hooks/store/use-ssh-passphrase-store";
 
 type ApiError = Error & {
     action?: string;

@@ -1,20 +1,7 @@
 import type { Elysia } from "elysia";
 
-import {
-    addProjectToConfig,
-    findProject,
-    readConfig,
-} from "@/backend/config-store";
-import {
-    checkoutBranch,
-    getBranchDiff,
-    getCommitHistory,
-    listBranches,
-    removeWorktree,
-    updateProjectWorktrees,
-    updateWorktree,
-    validateProjectPath,
-} from "@/backend/git";
+import { gitHandler } from "@/backend/handlers/git";
+import { projectConfigHandler } from "@/backend/handlers/project-config";
 import { success } from "@/backend/http/response";
 import { logger } from "@/backend/logger";
 import { clearSshPassphrase, setSshPassphrase } from "@/backend/ssh-passphrase";
@@ -24,7 +11,9 @@ export function registerRoutes(app: Elysia) {
     return app
         .get("/health", () => success("Backend is healthy.", [{ ok: true }]))
         .get("/config", async () =>
-            success("Configuration loaded.", [await readConfig()]),
+            success("Configuration loaded.", [
+                await projectConfigHandler.readConfig(),
+            ]),
         )
         .post("/projects", async ({ body }) => {
             const payload = body as { path?: string };
@@ -33,8 +22,8 @@ export function registerRoutes(app: Elysia) {
                 throw new ApiError("BAD_REQUEST", "Enter a project path.", 400);
             }
 
-            await validateProjectPath(payload.path);
-            const project = await addProjectToConfig(payload.path);
+            await gitHandler.validateProjectPath(payload.path);
+            const project = await projectConfigHandler.addProject(payload.path);
 
             return success("Project added.", [project]);
         })
@@ -65,8 +54,13 @@ export function registerRoutes(app: Elysia) {
             });
         })
         .get("/projects/:projectId/branches", async ({ params }) => {
-            const project = await findProject(params.projectId);
-            return success("Branches loaded.", await listBranches(project));
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            return success(
+                "Branches loaded.",
+                await gitHandler.listBranches(project),
+            );
         })
         .post("/projects/:projectId/checkout", async ({ params, body }) => {
             const payload = body as { branch?: string };
@@ -75,8 +69,13 @@ export function registerRoutes(app: Elysia) {
                 throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
             }
 
-            const project = await findProject(params.projectId);
-            const result = await checkoutBranch(project, payload.branch);
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            const result = await gitHandler.checkoutBranch(
+                project,
+                payload.branch,
+            );
 
             return success(result.message, [result]);
         })
@@ -87,8 +86,13 @@ export function registerRoutes(app: Elysia) {
                 throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
             }
 
-            const project = await findProject(params.projectId);
-            const result = await updateWorktree(project, payload.branch);
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            const result = await gitHandler.updateWorktree(
+                project,
+                payload.branch,
+            );
 
             return success(result.message, [result]);
         })
@@ -99,14 +103,21 @@ export function registerRoutes(app: Elysia) {
                 throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
             }
 
-            const project = await findProject(params.projectId);
-            const result = await removeWorktree(project, payload.branch);
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            const result = await gitHandler.removeWorktree(
+                project,
+                payload.branch,
+            );
 
             return success(result.message, [result]);
         })
         .post("/projects/:projectId/update-worktrees", async ({ params }) => {
-            const project = await findProject(params.projectId);
-            const result = await updateProjectWorktrees(project);
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            const result = await gitHandler.updateProjectWorktrees(project);
 
             return success(result.message, [result]);
         })
@@ -117,10 +128,12 @@ export function registerRoutes(app: Elysia) {
                 throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
             }
 
-            const project = await findProject(params.projectId);
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
             return success(
                 "Commit history loaded.",
-                await getCommitHistory(project, branch),
+                await gitHandler.getCommitHistory(project, branch),
             );
         })
         .get("/projects/:projectId/diff", async ({ params, query }) => {
@@ -130,9 +143,11 @@ export function registerRoutes(app: Elysia) {
                 throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
             }
 
-            const project = await findProject(params.projectId);
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
             return success("Branch diff loaded.", [
-                await getBranchDiff(project, branch),
+                await gitHandler.getBranchDiff(project, branch),
             ]);
         });
 }
