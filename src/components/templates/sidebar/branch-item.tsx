@@ -1,8 +1,8 @@
 import { RefreshCw, Trash2 } from "lucide-react";
-import type { BranchInfo, ProjectConfig } from "../../types/pr-run";
-import { formatBranchAge } from "../../lib/format";
-import { AppButton } from "../atoms/AppButton";
-import { SidebarItemIcon } from "./item-icon";
+import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
+import { formatBranchAge } from "@/lib/format";
+import { AppButton } from "@/components/atoms/AppButton";
+import { SidebarItemIcon } from "@/components/templates/sidebar/item-icon";
 
 type SidebarBranchItemProps = {
     branch: BranchInfo;

@@ -1,8 +1,8 @@
 import { Card, Input, Label, Surface } from "@heroui/react";
 import { KeyRound, X } from "lucide-react";
-import { AppButton } from "./atoms/AppButton";
-import { saveSshPassphrase } from "../lib/api";
-import { useSshPassphraseStore } from "../store/ssh-passphrase";
+import { AppButton } from "@/components/atoms/AppButton";
+import { saveSshPassphrase } from "@/lib/api";
+import { useSshPassphraseStore } from "@/store/ssh-passphrase";
 export function SshPassphraseDialog() {
     const { close, error, isOpen, isSaving, passphrase, setPassphrase } =
         useSshPassphraseStore();

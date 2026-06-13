@@ -1,7 +1,7 @@
 import { Card, Input, Label, Surface } from "@heroui/react";
 import { FolderPlus, X } from "lucide-react";
 import { useState } from "react";
-import { AppButton } from "./atoms/AppButton";
+import { AppButton } from "@/components/atoms/AppButton";
 
 type AddProjectDialogProps = {
     isOpen: boolean;

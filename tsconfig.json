@@ -5,6 +5,9 @@
             "path": "./tsconfig.app.json"
         },
         {
+            "path": "./tsconfig.backend.json"
+        },
+        {
             "path": "./tsconfig.electron.json"
         }
     ],
@@ -12,6 +15,8 @@
         "strict": true,
         "strictNullChecks": true,
         "noImplicitAny": true,
+        "baseUrl": ".",
+        "ignoreDeprecations": "6.0",
         "paths": {
             "@/*": ["./src/*"]
         }

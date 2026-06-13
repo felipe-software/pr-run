@@ -1,8 +1,8 @@
 import { $ } from "bun";
 
-import { logger } from "./logger";
-import { clearSshPassphrase, getSshPassphrase } from "./ssh-passphrase";
-import { ApiError } from "./types";
+import { logger } from "@/backend/logger";
+import { clearSshPassphrase, getSshPassphrase } from "@/backend/ssh-passphrase";
+import { ApiError } from "@/backend/types";
 
 type GitCommand =
     | ["rev-parse", "--show-toplevel"]

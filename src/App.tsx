@@ -2,19 +2,19 @@ import { Card, Spinner, Surface, toast } from "@heroui/react";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { AddProjectDialog } from "./components/AddProjectDialog";
-import { MainPanel } from "./components/MainPanel";
-import { Sidebar } from "./components/Sidebar";
-import { SshPassphraseDialog } from "./components/SshPassphraseDialog";
-import { isHandledSshPromptError, prRunApi } from "./lib/api";
-import { useSshPassphraseStore } from "./store/ssh-passphrase";
+import { AddProjectDialog } from "@/components/AddProjectDialog";
+import { MainPanel } from "@/components/MainPanel";
+import { Sidebar } from "@/components/templates/sidebar";
+import { SshPassphraseDialog } from "@/components/SshPassphraseDialog";
+import { isHandledSshPromptError, prRunApi } from "@/lib/api";
+import { useSshPassphraseStore } from "@/store/ssh-passphrase";
 import type {
     BranchInfo,
     CommitInfo,
     ProjectConfig,
     ProjectsConfig,
     UpdateWorktreesResult,
-} from "./types/pr-run";
+} from "@/types/pr-run";
 
 type SelectedBranch = {
     project: ProjectConfig;

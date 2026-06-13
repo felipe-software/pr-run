@@ -12,11 +12,11 @@ import type {
     SshPassphraseResult,
     UpdateResult,
     UpdateWorktreesResult,
-} from "../types/pr-run";
+} from "@/types/pr-run";
 import {
     type PendingRequest,
     useSshPassphraseStore,
-} from "../store/ssh-passphrase";
+} from "@/store/ssh-passphrase";
 
 type ApiError = Error & {
     action?: string;

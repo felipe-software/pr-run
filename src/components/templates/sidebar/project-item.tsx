@@ -1,9 +1,9 @@
 import { Spinner, Surface } from "@heroui/react";
 import { ChevronDown, ChevronRight, Folder, RefreshCw } from "lucide-react";
-import type { BranchInfo, ProjectConfig } from "../../types/pr-run";
-import { shortenPath } from "../../lib/format";
-import { AppButton } from "../atoms/AppButton";
-import { SidebarBranchItem } from "./branch-item";
+import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
+import { shortenPath } from "@/lib/format";
+import { AppButton } from "@/components/atoms/AppButton";
+import { SidebarBranchItem } from "@/components/templates/sidebar/branch-item";
 
 type SidebarProjectItemProps = {
     branches: BranchInfo[];

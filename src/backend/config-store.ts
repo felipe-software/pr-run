@@ -1,7 +1,11 @@
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ApiError, type ProjectConfig, type ProjectsConfig } from "./types";
+import {
+    ApiError,
+    type ProjectConfig,
+    type ProjectsConfig,
+} from "@/backend/types";
 
 const DEFAULT_GROUP_ID = "default";
 

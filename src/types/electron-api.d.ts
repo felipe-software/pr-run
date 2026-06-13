@@ -11,7 +11,7 @@ import type {
     TerminalExitEvent,
     TerminalSession,
     UpdateResult,
-} from "./pr-run";
+} from "@/types/pr-run";
 
 declare global {
     interface Window {

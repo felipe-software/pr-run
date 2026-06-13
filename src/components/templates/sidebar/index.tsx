@@ -1,6 +1,6 @@
-import { SidebarGroupSection } from "./group-section";
-import { SidebarHeader } from "./header";
-import type { SidebarProps } from "./types";
+import { SidebarGroupSection } from "@/components/templates/sidebar/group-section";
+import { SidebarHeader } from "@/components/templates/sidebar/header";
+import type { SidebarProps } from "@/components/templates/sidebar/types";
 
 export function Sidebar({
     groups,
@@ -69,4 +69,4 @@ export function Sidebar({
     );
 }
 
-export type { SidebarProps } from "./types";
+export type { SidebarProps } from "@/components/templates/sidebar/types";

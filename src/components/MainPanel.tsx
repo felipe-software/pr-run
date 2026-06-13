@@ -1,9 +1,9 @@
 import { Card, Surface } from "@heroui/react";
 import { Code2, FolderPlus, RefreshCw } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
-import type { BranchInfo, CommitInfo, ProjectConfig } from "../types/pr-run";
-import { AppButton } from "./atoms/AppButton";
-import { CommitHistory } from "./CommitHistory";
+import type { BranchInfo, CommitInfo, ProjectConfig } from "@/types/pr-run";
+import { AppButton } from "@/components/atoms/AppButton";
+import { CommitHistory } from "@/components/CommitHistory";
 
 const WorktreeTerminal = lazy(() =>
     import("./WorktreeTerminal").then((module) => ({

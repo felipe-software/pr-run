@@ -1,5 +1,5 @@
 import { KeyRound, Moon, Plus, SunMedium } from "lucide-react";
-import { AppButton } from "../atoms/AppButton";
+import { AppButton } from "@/components/atoms/AppButton";
 
 type SidebarHeaderProps = {
     theme: "dark" | "light";

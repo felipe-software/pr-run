@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { ComponentProps } from "react";
-import type { BranchInfo, ProjectGroup } from "../../types/pr-run";
-import { SidebarProjectItem } from "./project-item";
+import type { BranchInfo, ProjectGroup } from "@/types/pr-run";
+import { SidebarProjectItem } from "@/components/templates/sidebar/project-item";
 
 type SidebarGroupSectionProps = {
     branchErrors: Record<string, string | undefined>;

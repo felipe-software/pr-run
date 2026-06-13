@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, File, Folder } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
-import type { BranchDiffFile } from "../types/pr-run";
+import type { BranchDiffFile } from "@/types/pr-run";
 
 type BranchDiffTreeProps = {
     files: BranchDiffFile[];

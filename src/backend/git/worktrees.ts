@@ -1,0 +1,325 @@
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
+
+import { gitCommandErrorText, gitQuiet, gitText } from "@/backend/git-command";
+import {
+    exists,
+    gitError,
+    hasLocalBranch,
+    linkSharedEnv,
+    normalizeBranchName,
+    parseWorktreeList,
+    remoteBranch,
+    worktreePathFor,
+    STALE_BRANCH_DAYS,
+} from "@/backend/git/helpers";
+import { logger } from "@/backend/logger";
+import {
+    ApiError,
+    type BranchInfo,
+    type CheckoutResult,
+    type ProjectConfig,
+    type RemoveWorktreeResult,
+    type UpdateResult,
+    type UpdateWorktreesResult,
+} from "@/backend/types";
+
+export async function listBranches(
+    project: ProjectConfig,
+): Promise<BranchInfo[]> {
+    let output: string;
+
+    try {
+        output = await gitText(project.path, [
+            "for-each-ref",
+            "--sort=-committerdate",
+            "--format=%(refname:short)|%(committerdate:unix)",
+            "refs/remotes/origin",
+        ]);
+    } catch (error) {
+        throw gitError("Failed to list remote branches.", error);
+    }
+
+    const now = Date.now();
+    const branches = output
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => {
+            const [remoteName, timestampValue] = item.split("|");
+            const lastCommitTimestamp =
+                timestampValue && Number(timestampValue) > 0
+                    ? Number(timestampValue) * 1000
+                    : null;
+            const isStale = lastCommitTimestamp
+                ? now - lastCommitTimestamp >
+                  STALE_BRANCH_DAYS * 24 * 60 * 60 * 1000
+                : true;
+
+            return {
+                remoteName,
+                name: remoteName.replace(/^origin\//, ""),
+                lastCommitTimestamp,
+                isStale,
+            };
+        })
+        .filter((item) => item.remoteName.startsWith("origin/"))
+        .filter((item) => item.remoteName !== "origin/HEAD")
+        .sort((left, right) => {
+            if (left.isStale !== right.isStale) {
+                return left.isStale ? 1 : -1;
+            }
+
+            return (
+                (right.lastCommitTimestamp ?? 0) -
+                (left.lastCommitTimestamp ?? 0)
+            );
+        });
+
+    return Promise.all(
+        branches.map(async (branch) => {
+            const worktreePath = worktreePathFor(project.path, branch.name);
+
+            return {
+                name: branch.name,
+                remoteName: branch.remoteName,
+                worktreePath,
+                hasWorktree: await exists(worktreePath),
+                lastCommitTimestamp: branch.lastCommitTimestamp,
+                isStale: branch.isStale,
+            };
+        }),
+    );
+}
+
+export async function checkoutBranch(
+    project: ProjectConfig,
+    branch: string,
+): Promise<CheckoutResult> {
+    const { name, remoteName } = remoteBranch(branch);
+    const targetPath = worktreePathFor(project.path, name);
+
+    try {
+        await gitQuiet(project.path, [
+            "rev-parse",
+            "--verify",
+            `refs/remotes/origin/${name}`,
+        ]);
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
+        }
+
+        throw new ApiError(
+            "BRANCH_NOT_FOUND",
+            "Branch was not found on the remote.",
+            404,
+            error instanceof Error ? error.message : String(error),
+        );
+    }
+
+    if (await exists(targetPath)) {
+        return {
+            status: "ready",
+            branch: name,
+            worktreePath: targetPath,
+            message: "worktree ready",
+        };
+    }
+
+    await mkdir(path.dirname(targetPath), { recursive: true });
+
+    try {
+        if (await hasLocalBranch(project.path, name)) {
+            try {
+                await gitQuiet(project.path, [
+                    "worktree",
+                    "add",
+                    targetPath,
+                    name,
+                ]);
+            } catch (error) {
+                if (
+                    !gitCommandErrorText(error).includes(
+                        "is already checked out",
+                    )
+                ) {
+                    throw error;
+                }
+
+                await gitQuiet(project.path, [
+                    "worktree",
+                    "add",
+                    "--detach",
+                    targetPath,
+                    remoteName,
+                ]);
+            }
+        } else {
+            await gitQuiet(project.path, [
+                "worktree",
+                "add",
+                "--track",
+                "-b",
+                name,
+                targetPath,
+                remoteName,
+            ]);
+        }
+        logger.info({ branch: name, targetPath }, "worktree created");
+    } catch (error) {
+        throw gitError("Failed to create the worktree.", error);
+    }
+
+    await linkSharedEnv(project.path, targetPath);
+
+    return {
+        status: "created",
+        branch: name,
+        worktreePath: targetPath,
+        message: "Worktree created.",
+    };
+}
+
+export async function updateWorktree(
+    project: ProjectConfig,
+    branch: string,
+): Promise<UpdateResult> {
+    const { name, remoteName } = remoteBranch(branch);
+    const targetPath = worktreePathFor(project.path, name);
+
+    if (!(await exists(targetPath))) {
+        throw new ApiError(
+            "WORKTREE_NOT_FOUND",
+            "No worktree exists for this branch yet.",
+            404,
+        );
+    }
+
+    try {
+        await gitQuiet(project.path, ["fetch", "origin"]);
+        await gitQuiet(targetPath, ["reset", "--hard", remoteName]);
+    } catch (error) {
+        throw gitError("Failed to update the worktree.", error);
+    }
+
+    return {
+        status: "updated",
+        branch: name,
+        worktreePath: targetPath,
+        message: `Worktree updated to ${remoteName}.`,
+    };
+}
+
+export async function removeWorktree(
+    project: ProjectConfig,
+    branch: string,
+): Promise<RemoveWorktreeResult> {
+    const { name } = remoteBranch(branch);
+    const targetPath = worktreePathFor(project.path, name);
+
+    if (!(await exists(targetPath))) {
+        throw new ApiError(
+            "WORKTREE_NOT_FOUND",
+            "No worktree exists for this branch yet.",
+            404,
+        );
+    }
+
+    try {
+        await gitQuiet(project.path, [
+            "worktree",
+            "remove",
+            "--force",
+            targetPath,
+        ]);
+    } catch (error) {
+        throw gitError("Failed to remove the worktree.", error);
+    }
+
+    return {
+        status: "removed",
+        branch: name,
+        worktreePath: targetPath,
+        message: "Worktree removed.",
+    };
+}
+
+export async function updateProjectWorktrees(
+    project: ProjectConfig,
+): Promise<UpdateWorktreesResult> {
+    const projectWorktreesRoot = path.join(project.path, ".pr-run");
+
+    let output: string;
+
+    try {
+        await gitQuiet(project.path, ["fetch", "origin"]);
+        output = await gitText(project.path, [
+            "worktree",
+            "list",
+            "--porcelain",
+        ]);
+    } catch (error) {
+        throw gitError("Failed to list project worktrees.", error);
+    }
+
+    const remoteBranches = (await listBranches(project)).map((branch) => ({
+        name: branch.name,
+        normalizedName: normalizeBranchName(branch.name),
+    }));
+    const worktrees = parseWorktreeList(output).filter((item) =>
+        item.path.startsWith(`${projectWorktreesRoot}${path.sep}`),
+    );
+
+    if (worktrees.length === 0) {
+        return {
+            status: "updated",
+            updatedCount: 0,
+            skippedCount: 0,
+            message: "No worktrees found to update.",
+        };
+    }
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    for (const worktree of worktrees) {
+        const branchName =
+            worktree.branch?.replace(/^refs\/heads\//, "") ??
+            remoteBranches.find(
+                (branch) =>
+                    branch.normalizedName === path.basename(worktree.path),
+            )?.name;
+
+        if (!branchName) {
+            skippedCount += 1;
+            continue;
+        }
+
+        try {
+            await gitQuiet(worktree.path, [
+                "reset",
+                "--hard",
+                `origin/${branchName}`,
+            ]);
+            updatedCount += 1;
+        } catch (error) {
+            throw gitError(
+                `Failed to update worktree ${worktree.path}.`,
+                error,
+            );
+        }
+    }
+
+    logger.info({ updatedCount, skippedCount }, "project worktrees updated");
+
+    return {
+        status: "updated",
+        updatedCount,
+        skippedCount,
+        message:
+            updatedCount > 0
+                ? `${updatedCount} worktree(s) updated.`
+                : "No worktrees were updated.",
+    };
+}

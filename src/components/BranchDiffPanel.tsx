@@ -2,14 +2,14 @@ import { FileDiff, type FileDiffMetadata } from "@pierre/diffs/react";
 import { parsePatchFiles } from "@pierre/diffs";
 import { Spinner, Surface } from "@heroui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { isHandledSshPromptError, prRunApi } from "../lib/api";
-import { useSshPassphraseStore } from "../store/ssh-passphrase";
+import { isHandledSshPromptError, prRunApi } from "@/lib/api";
+import { useSshPassphraseStore } from "@/store/ssh-passphrase";
 import type {
     BranchDiffResult,
     BranchInfo,
     ProjectConfig,
-} from "../types/pr-run";
-import { BranchDiffTree } from "./BranchDiffTree";
+} from "@/types/pr-run";
+import { BranchDiffTree } from "@/components/BranchDiffTree";
 
 type BranchDiffPanelProps = {
     branch: BranchInfo;

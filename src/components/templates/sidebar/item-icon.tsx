@@ -1,5 +1,5 @@
 import { GitBranch } from "lucide-react";
-import type { BranchInfo } from "../../types/pr-run";
+import type { BranchInfo } from "@/types/pr-run";
 
 const RECENT_WINDOW_MS = 12 * 60 * 60 * 1_000;
 

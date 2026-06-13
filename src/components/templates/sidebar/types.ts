@@ -1,8 +1,4 @@
-import type {
-    BranchInfo,
-    ProjectConfig,
-    ProjectGroup,
-} from "../../types/pr-run";
+import type { BranchInfo, ProjectConfig, ProjectGroup } from "@/types/pr-run";
 
 export type SidebarProps = {
     groups: ProjectGroup[];

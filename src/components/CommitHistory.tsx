@@ -1,7 +1,7 @@
 import { Card, Spinner, Surface } from "@heroui/react";
 import { GitCommitHorizontal } from "lucide-react";
-import type { CommitInfo } from "../types/pr-run";
-import { formatDate } from "../lib/format";
+import type { CommitInfo } from "@/types/pr-run";
+import { formatDate } from "@/lib/format";
 
 type CommitHistoryProps = {
     commits: CommitInfo[];
