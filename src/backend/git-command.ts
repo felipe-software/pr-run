@@ -23,6 +23,8 @@ type GitCommand =
     | ["reset", "--hard", string]
     | ["worktree", "list", "--porcelain"]
     | ["log", string, "--pretty=format:%H"]
+    | ["diff", "--numstat", string]
+    | ["diff", "--patch", string]
     | [
           "log",
           string,

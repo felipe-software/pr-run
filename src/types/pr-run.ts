@@ -24,6 +24,18 @@ export type BranchInfo = {
     isStale: boolean;
 };
 
+export type BranchDiffFile = {
+    path: string;
+    additions: number;
+    deletions: number;
+};
+
+export type BranchDiffResult = {
+    branch: string;
+    files: BranchDiffFile[];
+    patch: string;
+};
+
 export type CheckoutResult =
     | {
           status: "created";

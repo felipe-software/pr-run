@@ -4,6 +4,7 @@ import { Elysia } from "elysia";
 import { addProjectToConfig, findProject, readConfig } from "./config-store";
 import {
     checkoutBranch,
+    getBranchDiff,
     getCommitHistory,
     listBranches,
     removeWorktree,
@@ -183,6 +184,18 @@ const app = new Elysia()
             "Commit history loaded.",
             await getCommitHistory(project, branch),
         );
+    })
+    .get("/projects/:projectId/diff", async ({ params, query }) => {
+        const branch = String(query.branch ?? "");
+
+        if (!branch) {
+            throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
+        }
+
+        const project = await findProject(params.projectId);
+        return success("Branch diff loaded.", [
+            await getBranchDiff(project, branch),
+        ]);
     });
 
 const server = app.listen({

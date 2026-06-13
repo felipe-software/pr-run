@@ -2,6 +2,7 @@ import ky, { type AfterResponseState, type Options } from "ky";
 
 import type {
     ApiEnvelope,
+    BranchDiffResult,
     BranchInfo,
     CheckoutResult,
     CommitInfo,
@@ -285,6 +286,11 @@ export const prRunApi = {
     getCommitHistory(projectId: string, branch: string) {
         return requestMany<CommitInfo>(
             `/projects/${encodeURIComponent(projectId)}/commits?${new URLSearchParams({ branch }).toString()}`,
+        );
+    },
+    getBranchDiff(projectId: string, branch: string) {
+        return requestOne<BranchDiffResult>(
+            `/projects/${encodeURIComponent(projectId)}/diff?${new URLSearchParams({ branch }).toString()}`,
         );
     },
     getConfig() {
