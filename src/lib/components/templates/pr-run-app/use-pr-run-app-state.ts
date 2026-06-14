@@ -5,6 +5,7 @@ import { isHandledSshPromptError } from "@/lib/api";
 import { useAddProjectMutation } from "@/lib/hooks/query/use-add-project-mutation";
 import { useCheckoutBranchMutation } from "@/lib/hooks/query/use-checkout-branch-mutation";
 import { useConfigQuery } from "@/lib/hooks/query/use-config-query";
+import { useCreateScriptMutation } from "@/lib/hooks/query/use-create-script-mutation";
 import { useRemoveWorktreeMutation } from "@/lib/hooks/query/use-remove-worktree-mutation";
 import { useUpdateProjectWorktreesMutation } from "@/lib/hooks/query/use-update-project-worktrees-mutation";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
@@ -32,6 +33,7 @@ export function usePrRunAppState() {
         () => new Set(),
     );
     const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
+    const [isCreateScriptOpen, setIsCreateScriptOpen] = useState(false);
     const [theme, setTheme] = useState<"dark" | "light">(() => {
         return localStorage.getItem("pr-run-theme") === "light"
             ? "light"
@@ -48,6 +50,7 @@ export function usePrRunAppState() {
     const configQuery = useConfigQuery(isElectronApiAvailable);
     const addProjectMutation = useAddProjectMutation();
     const checkoutBranchMutation = useCheckoutBranchMutation();
+    const createScriptMutation = useCreateScriptMutation();
     const removeWorktreeMutation = useRemoveWorktreeMutation();
     const updateProjectWorktreesMutation = useUpdateProjectWorktreesMutation();
     const groups = configQuery.data?.groups ?? [];
@@ -186,6 +189,22 @@ export function usePrRunAppState() {
         );
     }
 
+    async function createScript(title: string) {
+        setActionError(undefined);
+        const [error, script] = await tryPromise(
+            createScriptMutation.mutateAsync(title),
+        );
+
+        if (error) {
+            setActionError(getErrorMessage(error));
+            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            return;
+        }
+
+        showSuccessToast(`${script.title} created.`);
+        setIsCreateScriptOpen(false);
+    }
+
     async function removeWorktree(projectId: string, branchName: string) {
         setActionError(undefined);
         const [error, result] = await tryPromise(
@@ -239,6 +258,9 @@ export function usePrRunAppState() {
         addProjectError: addProjectMutation.error
             ? getErrorMessage(addProjectMutation.error)
             : undefined,
+        createScriptError: createScriptMutation.error
+            ? getErrorMessage(createScriptMutation.error)
+            : undefined,
         configError,
         expandedGroups,
         expandedProjects,
@@ -251,6 +273,8 @@ export function usePrRunAppState() {
                 selectedBranch?.projectId &&
             checkoutBranchMutation.variables?.branchName ===
                 selectedBranch?.branchName,
+        isCreatingScript: createScriptMutation.isPending,
+        isCreateScriptOpen,
         isLoadingConfig: configQuery.isPending,
         pendingProjectUpdateId: updateProjectWorktreesMutation.isPending
             ? updateProjectWorktreesMutation.variables
@@ -263,9 +287,15 @@ export function usePrRunAppState() {
         theme,
         beginResize: () => setIsResizingSidebar(true),
         closeAddProject: () => setIsAddProjectOpen(false),
+        closeCreateScript: () => setIsCreateScriptOpen(false),
+        createScript,
         openAddProject: () => {
             addProjectMutation.reset();
             setIsAddProjectOpen(true);
+        },
+        openCreateScript: () => {
+            createScriptMutation.reset();
+            setIsCreateScriptOpen(true);
         },
         openSshPassphrase: () => useSshPassphraseStore.getState().open(null),
         removeWorktree,

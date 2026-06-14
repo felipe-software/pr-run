@@ -4,6 +4,7 @@ export type SidebarProps = {
     expandedGroups: Set<string>;
     expandedProjects: Set<string>;
     groups: ProjectGroup[];
+    isCreatingScript: boolean;
     pendingProjectUpdateId?: string;
     pendingWorktreeRemovalKey?: string;
     selectedBranchName?: string;
@@ -12,6 +13,7 @@ export type SidebarProps = {
     theme: "dark" | "light";
     onAddProject: () => void;
     onBeginResize: () => void;
+    onCreateScript: () => void;
     onOpenSshPassphrase: () => void;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
     onSelectBranch: (projectId: string, branchName: string) => void;

@@ -1,10 +1,19 @@
 import { Card, Spinner, Surface } from "@heroui/react";
 import { Code2, FolderPlus, RefreshCw } from "lucide-react";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import {
+    lazy,
+    Suspense,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
 import { Button } from "@/lib/components/atoms/button";
 import { CommitHistory } from "@/lib/components/molecules/commit-history";
+import type { WorktreeTerminalHandle } from "@/lib/components/molecules/worktree-terminal";
 import { useCommitHistoryQuery } from "@/lib/hooks/query/use-commit-history-query";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
@@ -15,6 +24,12 @@ const WorktreeTerminal = lazy(() =>
     import("@/lib/components/molecules/worktree-terminal").then((module) => ({
         default: module.WorktreeTerminal,
     })),
+);
+
+const BranchScriptsSection = lazy(() =>
+    import("@/lib/components/templates/branch-scripts-section").then(
+        (module) => ({ default: module.BranchScriptsSection }),
+    ),
 );
 
 const BranchDiffPanel = lazy(() =>
@@ -29,9 +44,10 @@ type MainPanelProps = {
     isCheckingOutWorktree: boolean;
     project: ProjectConfig | null;
     onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
+    onCreateScript: () => void;
 };
 
-type BranchPageTab = "general" | "diff";
+type BranchPageTab = "general" | "run" | "diff";
 
 export function MainPanel({
     actionError,
@@ -39,8 +55,11 @@ export function MainPanel({
     isCheckingOutWorktree,
     project,
     onCheckoutBranch,
+    onCreateScript,
 }: MainPanelProps) {
     const [activeTab, setActiveTab] = useState<BranchPageTab>("general");
+    const terminalRef = useRef<WorktreeTerminalHandle>(null);
+    const pendingTerminalCommandsRef = useRef<string[]>([]);
     const selectedKey =
         project && branchName ? `${project.id}:${branchName}` : "";
     const branchesQuery = useProjectBranchesQuery(
@@ -59,6 +78,30 @@ export function MainPanel({
         branchName ?? undefined,
         Boolean(project && branchName),
     );
+    const setTerminalHandle = useCallback(
+        (terminal: WorktreeTerminalHandle | null) => {
+            terminalRef.current = terminal;
+
+            if (!terminal) {
+                return;
+            }
+
+            for (const command of pendingTerminalCommandsRef.current.splice(
+                0,
+            )) {
+                terminal.runCommand(command);
+            }
+        },
+        [],
+    );
+    const runTerminalCommand = useCallback((command: string) => {
+        if (terminalRef.current) {
+            terminalRef.current.runCommand(command);
+            return;
+        }
+
+        pendingTerminalCommandsRef.current.push(command);
+    }, []);
     const isAwaitingBranchPassphrase = isHandledSshPromptError(
         branchesQuery.error,
     );
@@ -68,6 +111,7 @@ export function MainPanel({
 
     useEffect(() => {
         setActiveTab("general");
+        pendingTerminalCommandsRef.current = [];
     }, [selectedKey]);
 
     useEffect(() => {
@@ -167,6 +211,20 @@ export function MainPanel({
                             General
                         </button>
                         <button
+                            aria-selected={activeTab === "run"}
+                            className={[
+                                "branch-page-tab",
+                                activeTab === "run"
+                                    ? "branch-page-tab-active"
+                                    : "",
+                            ].join(" ")}
+                            role="tab"
+                            type="button"
+                            onClick={() => setActiveTab("run")}
+                        >
+                            Run
+                        </button>
+                        <button
                             aria-selected={activeTab === "diff"}
                             className={[
                                 "branch-page-tab",
@@ -252,32 +310,6 @@ export function MainPanel({
                 <div className="branch-page-body">
                     {activeTab === "general" ? (
                         <div className="branch-general-page">
-                            {selectedBranch.hasWorktree ? (
-                                <section className="worktree-terminal-section">
-                                    <div className="mb-3 flex items-center justify-between">
-                                        <h2 className="text-base font-semibold">
-                                            Terminal
-                                        </h2>
-                                        <span className="truncate pl-4 text-xs text-muted-foreground">
-                                            {selectedBranch.worktreePath}
-                                        </span>
-                                    </div>
-                                    <Suspense
-                                        fallback={
-                                            <div className="worktree-terminal-viewport worktree-terminal-loading">
-                                                Loading terminal...
-                                            </div>
-                                        }
-                                    >
-                                        <WorktreeTerminal
-                                            worktreePath={
-                                                selectedBranch.worktreePath
-                                            }
-                                        />
-                                    </Suspense>
-                                </section>
-                            ) : null}
-
                             <section className="branch-commits-section">
                                 <div className="mb-3 flex items-center justify-between">
                                     <h2 className="text-base font-semibold">
@@ -300,6 +332,55 @@ export function MainPanel({
                                 </div>
                             </section>
                         </div>
+                    ) : activeTab === "run" ? (
+                        selectedBranch.hasWorktree ? (
+                            <div className="branch-run-page">
+                                <Suspense
+                                    fallback={
+                                        <Surface className="branch-scripts-state">
+                                            <Spinner size="sm" /> Loading
+                                            scripts...
+                                        </Surface>
+                                    }
+                                >
+                                    <BranchScriptsSection
+                                        branchName={selectedBranch.name}
+                                        projectId={project.id}
+                                        onCreateScript={onCreateScript}
+                                        onRunCommand={runTerminalCommand}
+                                    />
+                                </Suspense>
+
+                                <section className="worktree-terminal-section">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <h2 className="text-base font-semibold">
+                                            Terminal
+                                        </h2>
+                                        <span className="truncate pl-4 text-xs text-muted-foreground">
+                                            {selectedBranch.worktreePath}
+                                        </span>
+                                    </div>
+                                    <Suspense
+                                        fallback={
+                                            <div className="worktree-terminal-viewport worktree-terminal-loading">
+                                                Loading terminal...
+                                            </div>
+                                        }
+                                    >
+                                        <WorktreeTerminal
+                                            ref={setTerminalHandle}
+                                            worktreePath={
+                                                selectedBranch.worktreePath
+                                            }
+                                        />
+                                    </Suspense>
+                                </section>
+                            </div>
+                        ) : (
+                            <Surface className="branch-scripts-state">
+                                Create the worktree to run scripts.
+                            </Surface>
+                        )
                     ) : (
                         <Suspense
                             fallback={

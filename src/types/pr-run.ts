@@ -81,6 +81,54 @@ export type CommitInfo = {
     isInSelectedBranch: boolean;
 };
 
+export type ScriptInfo = {
+    id: string;
+    title: string;
+    fileName: string;
+    filePath: string;
+    button: boolean;
+    lifecycles: string[];
+    loadError?: string;
+};
+
+export type ScriptSourceResult = {
+    scriptId: string;
+    filePath: string;
+    source: string;
+};
+
+export type ScriptCommandResult = {
+    command: string;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+};
+
+export type ScriptRunResult = {
+    scriptId: string;
+    success: boolean;
+    durationMs: number;
+    commands: ScriptCommandResult[];
+};
+
+export type ScriptTerminalCommandResult = {
+    command: string;
+};
+
+export type TextFileLocation = {
+    filePath: string;
+    line?: number;
+    column?: number;
+};
+
+export type ScriptOpenResult = {
+    editor: string;
+};
+
+export type ScriptStreamEvent =
+    | { type: "output"; data: string }
+    | { type: "error"; message: string };
+
 export type SshPassphraseResult = {
     ok: true;
 };

@@ -2,6 +2,7 @@ import { Card, Spinner, Surface } from "@heroui/react";
 import { AlertTriangle } from "lucide-react";
 
 import { AddProjectDialog } from "@/lib/components/templates/add-project-dialog";
+import { CreateScriptDialog } from "@/lib/components/templates/create-script-dialog";
 import { MainPanel } from "@/lib/components/templates/main-panel";
 import { Sidebar } from "@/lib/components/templates/sidebar";
 import { SshPassphraseDialog } from "@/lib/components/templates/ssh-passphrase-dialog";
@@ -40,6 +41,7 @@ export function PrRunApp() {
                 expandedGroups={state.expandedGroups}
                 expandedProjects={state.expandedProjects}
                 groups={state.groups}
+                isCreatingScript={state.isCreatingScript}
                 pendingProjectUpdateId={state.pendingProjectUpdateId}
                 pendingWorktreeRemovalKey={state.pendingWorktreeRemovalKey}
                 selectedBranchName={
@@ -50,6 +52,7 @@ export function PrRunApp() {
                 theme={state.theme}
                 onAddProject={state.openAddProject}
                 onBeginResize={state.beginResize}
+                onCreateScript={state.openCreateScript}
                 onOpenSshPassphrase={state.openSshPassphrase}
                 onRemoveWorktree={state.removeWorktree}
                 onSelectBranch={state.selectBranch}
@@ -68,6 +71,7 @@ export function PrRunApp() {
                 isCheckingOutWorktree={state.isCheckingOutWorktree}
                 project={state.selectedBranchView.project}
                 onCheckoutBranch={state.checkoutBranch}
+                onCreateScript={state.openCreateScript}
             />
             <AddProjectDialog
                 error={state.addProjectError}
@@ -75,6 +79,13 @@ export function PrRunApp() {
                 isSubmitting={state.isAddingProject}
                 onClose={state.closeAddProject}
                 onSubmit={state.submitAddProject}
+            />
+            <CreateScriptDialog
+                error={state.createScriptError}
+                isOpen={state.isCreateScriptOpen}
+                isSubmitting={state.isCreatingScript}
+                onClose={state.closeCreateScript}
+                onSubmit={state.createScript}
             />
             <SshPassphraseDialog />
         </Surface>

@@ -73,6 +73,16 @@ export type SshPassphraseResult = {
     ok: true;
 };
 
+export type TextFileLocation = {
+    filePath: string;
+    line?: number;
+    column?: number;
+};
+
+export type ScriptOpenResult = {
+    editor: string;
+};
+
 export type TerminalCreateOptions = {
     cwd: string;
     cols: number;

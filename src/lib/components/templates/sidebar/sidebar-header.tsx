@@ -1,17 +1,21 @@
-import { KeyRound, Moon, Plus, SunMedium } from "lucide-react";
+import { FilePlus2, KeyRound, Moon, Plus, SunMedium } from "lucide-react";
 
 import { Button } from "@/lib/components/atoms/button";
 
 type SidebarHeaderProps = {
+    isCreatingScript: boolean;
     theme: "dark" | "light";
     onAddProject: () => void;
+    onCreateScript: () => void;
     onOpenSshPassphrase: () => void;
     onToggleTheme: () => void;
 };
 
 export function SidebarHeader({
+    isCreatingScript,
     theme,
     onAddProject,
+    onCreateScript,
     onOpenSshPassphrase,
     onToggleTheme,
 }: SidebarHeaderProps) {
@@ -35,6 +39,16 @@ export function SidebarHeader({
                     ) : (
                         <Moon className="h-4 w-4" />
                     )}
+                </Button>
+                <Button
+                    aria-label="Create script"
+                    className="h-8 min-w-8 px-2 text-[11px]"
+                    isDisabled={isCreatingScript}
+                    isIconOnly
+                    type="button"
+                    onPress={onCreateScript}
+                >
+                    <FilePlus2 className="h-4 w-4" />
                 </Button>
                 <Button
                     aria-label="SSH passphrase"

@@ -402,6 +402,110 @@ select {
     flex: 0 0 auto;
 }
 
+.branch-scripts-section {
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+.branch-scripts-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 8px;
+}
+
+.branch-script-row {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--app-border);
+    border-radius: 6px;
+    background: var(--app-panel);
+    padding: 4px;
+}
+
+.branch-script-run {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    padding: 7px 8px;
+    color: var(--app-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.branch-script-run:hover {
+    background: color-mix(in srgb, var(--app-text) 5%, transparent);
+}
+
+.branch-script-run:focus-visible {
+    outline: 1px solid var(--app-text);
+    outline-offset: -1px;
+}
+
+.branch-script-run:disabled {
+    color: var(--app-muted);
+    cursor: not-allowed;
+}
+
+.branch-script-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(4px);
+    transition:
+        opacity 140ms ease,
+        transform 140ms ease;
+}
+
+.branch-script-row:hover .branch-script-actions,
+.branch-script-row:focus-within .branch-script-actions,
+.branch-script-row:has(.branch-script-actions button:focus-visible) {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.branch-scripts-state,
+.branch-scripts-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--app-border);
+    border-radius: 6px;
+    background: var(--app-panel);
+    padding: 10px 12px;
+    color: var(--app-muted);
+    font-size: 12px;
+}
+
+.branch-scripts-error {
+    border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+    background: color-mix(in srgb, var(--danger) 9%, transparent);
+    color: var(--danger);
+}
+
+@media (hover: none) {
+    .branch-script-actions {
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+    }
+}
+
 .branch-page-main {
     display: flex;
     min-height: 0;
@@ -477,6 +581,27 @@ select {
     flex: 1 1 auto;
     flex-direction: column;
     gap: 16px;
+}
+
+.branch-run-page {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.branch-run-page .worktree-terminal-section {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+.branch-run-page .worktree-terminal-viewport {
+    min-height: 240px;
+    height: auto;
+    flex: 1 1 auto;
 }
 
 .branch-commits-section {

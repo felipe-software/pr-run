@@ -1,6 +1,6 @@
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 import { tryPromise } from "@/lib/error";
 
@@ -8,8 +8,32 @@ type WorktreeTerminalProps = {
     worktreePath: string;
 };
 
-export function WorktreeTerminal({ worktreePath }: WorktreeTerminalProps) {
+export type WorktreeTerminalHandle = {
+    runCommand(command: string): void;
+};
+
+export const WorktreeTerminal = forwardRef<
+    WorktreeTerminalHandle,
+    WorktreeTerminalProps
+>(function WorktreeTerminal({ worktreePath }, ref) {
     const mountRef = useRef<HTMLDivElement>(null);
+    const sessionIdRef = useRef<string | null>(null);
+    const terminalRef = useRef<Terminal | null>(null);
+    const pendingCommandsRef = useRef<string[]>([]);
+
+    useImperativeHandle(ref, () => ({
+        runCommand(command) {
+            const sessionId = sessionIdRef.current;
+
+            if (!sessionId) {
+                pendingCommandsRef.current.push(command);
+                return;
+            }
+
+            terminalRef.current?.focus();
+            void window.prRun.writeTerminalInput(sessionId, `${command}\r`);
+        },
+    }));
 
     useEffect(() => {
         const mount = mountRef.current;
@@ -55,6 +79,7 @@ export function WorktreeTerminal({ worktreePath }: WorktreeTerminalProps) {
 
         terminal.loadAddon(fitAddon);
         terminal.open(mount);
+        terminalRef.current = terminal;
         fitTerminal(fitAddon);
         terminal.focus();
 
@@ -103,6 +128,15 @@ export function WorktreeTerminal({ worktreePath }: WorktreeTerminalProps) {
             worktreePath,
         }).then((id) => {
             sessionId = id;
+            sessionIdRef.current = id ?? null;
+
+            if (!id) {
+                return;
+            }
+
+            for (const command of pendingCommandsRef.current.splice(0)) {
+                void window.prRun.writeTerminalInput(id, `${command}\r`);
+            }
         });
 
         return () => {
@@ -112,6 +146,8 @@ export function WorktreeTerminal({ worktreePath }: WorktreeTerminalProps) {
             unsubscribeExit();
             dataDisposable.dispose();
             terminal.dispose();
+            terminalRef.current = null;
+            sessionIdRef.current = null;
 
             if (sessionId) {
                 void window.prRun.disposeTerminalSession(sessionId);
@@ -120,7 +156,7 @@ export function WorktreeTerminal({ worktreePath }: WorktreeTerminalProps) {
     }, [worktreePath]);
 
     return <div className="worktree-terminal-viewport" ref={mountRef} />;
-}
+});
 
 async function startTerminalSession({
     lifecycle,

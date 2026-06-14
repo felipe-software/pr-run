@@ -1,29 +1,29 @@
 import { Card, Input, Label, Surface } from "@heroui/react";
-import { FolderPlus, X } from "lucide-react";
+import { FilePlus2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/lib/components/atoms/button";
 
-type AddProjectDialogProps = {
+type CreateScriptDialogProps = {
     error?: string;
     isOpen: boolean;
     isSubmitting: boolean;
     onClose: () => void;
-    onSubmit: (projectPath: string) => Promise<void>;
+    onSubmit: (title: string) => Promise<void>;
 };
 
-export function AddProjectDialog({
+export function CreateScriptDialog({
     error,
     isOpen,
     isSubmitting,
     onClose,
     onSubmit,
-}: AddProjectDialogProps) {
-    const [projectPath, setProjectPath] = useState("");
+}: CreateScriptDialogProps) {
+    const [title, setTitle] = useState("");
 
     useEffect(() => {
         if (!isOpen) {
-            setProjectPath("");
+            setTitle("");
         }
     }, [isOpen]);
 
@@ -33,7 +33,7 @@ export function AddProjectDialog({
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        await onSubmit(projectPath.trim());
+        await onSubmit(title.trim());
     }
 
     return (
@@ -42,27 +42,26 @@ export function AddProjectDialog({
                 <form className="p-5" onSubmit={handleSubmit}>
                     <Card.Header className="mb-5 px-0 pt-0">
                         <div className="flex items-start gap-3">
-                            <FolderPlus className="mt-0.5 h-5 w-5 text-primary" />
+                            <FilePlus2 className="mt-0.5 h-5 w-5 text-primary" />
                             <div>
-                                <Card.Title>Add project</Card.Title>
+                                <Card.Title>Create script</Card.Title>
                                 <Card.Description>
-                                    Enter the local path of a Git repository.
+                                    Create a global TypeScript script available
+                                    to every project.
                                 </Card.Description>
                             </div>
                         </div>
                     </Card.Header>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="project-path">Folder path</Label>
+                        <Label htmlFor="script-title">Title</Label>
                         <Input
                             autoFocus
                             fullWidth
-                            id="project-path"
-                            placeholder="/home/user/my-super-app"
-                            value={projectPath}
-                            onChange={(event) =>
-                                setProjectPath(event.target.value)
-                            }
+                            id="script-title"
+                            placeholder="Run Expo"
+                            value={title}
+                            onChange={(event) => setTitle(event.target.value)}
                         />
                     </div>
 
@@ -82,12 +81,12 @@ export function AddProjectDialog({
                             Cancel
                         </Button>
                         <Button
-                            isDisabled={isSubmitting || !projectPath.trim()}
+                            isDisabled={isSubmitting || !title.trim()}
                             tone="primary"
                             type="submit"
                         >
-                            <FolderPlus className="h-4 w-4" />
-                            {isSubmitting ? "Adding..." : "Add"}
+                            <FilePlus2 className="h-4 w-4" />
+                            {isSubmitting ? "Creating..." : "Create"}
                         </Button>
                     </div>
                 </form>

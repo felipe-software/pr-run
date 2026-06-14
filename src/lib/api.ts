@@ -9,6 +9,12 @@ import type {
     ProjectConfig,
     ProjectsConfig,
     RemoveWorktreeResult,
+    ScriptInfo,
+    ScriptOpenResult,
+    ScriptRunResult,
+    ScriptSourceResult,
+    ScriptStreamEvent,
+    ScriptTerminalCommandResult,
     SshPassphraseResult,
     UpdateResult,
     UpdateWorktreesResult,
@@ -57,6 +63,9 @@ const api = ky.create({
 const rawApi = ky.create({
     throwHttpErrors: false,
 });
+
+const SCRIPT_RESULT_MARKER = "__PR_RUN_SCRIPT_RESULT__";
+const SCRIPT_EVENT_MARKER = "__PR_RUN_SCRIPT_EVENT__";
 
 let backendUrlPromise: Promise<string> | null = null;
 
@@ -283,6 +292,18 @@ export const prRunApi = {
         );
     },
     clearSshPassphrase: clearSshPassphraseCache,
+    createScript(title: string) {
+        return requestOne<ScriptInfo>("/scripts", {
+            json: { title },
+            method: "POST",
+        });
+    },
+    deleteScript(scriptId: string) {
+        return requestOne<ScriptInfo>(
+            `/scripts/${encodeURIComponent(scriptId)}`,
+            { method: "DELETE" },
+        );
+    },
     getCommitHistory(projectId: string, branch: string) {
         return requestMany<CommitInfo>(
             `/projects/${encodeURIComponent(projectId)}/commits?${new URLSearchParams({ branch }).toString()}`,
@@ -301,6 +322,33 @@ export const prRunApi = {
             `/projects/${encodeURIComponent(projectId)}/branches`,
         );
     },
+    listScripts() {
+        return requestMany<ScriptInfo>("/scripts");
+    },
+    openScript(scriptId: string) {
+        return requestOne<ScriptOpenResult>(
+            `/scripts/${encodeURIComponent(scriptId)}/open`,
+            { method: "POST" },
+        );
+    },
+    prepareScriptTerminalCommand(
+        projectId: string,
+        branch: string,
+        scriptId: string,
+    ) {
+        return requestOne<ScriptTerminalCommandResult>(
+            `/projects/${encodeURIComponent(projectId)}/scripts/${encodeURIComponent(scriptId)}/terminal-command`,
+            {
+                json: { branch },
+                method: "POST",
+            },
+        );
+    },
+    getScriptSource(scriptId: string) {
+        return requestOne<ScriptSourceResult>(
+            `/scripts/${encodeURIComponent(scriptId)}/source`,
+        );
+    },
     removeWorktree(projectId: string, branch: string) {
         return requestOne<RemoveWorktreeResult>(
             `/projects/${encodeURIComponent(projectId)}/worktree`,
@@ -311,11 +359,55 @@ export const prRunApi = {
         );
     },
     saveSshPassphrase,
+    runScript(projectId: string, branch: string, scriptId: string) {
+        return requestOne<ScriptRunResult>(
+            `/projects/${encodeURIComponent(projectId)}/scripts/${encodeURIComponent(scriptId)}/run`,
+            {
+                json: { branch },
+                method: "POST",
+            },
+        );
+    },
+    async runScriptStream(
+        projectId: string,
+        branch: string,
+        scriptId: string,
+        onEvent: (event: ScriptStreamEvent) => void,
+    ) {
+        const response = await sendRaw(
+            `/projects/${encodeURIComponent(projectId)}/scripts/${encodeURIComponent(scriptId)}/run/stream`,
+            {
+                json: { branch },
+                method: "POST",
+                timeout: false,
+            },
+        );
+
+        if (!response.ok) {
+            const payload = await parseEnvelope(response);
+            throw createApiError(response, payload);
+        }
+
+        if (!response.body) {
+            throw new Error("Script stream is unavailable.");
+        }
+
+        return await consumeScriptStream(response.body, onEvent);
+    },
     updateProjectWorktrees(projectId: string) {
         return requestOne<UpdateWorktreesResult>(
             `/projects/${encodeURIComponent(projectId)}/update-worktrees`,
             {
                 method: "POST",
+            },
+        );
+    },
+    updateScriptSource(scriptId: string, source: string) {
+        return requestOne<ScriptInfo>(
+            `/scripts/${encodeURIComponent(scriptId)}/source`,
+            {
+                json: { source },
+                method: "PUT",
             },
         );
     },
@@ -329,3 +421,52 @@ export const prRunApi = {
         );
     },
 };
+
+async function consumeScriptStream(
+    stream: ReadableStream<Uint8Array>,
+    onEvent: (event: ScriptStreamEvent) => void,
+) {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let result: ScriptRunResult | undefined;
+
+    while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+            if (line.startsWith(SCRIPT_RESULT_MARKER)) {
+                result = JSON.parse(
+                    line.slice(SCRIPT_RESULT_MARKER.length),
+                ) as ScriptRunResult;
+                continue;
+            }
+
+            if (line.startsWith(SCRIPT_EVENT_MARKER)) {
+                onEvent(
+                    JSON.parse(
+                        line.slice(SCRIPT_EVENT_MARKER.length),
+                    ) as ScriptStreamEvent,
+                );
+                continue;
+            }
+
+            if (line) {
+                onEvent({ type: "output", data: `${line}\r\n` });
+            }
+        }
+
+        if (done) {
+            break;
+        }
+    }
+
+    if (!result) {
+        throw new Error("Script execution ended without a result.");
+    }
+
+    return result;
+}

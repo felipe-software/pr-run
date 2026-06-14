@@ -6,6 +6,7 @@ export function Sidebar({
     expandedGroups,
     expandedProjects,
     groups,
+    isCreatingScript,
     pendingProjectUpdateId,
     pendingWorktreeRemovalKey,
     selectedBranchName,
@@ -14,6 +15,7 @@ export function Sidebar({
     theme,
     onAddProject,
     onBeginResize,
+    onCreateScript,
     onOpenSshPassphrase,
     onRemoveWorktree,
     onSelectBranch,
@@ -28,8 +30,10 @@ export function Sidebar({
             style={{ width: `${sidebarWidth}px` }}
         >
             <SidebarHeader
+                isCreatingScript={isCreatingScript}
                 theme={theme}
                 onAddProject={onAddProject}
+                onCreateScript={onCreateScript}
                 onOpenSshPassphrase={onOpenSshPassphrase}
                 onToggleTheme={onToggleTheme}
             />

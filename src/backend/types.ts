@@ -81,6 +81,50 @@ export type CommitInfo = {
     isInSelectedBranch: boolean;
 };
 
+export type ScriptInfo = {
+    id: string;
+    title: string;
+    fileName: string;
+    filePath: string;
+    button: boolean;
+    lifecycles: string[];
+    loadError?: string;
+};
+
+export type ScriptSourceResult = {
+    scriptId: string;
+    filePath: string;
+    source: string;
+};
+
+export type ScriptCommandResult = {
+    command: string;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+};
+
+export type ScriptRunResult = {
+    scriptId: string;
+    success: boolean;
+    durationMs: number;
+    commands: ScriptCommandResult[];
+};
+
+export type ScriptTerminalCommandResult = {
+    command: string;
+};
+
+export type TextFileLocation = {
+    filePath: string;
+    line?: number;
+    column?: number;
+};
+
+export type ScriptOpenResult = {
+    editor: string;
+};
+
 export type ApiErrorCode =
     | "INVALID_PROJECT_PATH"
     | "NOT_A_GIT_REPOSITORY"
@@ -94,6 +138,13 @@ export type ApiErrorCode =
     | "CONFIG_READ_FAILED"
     | "CONFIG_WRITE_FAILED"
     | "PROJECT_NOT_FOUND"
+    | "SCRIPT_NOT_FOUND"
+    | "SCRIPT_CREATE_FAILED"
+    | "SCRIPT_DELETE_FAILED"
+    | "SCRIPT_LOAD_FAILED"
+    | "SCRIPT_EXECUTION_FAILED"
+    | "EDITOR_NOT_FOUND"
+    | "EDITOR_LAUNCH_FAILED"
     | "BAD_REQUEST"
     | "NOT_FOUND";
 
