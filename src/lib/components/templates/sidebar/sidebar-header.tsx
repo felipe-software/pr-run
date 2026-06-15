@@ -19,17 +19,20 @@ export function SidebarHeader({
     onOpenSshPassphrase,
     onToggleTheme,
 }: SidebarHeaderProps) {
+    const actionButtonClassName =
+        "h-7 min-w-7 rounded-md border-transparent px-0 text-muted-foreground/70 transition-colors data-[hover=true]:border-transparent data-[hover=true]:bg-sidebar-accent data-[hover=true]:text-sidebar-accent-foreground";
+
     return (
-        <header className="flex items-center justify-between px-3 py-3">
+        <header className="flex min-h-10 items-center justify-between gap-3 px-3 py-2">
             <div className="min-w-0">
-                <div className="truncate text-[15px] font-semibold tracking-[-0.02em]">
+                <div className="truncate text-sm font-medium tracking-tight text-sidebar-foreground">
                     PR Run
                 </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex shrink-0 items-center gap-1">
                 <Button
                     aria-label="Toggle theme"
-                    className="h-8 min-w-8 px-2 text-[11px]"
+                    className={actionButtonClassName}
                     isIconOnly
                     type="button"
                     onPress={onToggleTheme}
@@ -42,7 +45,7 @@ export function SidebarHeader({
                 </Button>
                 <Button
                     aria-label="Create script"
-                    className="h-8 min-w-8 px-2 text-[11px]"
+                    className={actionButtonClassName}
                     isDisabled={isCreatingScript}
                     isIconOnly
                     type="button"
@@ -52,7 +55,7 @@ export function SidebarHeader({
                 </Button>
                 <Button
                     aria-label="SSH passphrase"
-                    className="h-8 min-w-8 px-2 text-[11px]"
+                    className={actionButtonClassName}
                     isIconOnly
                     type="button"
                     onPress={onOpenSshPassphrase}
@@ -61,7 +64,7 @@ export function SidebarHeader({
                 </Button>
                 <Button
                     aria-label="Add project"
-                    className="h-8 w-8"
+                    className={actionButtonClassName}
                     isIconOnly
                     type="button"
                     onPress={onAddProject}

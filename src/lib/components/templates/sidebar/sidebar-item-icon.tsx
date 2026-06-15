@@ -1,9 +1,6 @@
 import { GitBranch, GitPullRequest } from "lucide-react";
 
-import { cn } from "@/lib/utils/cn";
 import type { BranchInfo } from "@/types/pr-run";
-
-const RECENT_WINDOW_MS = 12 * 60 * 60 * 1_000;
 
 type SidebarItemIconProps = {
     branch: BranchInfo;
@@ -14,15 +11,15 @@ export function SidebarItemIcon({ branch }: SidebarItemIconProps) {
 
     return (
         <span
-            className={cn(
-                "relative z-[1] grid h-[22px] w-[22px] flex-none place-items-center rounded-full border",
+            className={[
+                "grid h-5 w-5 flex-none place-items-center rounded-md",
                 markerClassName,
-            )}
+            ].join(" ")}
         >
             {branch.source === "pull-request" ? (
-                <GitPullRequest className="h-[13px] w-[13px]" />
+                <GitPullRequest className="h-3.5 w-3.5" />
             ) : (
-                <GitBranch className="h-[13px] w-[13px]" />
+                <GitBranch className="h-3.5 w-3.5" />
             )}
         </span>
     );
@@ -30,20 +27,12 @@ export function SidebarItemIcon({ branch }: SidebarItemIconProps) {
 
 function getMarkerClassName(branch: BranchInfo) {
     if (branch.hasWorktree) {
-        return "border-success bg-success text-black";
+        return "bg-success/15 text-success";
     }
 
-    if (isRecentlyUpdated(branch.lastCommitTimestamp)) {
-        return "border-blue-300/20 bg-blue-300/15 text-blue-100";
+    if (branch.source === "pull-request") {
+        return "bg-blue-500/20 text-blue-600 dark:text-blue-300";
     }
 
-    return "border-border bg-muted/10 text-foreground";
-}
-
-function isRecentlyUpdated(lastCommitTimestamp: number | null) {
-    if (!lastCommitTimestamp) {
-        return false;
-    }
-
-    return Date.now() - lastCommitTimestamp <= RECENT_WINDOW_MS;
+    return "bg-muted/45 text-muted-foreground/75";
 }

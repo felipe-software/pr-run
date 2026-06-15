@@ -22,7 +22,7 @@ import type {
     SelectedBranchView,
 } from "@/lib/components/templates/pr-run-app/types";
 
-const SIDEBAR_MIN_WIDTH = 240;
+const SIDEBAR_MIN_WIDTH = 256;
 const SIDEBAR_MAX_WIDTH = 560;
 
 export function usePrRunAppState() {
