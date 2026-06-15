@@ -26,7 +26,7 @@ export function Sidebar({
 }: SidebarProps) {
     return (
         <aside
-            className="app-sidebar relative flex h-screen min-h-0 shrink-0 flex-col border-r border-border/80"
+            className="relative flex h-screen min-h-0 shrink-0 flex-col border-r border-border/80 bg-background/90 [font-family:'SF_Pro_Display','Geist_Sans','Helvetica_Neue','Avenir_Next','Segoe_UI',sans-serif]"
             style={{ width: `${sidebarWidth}px` }}
         >
             <SidebarHeader
@@ -60,7 +60,7 @@ export function Sidebar({
 
             <div
                 aria-hidden="true"
-                className="sidebar-resize-handle"
+                className="absolute top-0 right-[-4px] h-full w-2 cursor-col-resize after:absolute after:top-0 after:left-[3px] after:h-full after:w-px after:bg-border after:content-['']"
                 onMouseDown={onBeginResize}
             />
         </aside>

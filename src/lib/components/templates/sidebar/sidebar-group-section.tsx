@@ -35,29 +35,36 @@ export function SidebarGroupSection({
     onToggleProject,
     onUpdateProject,
 }: SidebarGroupSectionProps) {
+    const rowClassName =
+        "flex w-full items-center gap-2 px-1.5 py-1.5 text-left text-foreground transition hover:bg-muted/20 hover:text-foreground";
+
     return (
         <section className="mb-2">
             <button
                 aria-expanded={isExpanded}
-                className="tree-row tree-group-row"
+                className={rowClassName}
                 type="button"
                 onClick={() => onToggleGroup(group.id)}
             >
                 {isExpanded ? (
-                    <ChevronDown className="tree-chevron" />
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 ) : (
-                    <ChevronRight className="tree-chevron" />
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 )}
-                <span className="tree-label flex-1">
+                <span className="flex-1 text-[13px] leading-[1.35] tracking-[-0.01em]">
                     {group.id === "default" ? "Projects" : group.name}
                 </span>
-                <span className="tree-meta">{group.projects.length}</span>
+                <span className="text-[11px] leading-[1.35] text-muted-foreground">
+                    {group.projects.length}
+                </span>
             </button>
 
             {isExpanded ? (
-                <div className="tree-children">
+                <div className="relative mt-1">
                     {group.projects.length === 0 ? (
-                        <div className="tree-empty">No projects added.</div>
+                        <div className="ml-2 px-2 py-1.5 text-[11px] leading-[1.45] text-muted-foreground">
+                            No projects added.
+                        </div>
                     ) : null}
 
                     {group.projects.map((project) => (

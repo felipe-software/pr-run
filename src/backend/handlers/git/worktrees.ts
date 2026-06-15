@@ -18,6 +18,10 @@ import {
     worktreePathFor,
     STALE_BRANCH_DAYS,
 } from "@/backend/handlers/git/helpers";
+import {
+    findGitHubRepository,
+    listGitHubPullRequests,
+} from "@/backend/handlers/git/github";
 import { logger } from "@/backend/logger";
 import {
     ApiError,
@@ -31,6 +35,64 @@ import {
 
 export async function listBranches(
     project: ProjectConfig,
+): Promise<BranchInfo[]> {
+    const repository = await findGitHubRepository(project);
+    const [pullRequests, branches] = await Promise.all([
+        listGitHubPullRequests(project, repository),
+        listRemoteBranches(project, repository),
+    ]);
+
+    if (!repository || pullRequests === undefined) {
+        return branches;
+    }
+
+    const pullRequestBranchNames = new Set(
+        pullRequests.map((pullRequest) => pullRequest.branchName),
+    );
+    const pullRequestBranches = await Promise.all(
+        pullRequests.map(async (pullRequest) => {
+            const worktreePath = worktreePathFor(
+                project.path,
+                pullRequest.branchName,
+            );
+            const lastCommitTimestamp = pullRequest.updatedAt
+                ? Date.parse(pullRequest.updatedAt)
+                : null;
+
+            return {
+                name: pullRequest.branchName,
+                remoteName: `origin/${pullRequest.branchName}`,
+                worktreePath,
+                hasWorktree: await exists(worktreePath),
+                lastCommitTimestamp: Number.isFinite(lastCommitTimestamp)
+                    ? lastCommitTimestamp
+                    : null,
+                isStale: false,
+                source: "pull-request" as const,
+                compareBranchName: pullRequest.baseBranchName,
+                repository,
+                pullRequest: {
+                    number: pullRequest.number,
+                    title: pullRequest.title,
+                    url: pullRequest.url,
+                    baseBranchName: pullRequest.baseBranchName,
+                    author: pullRequest.author,
+                },
+            };
+        }),
+    );
+
+    return [
+        ...pullRequestBranches,
+        ...branches.filter(
+            (branch) => !pullRequestBranchNames.has(branch.name),
+        ),
+    ];
+}
+
+async function listRemoteBranches(
+    project: ProjectConfig,
+    repository?: BranchInfo["repository"],
 ): Promise<BranchInfo[]> {
     const [error, output] = await tryPromise(
         gitText(project.path, [
@@ -92,6 +154,8 @@ export async function listBranches(
                 hasWorktree: await exists(worktreePath),
                 lastCommitTimestamp: branch.lastCommitTimestamp,
                 isStale: branch.isStale,
+                repository,
+                source: "branch",
             };
         }),
     );

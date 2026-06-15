@@ -155,7 +155,12 @@ export const WorktreeTerminal = forwardRef<
         };
     }, [worktreePath]);
 
-    return <div className="worktree-terminal-viewport" ref={mountRef} />;
+    return (
+        <div
+            className="h-[min(42vh,360px)] min-h-60 overflow-hidden rounded border border-border bg-black p-2.5"
+            ref={mountRef}
+        />
+    );
 });
 
 async function startTerminalSession({

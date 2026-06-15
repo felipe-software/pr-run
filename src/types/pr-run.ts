@@ -22,6 +22,29 @@ export type BranchInfo = {
     hasWorktree: boolean;
     lastCommitTimestamp: number | null;
     isStale: boolean;
+    source: "branch" | "pull-request";
+    compareBranchName?: string;
+    repository?: GitHubRepositoryInfo;
+    pullRequest?: PullRequestInfo;
+};
+
+export type GitHubRepositoryInfo = {
+    nameWithOwner: string;
+    url: string;
+};
+
+export type GitHubUserInfo = {
+    login: string;
+    url: string;
+    avatarUrl: string;
+};
+
+export type PullRequestInfo = {
+    number: number;
+    title: string;
+    url: string;
+    baseBranchName: string;
+    author?: GitHubUserInfo;
 };
 
 export type BranchDiffFile = {
@@ -77,7 +100,11 @@ export type CommitInfo = {
     subject: string;
     authorName: string;
     authorEmail: string;
+    authorAvatarUrl?: string;
+    authorLogin?: string;
+    authorUrl?: string;
     date: string;
+    url?: string;
     isInSelectedBranch: boolean;
 };
 

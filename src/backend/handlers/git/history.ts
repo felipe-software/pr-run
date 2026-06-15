@@ -4,29 +4,82 @@ import {
     getDefaultRemoteBranch,
     remoteBranch,
 } from "@/backend/handlers/git/helpers";
+import {
+    findGitHubRepository,
+    getGitHubCommit,
+} from "@/backend/handlers/git/github";
 import { ApiError, type CommitInfo, type ProjectConfig } from "@/backend/types";
 
 async function getBranchOnlyCommitHashes(
     projectPath: string,
-    defaultRemoteName: string | undefined,
+    baseRemoteName: string | undefined,
     remoteName: string,
 ) {
-    if (!defaultRemoteName || defaultRemoteName === remoteName) {
+    if (!baseRemoteName || baseRemoteName === remoteName) {
         return undefined;
     }
 
     const output = await gitText(projectPath, [
         "log",
-        `${defaultRemoteName}..${remoteName}`,
+        `${baseRemoteName}..${remoteName}`,
         "--pretty=format:%H",
     ]);
 
     return new Set(output.split("\n").filter(Boolean));
 }
 
+function githubUserFromEmail(authorEmail: string) {
+    const login = authorEmail.match(
+        /^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/,
+    )?.[1];
+
+    if (!login) {
+        return undefined;
+    }
+
+    return {
+        avatarUrl: `https://github.com/${login}.png?size=64`,
+        login,
+        url: `https://github.com/${login}`,
+    };
+}
+
+async function enrichCommitsWithGitHub(
+    project: ProjectConfig,
+    commits: CommitInfo[],
+) {
+    const repository = await findGitHubRepository(project);
+
+    if (!repository) {
+        return commits;
+    }
+
+    const details = await Promise.all(
+        commits.map((commit) =>
+            getGitHubCommit(project, repository, commit.hash),
+        ),
+    );
+
+    return commits.map((commit, index) => {
+        const githubUser =
+            details[index]?.author ?? githubUserFromEmail(commit.authorEmail);
+
+        return {
+            ...commit,
+            authorAvatarUrl: githubUser?.avatarUrl,
+            authorLogin: githubUser?.login,
+            authorUrl: githubUser?.url,
+            url:
+                details[index]?.url ??
+                `${repository.url.replace(/\/$/, "")}/commit/${commit.hash}`,
+        };
+    });
+}
+
 export async function getCommitHistory(
     project: ProjectConfig,
     branch: string,
+    baseBranch?: string,
 ): Promise<CommitInfo[]> {
     const { remoteName } = remoteBranch(branch);
 
@@ -39,12 +92,15 @@ export async function getCommitHistory(
             const defaultRemoteName = await getDefaultRemoteBranch(
                 project.path,
             );
-            marksAllCommitsAsSelectedBranch = defaultRemoteName
-                ? defaultRemoteName === remoteName
+            const baseRemoteName = baseBranch
+                ? remoteBranch(baseBranch).remoteName
+                : defaultRemoteName;
+            marksAllCommitsAsSelectedBranch = baseRemoteName
+                ? baseRemoteName === remoteName
                 : true;
             branchOnlyCommitHashes = await getBranchOnlyCommitHashes(
                 project.path,
-                defaultRemoteName,
+                baseRemoteName,
                 remoteName,
             );
             output = await gitText(project.path, [
@@ -70,7 +126,7 @@ export async function getCommitHistory(
         );
     }
 
-    return output
+    const commits = output
         .split("\n")
         .filter(Boolean)
         .map((line) => {
@@ -89,4 +145,6 @@ export async function getCommitHistory(
                     marksAllCommitsAsSelectedBranch,
             };
         });
+
+    return await enrichCommitsWithGitHub(project, commits);
 }

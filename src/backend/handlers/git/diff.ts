@@ -63,6 +63,7 @@ async function getBranchDiffPatch(
 export async function getBranchDiff(
     project: ProjectConfig,
     branch: string,
+    baseBranch?: string,
 ): Promise<BranchDiffResult> {
     const { name, remoteName } = remoteBranch(branch);
 
@@ -71,9 +72,12 @@ export async function getBranchDiff(
             const defaultRemoteName = await getDefaultRemoteBranch(
                 project.path,
             );
+            const baseRemoteName = baseBranch
+                ? remoteBranch(baseBranch).remoteName
+                : defaultRemoteName;
             const [files, patch] = await Promise.all([
-                getBranchDiffFiles(project.path, defaultRemoteName, remoteName),
-                getBranchDiffPatch(project.path, defaultRemoteName, remoteName),
+                getBranchDiffFiles(project.path, baseRemoteName, remoteName),
+                getBranchDiffPatch(project.path, baseRemoteName, remoteName),
             ]);
 
             return {

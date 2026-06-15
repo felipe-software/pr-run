@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, File, Folder } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 
+import { cn } from "@/lib/utils/cn";
 import type { BranchDiffFile } from "@/types/pr-run";
 
 type BranchDiffTreeProps = {
@@ -51,7 +52,7 @@ export function BranchDiffTree({
     }
 
     return (
-        <div className="branch-diff-tree" aria-label="Changed files">
+        <div aria-label="Changed files" className="relative">
             {tree.map((node) => (
                 <DiffTreeNodeRow
                     collapsedFolders={collapsedFolders}
@@ -86,22 +87,25 @@ function DiffTreeNodeRow({
 }: DiffTreeNodeRowProps) {
     const isDirectory = node.type === "directory";
     const isCollapsed = collapsedFolders.has(node.path);
-    const paddingLeft = `${depth * 14}px`;
+    const paddingLeft = `${depth * 10}px`;
 
     if (!isDirectory) {
         return (
             <button
-                className={[
-                    "branch-diff-row branch-diff-file-row",
-                    selectedPath === node.path ? "branch-diff-row-active" : "",
-                ].join(" ")}
+                className={cn(
+                    "flex w-full min-w-0 items-center gap-1 rounded bg-transparent py-[3px] pr-1 text-left text-muted-foreground transition hover:bg-muted/20 hover:text-foreground",
+                    selectedPath === node.path && "bg-muted/20 text-foreground",
+                )}
                 style={{ paddingLeft }}
                 type="button"
                 onClick={() => onSelectFile?.(node.path)}
             >
-                <span className="branch-diff-chevron-spacer" />
-                <File className="branch-diff-icon" />
-                <span className="branch-diff-label" title={node.path}>
+                <span className="h-3 w-3 shrink-0" />
+                <File className="h-3 w-3 shrink-0" />
+                <span
+                    className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-[1.35]"
+                    title={node.path}
+                >
                     {node.name}
                 </span>
                 <DiffCounts
@@ -116,18 +120,21 @@ function DiffTreeNodeRow({
         <Fragment>
             <button
                 aria-expanded={!isCollapsed}
-                className="branch-diff-row branch-diff-folder-row"
+                className="flex w-full min-w-0 items-center gap-1 rounded bg-transparent py-[3px] pr-1 text-left text-muted-foreground transition hover:bg-muted/20 hover:text-foreground"
                 style={{ paddingLeft }}
                 type="button"
                 onClick={() => onToggleFolder(node.path)}
             >
                 {isCollapsed ? (
-                    <ChevronRight className="branch-diff-chevron" />
+                    <ChevronRight className="h-3 w-3 shrink-0" />
                 ) : (
-                    <ChevronDown className="branch-diff-chevron" />
+                    <ChevronDown className="h-3 w-3 shrink-0" />
                 )}
-                <Folder className="branch-diff-icon" />
-                <span className="branch-diff-label" title={node.path}>
+                <Folder className="h-3 w-3 shrink-0" />
+                <span
+                    className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-[1.35]"
+                    title={node.path}
+                >
                     {node.name}
                 </span>
                 <DiffCounts
@@ -159,9 +166,9 @@ type DiffCountsProps = {
 
 function DiffCounts({ additions, deletions }: DiffCountsProps) {
     return (
-        <span className="branch-diff-counts">
-            <span className="branch-diff-count-add">+{additions}</span>
-            <span className="branch-diff-count-remove">-{deletions}</span>
+        <span className="inline-flex flex-none items-center gap-1 text-[10px] leading-[1.35] tabular-nums">
+            <span className="text-success">+{additions}</span>
+            <span className="text-danger">-{deletions}</span>
         </span>
     );
 }

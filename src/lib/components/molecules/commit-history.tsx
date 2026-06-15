@@ -45,12 +45,15 @@ export function CommitHistory({
     );
 
     return (
-        <Card className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+        <Card className="overflow-hidden rounded-lg border border-border bg-surface">
             {commits.map((commit, index) => {
                 const isOutsideBranch = !commit.isInSelectedBranch;
 
                 return (
-                    <div key={commit.hash}>
+                    <div
+                        className={index > 0 ? "border-t border-border" : ""}
+                        key={commit.hash}
+                    >
                         {index === outsideBranchStartIndex ? (
                             <div className="flex items-center gap-3 bg-muted/10 px-4 py-2 text-xs text-muted-foreground">
                                 <span className="h-2 w-2 rounded-full bg-success" />
@@ -61,7 +64,7 @@ export function CommitHistory({
                         ) : null}
                         <Card.Content
                             className={[
-                                "grid gap-1 px-4 py-3",
+                                "grid gap-2 px-4 py-3",
                                 isOutsideBranch ? "opacity-65" : "",
                             ].join(" ")}
                         >
@@ -74,17 +77,63 @@ export function CommitHistory({
                                             : "bg-success",
                                     ].join(" ")}
                                 />
-                                <Surface className="mt-0.5 flex shrink-0 items-center gap-1 rounded bg-muted/20 px-2 py-0.5 font-mono text-xs text-muted-foreground">
-                                    <GitCommitHorizontal className="h-3 w-3" />
-                                    {commit.shortHash}
-                                </Surface>
                                 <div className="min-w-0 flex-1">
-                                    <div className="truncate text-sm font-medium">
-                                        {commit.subject}
+                                    <div className="flex flex-wrap items-start gap-2">
+                                        <Surface className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded bg-muted/20 px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                                            <GitCommitHorizontal className="h-3 w-3" />
+                                            {commit.url ? (
+                                                <a
+                                                    className="hover:text-foreground hover:underline"
+                                                    href={commit.url}
+                                                    rel="noreferrer"
+                                                    target="_blank"
+                                                >
+                                                    {commit.shortHash}
+                                                </a>
+                                            ) : (
+                                                <span>{commit.shortHash}</span>
+                                            )}
+                                        </Surface>
+                                        <div className="min-w-0 flex-1">
+                                            {commit.url ? (
+                                                <a
+                                                    className="block truncate text-sm font-medium text-foreground transition hover:text-primary hover:underline"
+                                                    href={commit.url}
+                                                    rel="noreferrer"
+                                                    target="_blank"
+                                                >
+                                                    {commit.subject}
+                                                </a>
+                                            ) : (
+                                                <div className="truncate text-sm font-medium">
+                                                    {commit.subject}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="mt-1 text-xs text-muted-foreground">
-                                        {commit.authorName} ·{" "}
-                                        {formatDate(commit.date)}
+                                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                        {commit.authorAvatarUrl ? (
+                                            <img
+                                                alt={commit.authorName}
+                                                className="h-5 w-5 rounded-full border border-border object-cover"
+                                                src={commit.authorAvatarUrl}
+                                            />
+                                        ) : null}
+                                        {commit.authorUrl ? (
+                                            <a
+                                                className="hover:text-foreground hover:underline"
+                                                href={commit.authorUrl}
+                                                rel="noreferrer"
+                                                target="_blank"
+                                            >
+                                                {commit.authorLogin ??
+                                                    commit.authorName}
+                                            </a>
+                                        ) : (
+                                            <span>{commit.authorName}</span>
+                                        )}
+                                        <span>·</span>
+                                        <span>{formatDate(commit.date)}</span>
                                     </div>
                                 </div>
                             </div>

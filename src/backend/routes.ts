@@ -171,6 +171,9 @@ export function registerRoutes(app: Elysia) {
         })
         .get("/projects/:projectId/commits", async ({ params, query }) => {
             const branch = String(query.branch ?? "");
+            const baseBranch = query.baseBranch
+                ? String(query.baseBranch)
+                : undefined;
 
             if (!branch) {
                 throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
@@ -181,11 +184,14 @@ export function registerRoutes(app: Elysia) {
             );
             return success(
                 "Commit history loaded.",
-                await gitHandler.getCommitHistory(project, branch),
+                await gitHandler.getCommitHistory(project, branch, baseBranch),
             );
         })
         .get("/projects/:projectId/diff", async ({ params, query }) => {
             const branch = String(query.branch ?? "");
+            const baseBranch = query.baseBranch
+                ? String(query.baseBranch)
+                : undefined;
 
             if (!branch) {
                 throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
@@ -195,7 +201,7 @@ export function registerRoutes(app: Elysia) {
                 params.projectId,
             );
             return success("Branch diff loaded.", [
-                await gitHandler.getBranchDiff(project, branch),
+                await gitHandler.getBranchDiff(project, branch, baseBranch),
             ]);
         })
         .post(

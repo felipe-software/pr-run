@@ -8,6 +8,7 @@ import { SidebarBranchItem } from "@/lib/components/templates/sidebar/sidebar-br
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
 import { shortenPath } from "@/lib/format";
+import { cn } from "@/lib/utils/cn";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { ProjectConfig } from "@/types/pr-run";
 
@@ -36,6 +37,8 @@ export function SidebarProjectItem({
     onToggleProject,
     onUpdateProject,
 }: SidebarProjectItemProps) {
+    const rowClassName =
+        "flex w-full items-center gap-2 bg-transparent px-1.5 py-1.5 text-left text-foreground transition hover:bg-muted/20 hover:text-foreground";
     const branchesQuery = useProjectBranchesQuery(project.id, isExpanded);
     const isAwaitingSshPassphrase = isHandledSshPromptError(
         branchesQuery.error,
@@ -57,37 +60,37 @@ export function SidebarProjectItem({
     }, [branchesQuery, isAwaitingSshPassphrase]);
 
     return (
-        <div className="tree-node">
+        <div className="relative">
             <div
-                className={[
-                    "tree-project-shell",
-                    isSelected ? "tree-row-selected" : "",
-                ].join(" ")}
+                className={cn(
+                    "relative flex items-stretch rounded-sm",
+                    isSelected && "bg-muted/20",
+                )}
             >
                 <button
                     aria-expanded={isExpanded}
-                    className="tree-row tree-project-row"
+                    className={cn(rowClassName, "pr-10")}
                     type="button"
                     onClick={() => onToggleProject(project.id)}
                 >
                     {isExpanded ? (
-                        <ChevronDown className="tree-chevron" />
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     ) : (
-                        <ChevronRight className="tree-chevron" />
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     )}
-                    <Folder className="tree-icon" />
+                    <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1">
-                        <span className="tree-label block truncate">
+                        <span className="block truncate text-[13px] leading-[1.35] tracking-[-0.01em]">
                             {project.name}
                         </span>
-                        <span className="tree-meta block truncate">
+                        <span className="block truncate text-[11px] leading-[1.35] text-muted-foreground">
                             {shortenPath(project.path)}
                         </span>
                     </span>
                 </button>
                 <Button
                     aria-label={`Reload ${project.name} worktrees`}
-                    className="tree-project-action"
+                    className="absolute top-1/2 right-0.5 h-7 w-7 min-w-7 -translate-y-1/2 px-0 opacity-70 hover:opacity-100"
                     isDisabled={isUpdatingProject}
                     isIconOnly
                     size="sm"
@@ -104,16 +107,16 @@ export function SidebarProjectItem({
             </div>
 
             {isExpanded ? (
-                <div className="tree-branch-list">
+                <div className="relative mt-1 pl-4 before:absolute before:top-0 before:bottom-[17px] before:left-1 before:w-px before:bg-border before:content-['']">
                     {branchesQuery.isPending ? (
-                        <Surface className="tree-inline-state flex items-center gap-2">
+                        <Surface className="ml-2 flex items-center gap-2 px-2 py-1.5 text-[11px] leading-[1.45] text-muted-foreground">
                             <Spinner size="sm" />
                             Loading branches...
                         </Surface>
                     ) : null}
 
                     {!branchesQuery.isPending && isAwaitingSshPassphrase ? (
-                        <Surface className="tree-inline-state text-muted-foreground">
+                        <Surface className="ml-2 px-2 py-1.5 text-[11px] leading-[1.45] text-muted-foreground">
                             Waiting for SSH passphrase...
                         </Surface>
                     ) : null}
@@ -121,7 +124,7 @@ export function SidebarProjectItem({
                     {!branchesQuery.isPending &&
                     !isAwaitingSshPassphrase &&
                     branchError ? (
-                        <Surface className="tree-inline-state border border-danger/20 text-danger">
+                        <Surface className="ml-2 border border-danger/20 px-2 py-1.5 text-[11px] leading-[1.45] text-danger">
                             {branchError}
                         </Surface>
                     ) : null}
@@ -129,7 +132,9 @@ export function SidebarProjectItem({
                     {!branchesQuery.isPending &&
                     !branchError &&
                     (branchesQuery.data?.length ?? 0) === 0 ? (
-                        <div className="tree-empty">No remote branches.</div>
+                        <div className="ml-2 px-2 py-1.5 text-[11px] leading-[1.45] text-muted-foreground">
+                            No remote branches.
+                        </div>
                     ) : null}
 
                     {(branchesQuery.data ?? []).map((branch) => (

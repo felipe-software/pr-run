@@ -13,7 +13,7 @@ export function PrRunApp() {
 
     if (state.configError) {
         return (
-            <div className="grid h-screen place-items-center overflow-hidden bg-background p-8 text-foreground">
+            <div className="fixed inset-0 grid place-items-center overflow-hidden bg-background p-8 text-foreground [font-family:'SF_Pro_Display','Geist_Sans','Helvetica_Neue','Avenir_Next','Segoe_UI',sans-serif]">
                 <Card className="max-w-lg rounded-lg border border-danger/25 bg-danger/10 text-danger">
                     <Card.Content className="flex gap-3 p-5">
                         <AlertTriangle className="h-5 w-5 shrink-0" />
@@ -26,7 +26,7 @@ export function PrRunApp() {
 
     if (state.isLoadingConfig) {
         return (
-            <Surface className="grid h-screen place-items-center overflow-hidden bg-background text-sm text-muted-foreground">
+            <Surface className="fixed inset-0 grid place-items-center overflow-hidden bg-background text-sm text-muted-foreground [font-family:'SF_Pro_Display','Geist_Sans','Helvetica_Neue','Avenir_Next','Segoe_UI',sans-serif]">
                 <span className="flex items-center gap-2">
                     <Spinner size="sm" />
                     Loading PR Run...
@@ -36,7 +36,7 @@ export function PrRunApp() {
     }
 
     return (
-        <Surface className="flex h-screen min-h-0 overflow-hidden rounded-none bg-background text-foreground">
+        <Surface className="fixed inset-0 flex min-h-0 overflow-hidden rounded-none bg-background text-foreground [font-family:'SF_Pro_Display','Geist_Sans','Helvetica_Neue','Avenir_Next','Segoe_UI',sans-serif]">
             <Sidebar
                 expandedGroups={state.expandedGroups}
                 expandedProjects={state.expandedProjects}

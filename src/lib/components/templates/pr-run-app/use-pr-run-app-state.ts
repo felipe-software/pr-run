@@ -84,6 +84,9 @@ export function usePrRunAppState() {
             return;
         }
 
+        const previousCursor = document.body.style.cursor;
+        const previousUserSelect = document.body.style.userSelect;
+
         function handleMouseMove(event: MouseEvent) {
             setSidebarWidth(
                 clamp(event.clientX, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH),
@@ -94,12 +97,14 @@ export function usePrRunAppState() {
             setIsResizingSidebar(false);
         }
 
-        document.body.classList.add("is-resizing-sidebar");
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
         window.addEventListener("mousemove", handleMouseMove);
         window.addEventListener("mouseup", handleMouseUp);
 
         return () => {
-            document.body.classList.remove("is-resizing-sidebar");
+            document.body.style.cursor = previousCursor;
+            document.body.style.userSelect = previousUserSelect;
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mouseup", handleMouseUp);
         };

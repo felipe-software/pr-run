@@ -304,14 +304,30 @@ export const prRunApi = {
             { method: "DELETE" },
         );
     },
-    getCommitHistory(projectId: string, branch: string) {
+    getCommitHistory(
+        projectId: string,
+        branch: string,
+        baseBranch?: string,
+    ) {
+        const params = new URLSearchParams({ branch });
+
+        if (baseBranch) {
+            params.set("baseBranch", baseBranch);
+        }
+
         return requestMany<CommitInfo>(
-            `/projects/${encodeURIComponent(projectId)}/commits?${new URLSearchParams({ branch }).toString()}`,
+            `/projects/${encodeURIComponent(projectId)}/commits?${params.toString()}`,
         );
     },
-    getBranchDiff(projectId: string, branch: string) {
+    getBranchDiff(projectId: string, branch: string, baseBranch?: string) {
+        const params = new URLSearchParams({ branch });
+
+        if (baseBranch) {
+            params.set("baseBranch", baseBranch);
+        }
+
         return requestOne<BranchDiffResult>(
-            `/projects/${encodeURIComponent(projectId)}/diff?${new URLSearchParams({ branch }).toString()}`,
+            `/projects/${encodeURIComponent(projectId)}/diff?${params.toString()}`,
         );
     },
     getConfig() {

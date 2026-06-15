@@ -38,6 +38,7 @@ declare global {
             getCommitHistory(
                 projectId: string,
                 branch: string,
+                baseBranch?: string,
             ): Promise<CommitInfo[]>;
             setSshPassphrase(passphrase: string): Promise<SshPassphraseResult>;
             clearSshPassphrase(): Promise<SshPassphraseResult>;
