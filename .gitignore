@@ -10,3 +10,4 @@ dist-electron
 review.sh
 AGENTS.md
 .pr-run-data/
+.pr-run
