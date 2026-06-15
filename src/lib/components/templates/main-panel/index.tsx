@@ -1,13 +1,5 @@
 import { Spinner, Surface } from "@heroui/react";
-import {
-    lazy,
-    Suspense,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
 import { BranchPageHeader } from "@/lib/components/templates/main-panel/branch-page-header";
@@ -20,11 +12,14 @@ import {
     MainPanelLoadingState,
     MainPanelState,
 } from "@/lib/components/templates/main-panel/main-panel-state";
-import type { WorktreeTerminalHandle } from "@/lib/components/molecules/worktree-terminal";
 import { CommitHistory } from "@/lib/components/molecules/commit-history";
 import { useCommitHistoryQuery } from "@/lib/hooks/query/use-commit-history-query";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
+import {
+    getWorktreeOwnerKey,
+    useWorktreeTerminalStore,
+} from "@/lib/hooks/store/use-worktree-terminal-store";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { ProjectConfig } from "@/types/pr-run";
 
@@ -64,8 +59,6 @@ export function MainPanel({
     onCreateScript,
 }: MainPanelProps) {
     const [activeTab, setActiveTab] = useState<BranchPageTab>("general");
-    const terminalRef = useRef<WorktreeTerminalHandle>(null);
-    const pendingTerminalCommandsRef = useRef<string[]>([]);
     const selectedKey =
         project && branchName ? `${project.id}:${branchName}` : "";
     const branchesQuery = useProjectBranchesQuery(
@@ -85,30 +78,6 @@ export function MainPanel({
         selectedBranch?.compareBranchName,
         Boolean(project && branchName && selectedBranch),
     );
-    const setTerminalHandle = useCallback(
-        (terminal: WorktreeTerminalHandle | null) => {
-            terminalRef.current = terminal;
-
-            if (!terminal) {
-                return;
-            }
-
-            for (const command of pendingTerminalCommandsRef.current.splice(
-                0,
-            )) {
-                terminal.runCommand(command);
-            }
-        },
-        [],
-    );
-    const runTerminalCommand = useCallback((command: string) => {
-        if (terminalRef.current) {
-            terminalRef.current.runCommand(command);
-            return;
-        }
-
-        pendingTerminalCommandsRef.current.push(command);
-    }, []);
     const isAwaitingBranchPassphrase = isHandledSshPromptError(
         branchesQuery.error,
     );
@@ -118,7 +87,6 @@ export function MainPanel({
 
     useEffect(() => {
         setActiveTab("general");
-        pendingTerminalCommandsRef.current = [];
     }, [selectedKey]);
 
     useEffect(() => {
@@ -171,6 +139,25 @@ export function MainPanel({
         commitsQuery.error && !isAwaitingCommitPassphrase
             ? getErrorMessage(commitsQuery.error)
             : undefined;
+    const currentBranch = selectedBranch;
+    const worktreeOwnerKey = getWorktreeOwnerKey(
+        project.id,
+        currentBranch.name,
+    );
+    async function runScriptCommand({
+        command,
+        scriptTitle,
+    }: {
+        command: string;
+        scriptTitle: string;
+    }) {
+        await useWorktreeTerminalStore.getState().runScriptCommand({
+            command,
+            ownerKey: worktreeOwnerKey,
+            scriptTitle,
+            worktreePath: currentBranch.worktreePath,
+        });
+    }
 
     return (
         <main className="flex h-screen min-h-0 flex-1 overflow-hidden bg-background px-[18px] pt-5 pb-[18px] max-[900px]:px-[10px] max-[500px]:overflow-y-auto">
@@ -218,37 +205,27 @@ export function MainPanel({
                                     }
                                 >
                                     <BranchScriptsSection
-                                        branchName={selectedBranch.name}
+                                        branchName={currentBranch.name}
                                         projectId={project.id}
                                         onCreateScript={onCreateScript}
-                                        onRunCommand={runTerminalCommand}
+                                        onRunScriptCommand={runScriptCommand}
                                     />
                                 </Suspense>
 
-                                <section className="flex min-h-0 flex-1 flex-col">
-                                    <div className="mb-3 flex items-center justify-between">
-                                        <h2 className="text-base font-semibold">
-                                            Terminal
-                                        </h2>
-                                        <span className="truncate pl-4 text-xs text-muted-foreground">
-                                            {selectedBranch.worktreePath}
-                                        </span>
-                                    </div>
-                                    <Suspense
-                                        fallback={
-                                            <div className="grid h-[min(42vh,360px)] min-h-60 place-items-center overflow-hidden rounded border border-border bg-black px-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                                                Loading terminal...
-                                            </div>
+                                <Suspense
+                                    fallback={
+                                        <div className="grid h-[min(42vh,360px)] min-h-60 place-items-center overflow-hidden rounded border border-border bg-black px-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                                            Loading terminal...
+                                        </div>
+                                    }
+                                >
+                                    <WorktreeTerminal
+                                        ownerKey={worktreeOwnerKey}
+                                        worktreePath={
+                                            currentBranch.worktreePath
                                         }
-                                    >
-                                        <WorktreeTerminal
-                                            ref={setTerminalHandle}
-                                            worktreePath={
-                                                selectedBranch.worktreePath
-                                            }
-                                        />
-                                    </Suspense>
-                                </section>
+                                    />
+                                </Suspense>
                             </div>
                         ) : (
                             <Surface className="rounded-md border border-border bg-muted/10 px-3 py-2 text-sm text-muted-foreground">
@@ -264,10 +241,8 @@ export function MainPanel({
                             }
                         >
                             <BranchDiffPanel
-                                baseBranchName={
-                                    selectedBranch.compareBranchName
-                                }
-                                branchName={selectedBranch.name}
+                                baseBranchName={currentBranch.compareBranchName}
+                                branchName={currentBranch.name}
                                 projectId={project.id}
                             />
                         </Suspense>

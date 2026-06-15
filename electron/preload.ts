@@ -11,7 +11,9 @@ import type {
     TerminalCreateOptions,
     TerminalDataEvent,
     TerminalExitEvent,
+    TerminalInputOptions,
     TerminalSession,
+    TerminalSessionSnapshot,
     UpdateResult,
     UpdateWorktreesResult,
 } from "./types.js";
@@ -156,8 +158,26 @@ contextBridge.exposeInMainWorld("prRun", {
             options,
         ) as Promise<TerminalSession>;
     },
-    async writeTerminalInput(id: string, data: string) {
-        await ipcRenderer.invoke("terminal:input", id, data);
+    async getTerminalSessionSnapshot(id: string) {
+        return ipcRenderer.invoke(
+            "terminal:getSnapshot",
+            id,
+        ) as Promise<TerminalSessionSnapshot>;
+    },
+    async getTerminalSessionState(id: string) {
+        return ipcRenderer.invoke("terminal:getState", id) as Promise<
+            Pick<
+                TerminalSessionSnapshot,
+                "id" | "isAlive" | "busyState" | "sequence"
+            >
+        >;
+    },
+    async writeTerminalInput(
+        id: string,
+        data: string,
+        options?: TerminalInputOptions,
+    ) {
+        await ipcRenderer.invoke("terminal:input", id, data, options);
     },
     async resizeTerminal(id: string, cols: number, rows: number) {
         await ipcRenderer.invoke("terminal:resize", id, cols, rows);

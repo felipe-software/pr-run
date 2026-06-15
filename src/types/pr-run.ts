@@ -166,21 +166,44 @@ export type TerminalCreateOptions = {
     rows: number;
 };
 
+export type TerminalBusyState = "idle" | "busy" | "unknown";
+
 export type TerminalSession = {
     id: string;
     shell: string;
     cwd: string;
+    isAlive: boolean;
+    busyState: TerminalBusyState;
+    sequence: number;
+};
+
+export type TerminalSessionSnapshot = {
+    id: string;
+    shell: string;
+    cwd: string;
+    isAlive: boolean;
+    busyState: TerminalBusyState;
+    sequence: number;
+    history: string;
+    exitCode?: number;
+    signal?: number;
+};
+
+export type TerminalInputOptions = {
+    source?: "keyboard" | "script";
 };
 
 export type TerminalDataEvent = {
     id: string;
     data: string;
+    sequence: number;
 };
 
 export type TerminalExitEvent = {
     id: string;
     exitCode: number;
     signal?: number;
+    sequence: number;
 };
 
 export type ApiMetadata = Record<string, unknown>;

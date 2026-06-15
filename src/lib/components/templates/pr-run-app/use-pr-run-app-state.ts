@@ -9,6 +9,10 @@ import { useCreateScriptMutation } from "@/lib/hooks/query/use-create-script-mut
 import { useRemoveWorktreeMutation } from "@/lib/hooks/query/use-remove-worktree-mutation";
 import { useUpdateProjectWorktreesMutation } from "@/lib/hooks/query/use-update-project-worktrees-mutation";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
+import {
+    getWorktreeOwnerKey,
+    useWorktreeTerminalStore,
+} from "@/lib/hooks/store/use-worktree-terminal-store";
 import { tryPromise } from "@/lib/error";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { ProjectConfig } from "@/types/pr-run";
@@ -233,6 +237,9 @@ export function usePrRunAppState() {
         }
 
         showSuccessToast(result.message);
+        await useWorktreeTerminalStore
+            .getState()
+            .disposeOwner(getWorktreeOwnerKey(projectId, branchName));
     }
 
     async function updateProject(project: ProjectConfig) {

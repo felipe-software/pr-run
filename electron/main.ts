@@ -1,94 +1,16 @@
 import { app, BrowserWindow, ipcMain, Menu, shell } from "electron";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import crypto from "node:crypto";
-import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
-import * as pty from "node-pty";
 
-import type { TerminalCreateOptions } from "./types.js";
+import { TerminalSessionManager } from "./terminal-session-manager.js";
+import type { TerminalCreateOptions, TerminalInputOptions } from "./types.js";
 
 const projectRoot = path.join(__dirname, "..");
 
 let backendProcess: ChildProcessWithoutNullStreams | null = null;
 let backendUrl: string | null = null;
-const terminalSessions = new Map<
-    string,
-    {
-        process: pty.IPty;
-        webContentsId: number;
-    }
->();
-
-function defaultShell() {
-    if (process.platform === "win32") {
-        return process.env.COMSPEC || "cmd.exe";
-    }
-
-    return process.env.SHELL || "/bin/sh";
-}
-
-function createTerminalSession(
-    webContentsId: number,
-    options: TerminalCreateOptions,
-) {
-    const cwd = path.resolve(options.cwd);
-    const stat = fs.statSync(cwd);
-
-    if (!stat.isDirectory()) {
-        throw new Error("Terminal cwd must be a directory.");
-    }
-
-    const shellPath = defaultShell();
-    const env = Object.fromEntries(
-        Object.entries(process.env).filter(
-            (entry): entry is [string, string] => typeof entry[1] === "string",
-        ),
-    );
-    const terminalProcess = pty.spawn(shellPath, [], {
-        name: "xterm-256color",
-        cwd,
-        cols: Math.max(2, options.cols),
-        rows: Math.max(2, options.rows),
-        env: {
-            ...env,
-            TERM: "xterm-256color",
-            COLORTERM: "truecolor",
-        },
-    });
-    const id = crypto.randomUUID();
-
-    terminalSessions.set(id, {
-        process: terminalProcess,
-        webContentsId,
-    });
-
-    return {
-        id,
-        shell: shellPath,
-        cwd,
-        process: terminalProcess,
-    };
-}
-
-function closeTerminalSession(id: string) {
-    const session = terminalSessions.get(id);
-
-    if (!session) {
-        return;
-    }
-
-    terminalSessions.delete(id);
-    session.process.kill();
-}
-
-function closeWebContentsTerminals(webContentsId: number) {
-    for (const [id, session] of terminalSessions) {
-        if (session.webContentsId === webContentsId) {
-            closeTerminalSession(id);
-        }
-    }
-}
+const terminalSessionManager = new TerminalSessionManager();
 
 function getAvailablePort() {
     return new Promise<number>((resolve, reject) => {
@@ -352,56 +274,50 @@ app.whenReady()
         ipcMain.handle(
             "terminal:create",
             (event, options: TerminalCreateOptions) => {
-                const session = createTerminalSession(event.sender.id, options);
-
-                session.process.onData((data) => {
-                    if (!event.sender.isDestroyed()) {
-                        event.sender.send("terminal:data", {
-                            id: session.id,
-                            data,
-                        });
-                    }
-                });
-
-                session.process.onExit(({ exitCode, signal }) => {
-                    terminalSessions.delete(session.id);
-
-                    if (!event.sender.isDestroyed()) {
-                        event.sender.send("terminal:exit", {
-                            id: session.id,
-                            exitCode,
-                            signal,
-                        });
-                    }
-                });
-
-                event.sender.once("destroyed", () => {
-                    closeWebContentsTerminals(event.sender.id);
-                });
-
-                return {
-                    id: session.id,
-                    shell: session.shell,
-                    cwd: session.cwd,
-                };
+                return terminalSessionManager.createSession(
+                    event.sender,
+                    options,
+                );
             },
         );
-
-        ipcMain.handle("terminal:input", (_event, id: string, data: string) => {
-            terminalSessions.get(id)?.process.write(data);
+        ipcMain.handle("terminal:getSnapshot", (event, id: string) => {
+            return terminalSessionManager.getSessionSnapshot(event.sender, id);
+        });
+        ipcMain.handle("terminal:getState", (event, id: string) => {
+            return terminalSessionManager.getSessionState(event.sender, id);
         });
 
         ipcMain.handle(
-            "terminal:resize",
-            (_event, id: string, cols: number, rows: number) => {
-                terminalSessions
-                    .get(id)
-                    ?.process.resize(Math.max(2, cols), Math.max(2, rows));
+            "terminal:input",
+            (
+                event,
+                id: string,
+                data: string,
+                options?: TerminalInputOptions,
+            ) => {
+                terminalSessionManager.writeInput(
+                    event.sender,
+                    id,
+                    data,
+                    options,
+                );
             },
         );
 
-        ipcMain.handle("terminal:dispose", (_event, id: string) => {
-            closeTerminalSession(id);
+        ipcMain.handle(
+            "terminal:resize",
+            (event, id: string, cols: number, rows: number) => {
+                terminalSessionManager.resizeSession(
+                    event.sender,
+                    id,
+                    cols,
+                    rows,
+                );
+            },
+        );
+
+        ipcMain.handle("terminal:dispose", (event, id: string) => {
+            terminalSessionManager.disposeSession(event.sender, id);
         });
 
         await createWindow();
@@ -428,9 +344,6 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-    for (const id of terminalSessions.keys()) {
-        closeTerminalSession(id);
-    }
-
+    terminalSessionManager.disposeAll();
     stopBackend();
 });

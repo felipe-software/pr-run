@@ -38,9 +38,18 @@ The script name and Play icon execute it. Edit and Delete actions appear when
 the row is hovered or focused. Edit opens the TypeScript source with the
 operating system's default plain-text editor.
 
-Script commands are written to the existing worktree terminal session in the
-Run tab. Output, ANSI colors, keyboard input, and interruption signals use that
-same pseudo-terminal.
+Script commands are written to the active worktree terminal tab in the Run tab
+when that shell is idle. If the active tab is busy, PR Run opens a new terminal
+tab automatically for that script and focuses it. You can also create extra
+terminal tabs manually with the `+` button in the terminal header.
+
+Terminal tabs belong to the current worktree and stay alive when you leave the
+Run tab or switch to another branch or project in the app. Returning to the
+same worktree restores the tab list and buffered output. Sessions only stop
+when you close that terminal tab, remove the worktree, or quit PR Run.
+
+Output, ANSI colors, keyboard input, and interruption signals stay attached to
+the same pseudo-terminal for each tab.
 
 Scripts are trusted local code. They run with the same operating-system
 permissions and environment as the worktree terminal.

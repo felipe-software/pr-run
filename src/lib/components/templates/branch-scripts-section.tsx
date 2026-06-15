@@ -15,14 +15,17 @@ type BranchScriptsSectionProps = {
     branchName: string;
     projectId: string;
     onCreateScript: () => void;
-    onRunCommand: (command: string) => void;
+    onRunScriptCommand: (payload: {
+        command: string;
+        scriptTitle: string;
+    }) => Promise<void>;
 };
 
 export function BranchScriptsSection({
     branchName,
     projectId,
     onCreateScript,
-    onRunCommand,
+    onRunScriptCommand,
 }: BranchScriptsSectionProps) {
     const scriptsQuery = useScriptsQuery();
     const runScriptMutation = useRunScriptMutation();
@@ -53,7 +56,16 @@ export function BranchScriptsSection({
             return;
         }
 
-        onRunCommand(result.command);
+        const [commandError] = await tryPromise(
+            onRunScriptCommand({
+                command: result.command,
+                scriptTitle: script.title,
+            }),
+        );
+
+        if (commandError) {
+            toast.danger(getErrorMessage(commandError), { timeout: 3200 });
+        }
     }
 
     async function deleteScript(script: ScriptInfo) {
@@ -76,15 +88,15 @@ export function BranchScriptsSection({
     return (
         <section className="min-w-0 shrink-0">
             <Card className="rounded-lg border border-border bg-surface">
-                <Card.Content className="p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
+                <Card.Content className="px-3 py-1.5">
+                    <div className="mb-2 flex items-center justify-between gap-3">
                         <h2 className="text-base font-semibold">Scripts</h2>
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-muted-foreground">
                                 {(scriptsQuery.data ?? []).length} available
                             </span>
                             <Button
-                                className="h-8"
+                                className="h-7"
                                 type="button"
                                 onPress={onCreateScript}
                             >
@@ -116,12 +128,12 @@ export function BranchScriptsSection({
 
                                 return (
                                     <div
-                                        className="group flex items-center gap-1 self-start"
+                                        className="group relative self-start"
                                         key={script.id}
                                     >
                                         <Chip
                                             as="button"
-                                            className="max-w-60 cursor-pointer justify-between gap-1.5 text-left transition hover:bg-muted/20 disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-60"
+                                            className="max-w-60 cursor-pointer justify-start gap-1.5 pr-[54px] text-left transition hover:bg-muted/20 disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-60"
                                             disabled={
                                                 Boolean(script.loadError) ||
                                                 isPreparing
@@ -131,15 +143,15 @@ export function BranchScriptsSection({
                                                 void runScript(script)
                                             }
                                         >
+                                            <Play className="h-3.5 w-3.5 shrink-0" />
                                             <span className="truncate">
                                                 {script.title}
                                             </span>
-                                            <Play className="h-3.5 w-3.5 shrink-0" />
                                         </Chip>
-                                        <div className="flex max-w-0 items-center gap-1 overflow-hidden opacity-0 transition-all duration-150 group-hover:max-w-20 group-hover:opacity-100 group-focus-within:max-w-20 group-focus-within:opacity-100">
+                                        <div className="pointer-events-none absolute top-1/2 right-1 z-10 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
                                             <Button
                                                 aria-label={`Edit ${script.title}`}
-                                                className="h-7 w-7 min-w-7 px-0"
+                                                className="h-6 w-6 min-w-6 border-border/80 bg-surface px-0 shadow-sm"
                                                 isIconOnly
                                                 type="button"
                                                 onPress={() =>
@@ -150,7 +162,7 @@ export function BranchScriptsSection({
                                             </Button>
                                             <Button
                                                 aria-label={`Delete ${script.title}`}
-                                                className="h-7 w-7 min-w-7 px-0 text-danger"
+                                                className="h-6 w-6 min-w-6 border-border/80 bg-surface px-0 text-danger shadow-sm"
                                                 isDisabled={isDeleting}
                                                 isIconOnly
                                                 type="button"

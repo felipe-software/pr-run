@@ -9,7 +9,9 @@ import type {
     TerminalCreateOptions,
     TerminalDataEvent,
     TerminalExitEvent,
+    TerminalInputOptions,
     TerminalSession,
+    TerminalSessionSnapshot,
     UpdateResult,
 } from "@/types/pr-run";
 
@@ -45,7 +47,22 @@ declare global {
             createTerminalSession(
                 options: TerminalCreateOptions,
             ): Promise<TerminalSession>;
-            writeTerminalInput(id: string, data: string): Promise<void>;
+            getTerminalSessionSnapshot(
+                id: string,
+            ): Promise<TerminalSessionSnapshot>;
+            getTerminalSessionState(
+                id: string,
+            ): Promise<
+                Pick<
+                    TerminalSessionSnapshot,
+                    "id" | "isAlive" | "busyState" | "sequence"
+                >
+            >;
+            writeTerminalInput(
+                id: string,
+                data: string,
+                options?: TerminalInputOptions,
+            ): Promise<void>;
             resizeTerminal(
                 id: string,
                 cols: number,
