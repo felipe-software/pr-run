@@ -24,6 +24,8 @@ export function TerminalPane({
     const { mountRef } = useTerminalPane({
         onExit: useCallback(() => {
             syncTabSnapshot(ownerKey, sessionId, {
+                busyState: "unknown",
+                currentProcess: "",
                 id: sessionId,
                 isAlive: false,
             });
@@ -37,12 +39,18 @@ export function TerminalPane({
             },
             [ownerKey, sessionId, syncTabSnapshot],
         ),
+        onUpdate: useCallback(
+            (snapshot) => {
+                syncTabSnapshot(ownerKey, sessionId, snapshot);
+            },
+            [ownerKey, sessionId, syncTabSnapshot],
+        ),
         sessionId,
     });
 
     return (
         <div
-            className="h-[min(42vh,360px)] min-h-60 overflow-hidden rounded-b border border-border bg-black"
+            className="min-h-0 flex-1 overflow-hidden rounded-b border border-border bg-black"
             ref={mountRef}
         />
     );

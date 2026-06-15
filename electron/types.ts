@@ -95,6 +95,7 @@ export type TerminalSession = {
     id: string;
     shell: string;
     cwd: string;
+    currentProcess: string;
     isAlive: boolean;
     busyState: TerminalBusyState;
     sequence: number;
@@ -104,6 +105,7 @@ export type TerminalSessionSnapshot = {
     id: string;
     shell: string;
     cwd: string;
+    currentProcess: string;
     isAlive: boolean;
     busyState: TerminalBusyState;
     sequence: number;
@@ -119,6 +121,7 @@ export type TerminalInputOptions = {
 export type TerminalDataEvent = {
     id: string;
     data: string;
+    currentProcess: string;
     sequence: number;
 };
 
@@ -126,5 +129,6 @@ export type TerminalExitEvent = {
     id: string;
     exitCode: number;
     signal?: number;
+    currentProcess: string;
     sequence: number;
 };

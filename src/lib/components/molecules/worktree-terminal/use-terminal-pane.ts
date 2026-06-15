@@ -17,6 +17,12 @@ type UseTerminalPaneParams = {
     onExit: () => void;
     onManualInput: () => void;
     onSnapshot: (snapshot: TerminalSessionSnapshot) => void;
+    onUpdate: (
+        snapshot: Pick<
+            TerminalSessionSnapshot,
+            "busyState" | "currentProcess" | "id" | "isAlive"
+        >,
+    ) => void;
     sessionId: string;
 };
 
@@ -24,6 +30,7 @@ export function useTerminalPane({
     onExit,
     onManualInput,
     onSnapshot,
+    onUpdate,
     sessionId,
 }: UseTerminalPaneParams) {
     const mountRef = useRef<HTMLDivElement>(null);
@@ -92,6 +99,7 @@ export function useTerminalPane({
                 lifecycle,
                 pendingEvents,
                 { ...event, type: "data" },
+                onUpdate,
                 () => undefined,
                 () => lastSequence,
                 (sequence) => {
@@ -109,6 +117,7 @@ export function useTerminalPane({
                 lifecycle,
                 pendingEvents,
                 { ...event, type: "exit" },
+                onUpdate,
                 onExit,
                 () => lastSequence,
                 (sequence) => {
@@ -133,6 +142,7 @@ export function useTerminalPane({
         void hydrateTerminal({
             lifecycle,
             onSnapshot,
+            onUpdate,
             pendingEvents,
             sessionId,
             setLastSequence: (sequence) => {
@@ -149,7 +159,7 @@ export function useTerminalPane({
             dataDisposable.dispose();
             terminal.dispose();
         };
-    }, [onExit, onManualInput, onSnapshot, sessionId]);
+    }, [onExit, onManualInput, onSnapshot, onUpdate, sessionId]);
 
     return { mountRef };
 }
@@ -157,6 +167,7 @@ export function useTerminalPane({
 async function hydrateTerminal({
     lifecycle,
     onSnapshot,
+    onUpdate,
     pendingEvents,
     sessionId,
     setLastSequence,
@@ -164,6 +175,12 @@ async function hydrateTerminal({
 }: {
     lifecycle: { disposed: boolean; hydrated: boolean };
     onSnapshot: (snapshot: TerminalSessionSnapshot) => void;
+    onUpdate: (
+        snapshot: Pick<
+            TerminalSessionSnapshot,
+            "busyState" | "currentProcess" | "id" | "isAlive"
+        >,
+    ) => void;
     pendingEvents: TerminalPaneEvent[];
     sessionId: string;
     setLastSequence: (sequence: number) => void;
@@ -197,6 +214,7 @@ async function hydrateTerminal({
     }
 
     onSnapshot(snapshot);
+    onUpdate(snapshot);
     setLastSequence(snapshot.sequence);
     lifecycle.hydrated = true;
 
@@ -208,6 +226,7 @@ async function hydrateTerminal({
         }
 
         applyTerminalEvent(terminal, event);
+        onUpdate(eventToSessionUpdate(event));
         setLastSequence(event.sequence);
     }
 }
@@ -217,6 +236,12 @@ function handleTerminalEvent(
     lifecycle: { hydrated: boolean },
     pendingEvents: TerminalPaneEvent[],
     event: TerminalPaneEvent,
+    onUpdate: (
+        snapshot: Pick<
+            TerminalSessionSnapshot,
+            "busyState" | "currentProcess" | "id" | "isAlive"
+        >,
+    ) => void,
     onExit: () => void,
     getLastSequence: () => number,
     setLastSequence: (sequence: number) => void,
@@ -231,6 +256,7 @@ function handleTerminalEvent(
     }
 
     applyTerminalEvent(terminal, event, onExit);
+    onUpdate(eventToSessionUpdate(event));
     setLastSequence(event.sequence);
 }
 
@@ -257,6 +283,15 @@ function writeExitMessage(
     terminal.writeln(
         `[process exited with code ${exitCode}${signal ? `, signal ${signal}` : ""}]`,
     );
+}
+
+function eventToSessionUpdate(event: TerminalPaneEvent) {
+    return {
+        id: event.id,
+        currentProcess: event.currentProcess,
+        isAlive: event.type === "data",
+        busyState: "unknown" as const,
+    };
 }
 
 async function fitTerminal(fitAddon: FitAddon) {

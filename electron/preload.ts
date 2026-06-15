@@ -168,7 +168,7 @@ contextBridge.exposeInMainWorld("prRun", {
         return ipcRenderer.invoke("terminal:getState", id) as Promise<
             Pick<
                 TerminalSessionSnapshot,
-                "id" | "isAlive" | "busyState" | "sequence"
+                "id" | "isAlive" | "busyState" | "sequence" | "currentProcess"
             >
         >;
     },

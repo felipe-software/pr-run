@@ -1,7 +1,10 @@
 import { create } from "zustand";
 
 import { tryPromise } from "@/lib/error";
-import type { TerminalSessionSnapshot } from "@/types/pr-run";
+import type {
+    TerminalBusyState,
+    TerminalSessionSnapshot,
+} from "@/types/pr-run";
 
 const DEFAULT_TERMINAL_COLS = 80;
 const DEFAULT_TERMINAL_ROWS = 24;
@@ -15,7 +18,10 @@ export type WorktreeTerminalTab = {
     sessionId: string;
     label: string;
     status: WorktreeTerminalTabStatus;
+    busyState: TerminalBusyState;
     hasManualInput: boolean;
+    shellName: string;
+    scriptTitleOverride?: string;
 };
 
 export type WorktreeTerminalOwnerState = {
@@ -65,7 +71,10 @@ type WorktreeTerminalStoreState = {
     syncTabSnapshot: (
         ownerKey: WorktreeTerminalOwnerKey,
         sessionId: string,
-        snapshot: Pick<TerminalSessionSnapshot, "id" | "isAlive">,
+        snapshot: Pick<
+            TerminalSessionSnapshot,
+            "busyState" | "currentProcess" | "id" | "isAlive"
+        >,
     ) => void;
     runScriptCommand: (params: RunScriptCommandParams) => Promise<void>;
     setActiveTab: (ownerKey: WorktreeTerminalOwnerKey, tabId: string) => void;
@@ -227,7 +236,13 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
                     label,
                     sessionId: session.id,
                     status: session.isAlive ? "alive" : "exited",
+                    busyState: session.busyState,
                     hasManualInput: false,
+                    shellName: session.currentProcess,
+                    scriptTitleOverride:
+                        reason.type === "script"
+                            ? reason.scriptTitle
+                            : undefined,
                 };
 
                 return {
@@ -281,7 +296,11 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
                             ...owner,
                             tabs: owner.tabs.map((tab) =>
                                 tab.id === tabId
-                                    ? { ...tab, hasManualInput: true }
+                                    ? {
+                                          ...tab,
+                                          hasManualInput: true,
+                                          scriptTitleOverride: undefined,
+                                      }
                                     : tab,
                             ),
                         },
@@ -304,12 +323,7 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
                             ...owner,
                             tabs: owner.tabs.map((tab) =>
                                 tab.sessionId === sessionId
-                                    ? {
-                                          ...tab,
-                                          status: snapshot.isAlive
-                                              ? "alive"
-                                              : "exited",
-                                      }
+                                    ? syncWorktreeTerminalTab(tab, snapshot)
                                     : tab,
                             ),
                         },
@@ -332,7 +346,11 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
             let activeSessionState:
                 | Pick<
                       TerminalSessionSnapshot,
-                      "busyState" | "id" | "isAlive" | "sequence"
+                      | "busyState"
+                      | "currentProcess"
+                      | "id"
+                      | "isAlive"
+                      | "sequence"
                   >
                 | undefined;
 
@@ -343,10 +361,11 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
 
                 if (!stateError) {
                     activeSessionState = sessionState;
-                    get().syncTabSnapshot(ownerKey, activeTab.sessionId, {
-                        id: sessionState.id,
-                        isAlive: sessionState.isAlive,
-                    });
+                    get().syncTabSnapshot(
+                        ownerKey,
+                        activeTab.sessionId,
+                        sessionState,
+                    );
                 }
             }
 
@@ -361,6 +380,62 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
                           type: "script",
                           scriptTitle,
                       });
+
+            if (executionMode === "reuse") {
+                set((state) => {
+                    const owner = state.owners[ownerKey];
+
+                    if (!owner) {
+                        return state;
+                    }
+
+                    return {
+                        owners: {
+                            ...state.owners,
+                            [ownerKey]: {
+                                ...owner,
+                                tabs: owner.tabs.map((tab) =>
+                                    tab.id === targetTab.id
+                                        ? {
+                                              ...tab,
+                                              busyState: "busy",
+                                              hasManualInput: false,
+                                              label: scriptTitle,
+                                              scriptTitleOverride: scriptTitle,
+                                          }
+                                        : tab,
+                                ),
+                            },
+                        },
+                    };
+                });
+            } else {
+                set((state) => {
+                    const owner = state.owners[ownerKey];
+
+                    if (!owner) {
+                        return state;
+                    }
+
+                    return {
+                        owners: {
+                            ...state.owners,
+                            [ownerKey]: {
+                                ...owner,
+                                tabs: owner.tabs.map((tab) =>
+                                    tab.id === targetTab.id
+                                        ? {
+                                              ...tab,
+                                              busyState: "busy",
+                                          }
+                                        : tab,
+                                ),
+                            },
+                        },
+                    };
+                });
+            }
+
             const [writeError] = await tryPromise(
                 window.prRun.writeTerminalInput(
                     targetTab.sessionId,
@@ -451,4 +526,41 @@ function reserveTerminalLabel(
         },
         `Terminal ${owner.nextTerminalNumber}`,
     ];
+}
+
+function syncWorktreeTerminalTab(
+    tab: WorktreeTerminalTab,
+    snapshot: Pick<
+        TerminalSessionSnapshot,
+        "busyState" | "currentProcess" | "id" | "isAlive"
+    >,
+): WorktreeTerminalTab {
+    const nextTab: WorktreeTerminalTab = {
+        ...tab,
+        busyState:
+            snapshot.isAlive && snapshot.busyState === "unknown"
+                ? tab.busyState
+                : snapshot.busyState,
+        status: snapshot.isAlive ? "alive" : "exited",
+    };
+
+    if (tab.scriptTitleOverride) {
+        if (
+            snapshot.currentProcess === tab.scriptTitleOverride ||
+            snapshot.currentProcess !== tab.shellName
+        ) {
+            return {
+                ...nextTab,
+                label: tab.scriptTitleOverride,
+            };
+        }
+
+        nextTab.scriptTitleOverride = undefined;
+    }
+
+    if (snapshot.currentProcess) {
+        nextTab.label = snapshot.currentProcess;
+    }
+
+    return nextTab;
 }

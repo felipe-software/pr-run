@@ -87,9 +87,9 @@ export function BranchScriptsSection({
 
     return (
         <section className="min-w-0 shrink-0">
-            <Card className="rounded-lg border border-border bg-surface">
-                <Card.Content className="px-3 py-1.5">
-                    <div className="mb-2 flex items-center justify-between gap-3">
+            <Card className="rounded-lg border border-border bg-surface py-1! px-2">
+                <Card.Content className="px-0 py-0">
+                    <div className="mb-0 flex items-center justify-between gap-1">
                         <h2 className="text-base font-semibold">Scripts</h2>
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-muted-foreground">
@@ -107,11 +107,11 @@ export function BranchScriptsSection({
                     </div>
 
                     {scriptsQuery.isPending ? (
-                        <Surface className="flex items-center gap-2 rounded-md border border-border bg-muted/10 px-3 py-2 text-sm text-muted-foreground">
+                        <Surface className="flex items-center gap-2 rounded-md border border-border bg-muted/10 px-3 py-1 text-sm text-muted-foreground">
                             <Spinner size="sm" /> Loading scripts...
                         </Surface>
                     ) : scriptsQuery.error ? (
-                        <Surface className="rounded-md border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger">
+                        <Surface className="rounded-md border border-danger/25 bg-danger/10 px-3 py-1 text-sm text-danger">
                             {getErrorMessage(scriptsQuery.error)}
                         </Surface>
                     ) : scriptsQuery.data?.length ? (
@@ -178,7 +178,7 @@ export function BranchScriptsSection({
                             })}
                         </div>
                     ) : (
-                        <Surface className="rounded-md border border-border bg-muted/10 px-3 py-2 text-sm text-muted-foreground">
+                        <Surface className="rounded-md border border-border bg-muted/10 px-3 py-1 text-sm text-muted-foreground">
                             Create a global script from the sidebar toolbar.
                         </Surface>
                     )}

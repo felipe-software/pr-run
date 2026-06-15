@@ -113,6 +113,7 @@ export class TerminalSessionManager {
             id: session.id,
             shell: session.shell,
             cwd: session.cwd,
+            currentProcess: getCurrentProcessName(session),
             isAlive: !session.exitState,
             busyState,
             sequence: session.sequence,
@@ -128,6 +129,7 @@ export class TerminalSessionManager {
 
         return {
             id: session.id,
+            currentProcess: getCurrentProcessName(session),
             isAlive: !session.exitState,
             busyState,
             sequence: session.sequence,
@@ -228,6 +230,7 @@ export class TerminalSessionManager {
         this.sendToRenderer(session.webContentsId, "terminal:data", {
             id: session.id,
             data,
+            currentProcess: getCurrentProcessName(session),
             sequence: session.sequence,
         } satisfies TerminalDataEvent);
     }
@@ -253,6 +256,7 @@ export class TerminalSessionManager {
             id: session.id,
             exitCode: exitState.exitCode,
             signal: exitState.signal,
+            currentProcess: getCurrentProcessName(session),
             sequence: session.sequence,
         } satisfies TerminalExitEvent);
     }
@@ -296,6 +300,7 @@ export class TerminalSessionManager {
             id: session.id,
             shell: session.shell,
             cwd: session.cwd,
+            currentProcess: getCurrentProcessName(session),
             isAlive: !session.exitState,
             busyState,
             sequence: session.sequence,
@@ -433,4 +438,14 @@ function readWindowsChildProcessCount(
             },
         );
     });
+}
+
+function getCurrentProcessName(session: TerminalSessionRecord) {
+    return normalizeProcessName(session.process.process || session.shell);
+}
+
+function normalizeProcessName(value: string) {
+    const normalizedValue = path.basename(value).trim();
+
+    return normalizedValue || "shell";
 }

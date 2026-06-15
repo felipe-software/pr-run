@@ -12,11 +12,13 @@ describe("resolveScriptExecutionMode", () => {
         expect(
             resolveScriptExecutionMode({
                 activeTab: {
+                    busyState: "idle",
                     id: "tab-1",
                     label: "Terminal 1",
                     sessionId: "session-1",
                     status: "alive",
                     hasManualInput: false,
+                    shellName: "zsh",
                 },
                 activeSessionState: {
                     isAlive: true,
@@ -30,11 +32,13 @@ describe("resolveScriptExecutionMode", () => {
         expect(
             resolveScriptExecutionMode({
                 activeTab: {
+                    busyState: "busy",
                     id: "tab-1",
                     label: "Terminal 1",
                     sessionId: "session-1",
                     status: "alive",
                     hasManualInput: false,
+                    shellName: "zsh",
                 },
                 activeSessionState: {
                     isAlive: true,
@@ -50,21 +54,25 @@ describe("worktree terminal owner state", () => {
         const firstOwner = appendWorktreeTerminalTab(
             createWorktreeTerminalOwnerState("/tmp/one"),
             {
+                busyState: "idle",
                 id: "tab-1",
                 label: "Terminal 1",
                 sessionId: "session-1",
                 status: "alive",
                 hasManualInput: false,
+                shellName: "zsh",
             },
         );
         const secondOwner = appendWorktreeTerminalTab(
             createWorktreeTerminalOwnerState("/tmp/two"),
             {
+                busyState: "idle",
                 id: "tab-2",
                 label: "Terminal 1",
                 sessionId: "session-2",
                 status: "alive",
                 hasManualInput: false,
+                shellName: "zsh",
             },
         );
 
@@ -78,27 +86,33 @@ describe("worktree terminal owner state", () => {
                 appendWorktreeTerminalTab(
                     createWorktreeTerminalOwnerState("/tmp/one"),
                     {
+                        busyState: "idle",
                         id: "tab-1",
                         label: "Terminal 1",
                         sessionId: "session-1",
                         status: "alive",
                         hasManualInput: false,
+                        shellName: "zsh",
                     },
                 ),
                 {
+                    busyState: "idle",
                     id: "tab-2",
                     label: "Terminal 2",
                     sessionId: "session-2",
                     status: "alive",
                     hasManualInput: false,
+                    shellName: "zsh",
                 },
             ),
             {
+                busyState: "idle",
                 id: "tab-3",
                 label: "Terminal 3",
                 sessionId: "session-3",
                 status: "alive",
                 hasManualInput: false,
+                shellName: "zsh",
             },
         );
         const nextOwner = removeWorktreeTerminalTab(owner, "tab-3");

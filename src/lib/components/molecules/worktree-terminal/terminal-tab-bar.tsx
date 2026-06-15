@@ -1,4 +1,5 @@
 import { Plus, X } from "lucide-react";
+import type { MouseEvent } from "react";
 
 import { Button } from "@/lib/components/atoms/button";
 import { cn } from "@/lib/utils/cn";
@@ -19,8 +20,21 @@ export function TerminalTabBar({
     onSelectTab,
     tabs,
 }: TerminalTabBarProps) {
+    function handleMiddleClick(
+        event: MouseEvent<HTMLDivElement>,
+        tabId: string,
+    ) {
+        if (event.button !== 1) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        onCloseTab(tabId);
+    }
+
     return (
-        <div className="flex items-end overflow-hidden">
+        <div className="flex min-w-0 items-end overflow-hidden">
             <div className="flex min-w-0 flex-1 items-end gap-0 overflow-x-auto">
                 {tabs.map((tab) => {
                     const isActive = tab.id === activeTabId;
@@ -34,25 +48,28 @@ export function TerminalTabBar({
                                     : "bg-background/90 text-muted-foreground hover:bg-muted/20 hover:text-foreground",
                             )}
                             key={tab.id}
+                            onAuxClick={(event) =>
+                                handleMiddleClick(event, tab.id)
+                            }
+                            onMouseDown={(event) =>
+                                handleMiddleClick(event, tab.id)
+                            }
                         >
                             <button
                                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
                                 type="button"
                                 onClick={() => onSelectTab(tab.id)}
                             >
-                                <span
-                                    className={cn(
-                                        "h-1.5 w-1.5 shrink-0 rounded-full",
-                                        tab.status === "alive"
-                                            ? "bg-emerald-400"
-                                            : "bg-muted-foreground/70",
-                                    )}
-                                />
+                                {tab.busyState === "busy" ? (
+                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                                ) : null}
                                 <span className="truncate">{tab.label}</span>
                                 <span className="sr-only">
-                                    {tab.status === "alive"
-                                        ? "running shell"
-                                        : "shell exited"}
+                                    {tab.status === "exited"
+                                        ? "shell exited"
+                                        : tab.busyState === "busy"
+                                          ? "busy shell"
+                                          : "idle shell"}
                                 </span>
                             </button>
                             <button
@@ -74,16 +91,16 @@ export function TerminalTabBar({
                         </div>
                     );
                 })}
+                <Button
+                    aria-label="Create terminal"
+                    className="h-[30px] min-w-8 self-end rounded-t-md rounded-b-none border-b-0 px-0"
+                    isIconOnly
+                    type="button"
+                    onPress={onCreateTerminal}
+                >
+                    <Plus className="h-3.5 w-3.5" />
+                </Button>
             </div>
-            <Button
-                aria-label="Create terminal"
-                className="ml-2 h-8 w-8 min-w-8 self-center px-0"
-                isIconOnly
-                type="button"
-                onPress={onCreateTerminal}
-            >
-                <Plus className="h-3.5 w-3.5" />
-            </Button>
         </div>
     );
 }

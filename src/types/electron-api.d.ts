@@ -55,7 +55,11 @@ declare global {
             ): Promise<
                 Pick<
                     TerminalSessionSnapshot,
-                    "id" | "isAlive" | "busyState" | "sequence"
+                    | "id"
+                    | "isAlive"
+                    | "busyState"
+                    | "sequence"
+                    | "currentProcess"
                 >
             >;
             writeTerminalInput(

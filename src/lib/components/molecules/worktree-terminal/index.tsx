@@ -1,6 +1,6 @@
 import { Surface, toast } from "@heroui/react";
 import { TerminalSquare } from "lucide-react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { Button } from "@/lib/components/atoms/button";
 import { TerminalPane } from "@/lib/components/molecules/worktree-terminal/terminal-pane";
@@ -30,6 +30,14 @@ export function WorktreeTerminal({
     const setActiveTab = useWorktreeTerminalStore(
         (state) => state.setActiveTab,
     );
+    const syncTabSnapshot = useWorktreeTerminalStore(
+        (state) => state.syncTabSnapshot,
+    );
+    const ownerRef = useRef(owner);
+
+    useEffect(() => {
+        ownerRef.current = owner;
+    }, [owner]);
 
     useEffect(() => {
         ensureOwner(ownerKey, worktreePath);
@@ -41,6 +49,46 @@ export function WorktreeTerminal({
             },
         );
     }, [ensureDefaultTerminal, ensureOwner, ownerKey, worktreePath]);
+
+    useEffect(() => {
+        let disposed = false;
+
+        async function syncTerminalStates() {
+            const currentOwner = ownerRef.current;
+
+            if (!currentOwner) {
+                return;
+            }
+
+            const aliveTabs = currentOwner.tabs.filter(
+                (tab) => tab.status === "alive",
+            );
+
+            await Promise.all(
+                aliveTabs.map(async (tab) => {
+                    const [error, sessionState] = await tryPromise(
+                        window.prRun.getTerminalSessionState(tab.sessionId),
+                    );
+
+                    if (error || disposed) {
+                        return;
+                    }
+
+                    syncTabSnapshot(ownerKey, tab.sessionId, sessionState);
+                }),
+            );
+        }
+
+        void syncTerminalStates();
+        const intervalId = window.setInterval(() => {
+            void syncTerminalStates();
+        }, 500);
+
+        return () => {
+            disposed = true;
+            window.clearInterval(intervalId);
+        };
+    }, [ownerKey, syncTabSnapshot]);
 
     const createManualTerminal = useCallback(async () => {
         const [error] = await tryPromise(
@@ -67,12 +115,6 @@ export function WorktreeTerminal({
 
     return (
         <section className="flex min-h-0 flex-1 flex-col">
-            <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-base font-semibold">Terminal</h2>
-                <span className="truncate pl-4 text-xs text-muted-foreground">
-                    {worktreePath}
-                </span>
-            </div>
             {owner?.tabs.length ? (
                 <div className="flex min-h-0 flex-1 flex-col">
                     <TerminalTabBar
@@ -91,7 +133,7 @@ export function WorktreeTerminal({
                     ) : null}
                 </div>
             ) : (
-                <Surface className="grid h-[min(42vh,360px)] min-h-60 place-items-center rounded border border-dashed border-border bg-muted/10 px-6 text-center">
+                <Surface className="grid min-h-0 flex-1 place-items-center rounded border border-dashed border-border bg-muted/10 px-6 text-center">
                     <div className="flex max-w-sm flex-col items-center gap-3 text-sm text-muted-foreground">
                         <TerminalSquare className="h-6 w-6 text-foreground" />
                         <p>
