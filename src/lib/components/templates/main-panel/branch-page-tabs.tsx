@@ -1,3 +1,5 @@
+import { TabShell } from "@/lib/components/atoms/tab-shell";
+
 type BranchPageTab = "general" | "run" | "diff";
 
 type BranchPageTabsProps = {
@@ -21,20 +23,21 @@ export function BranchPageTabs({
             role="tablist"
         >
             {tabs.map((tab) => (
-                <button
-                    aria-selected={activeTab === tab.value}
-                    className={
-                        activeTab === tab.value
-                            ? "-mr-px h-8 min-w-[84px] rounded-t-md border border-b-0 border-border bg-surface px-3 text-xs font-semibold leading-none text-foreground"
-                            : "-mr-px h-8 min-w-[84px] rounded-t-md border border-b-0 border-border bg-background/90 px-3 text-xs font-medium leading-none text-muted-foreground transition hover:bg-muted/20 hover:text-foreground"
-                    }
+                <TabShell
+                    className="min-w-[84px]"
+                    isActive={activeTab === tab.value}
                     key={tab.value}
-                    role="tab"
-                    type="button"
-                    onClick={() => onSelectTab(tab.value)}
                 >
-                    {tab.label}
-                </button>
+                    <button
+                        aria-selected={activeTab === tab.value}
+                        className="h-full w-full px-3 text-xs leading-none font-[inherit]"
+                        role="tab"
+                        type="button"
+                        onClick={() => onSelectTab(tab.value)}
+                    >
+                        {tab.label}
+                    </button>
+                </TabShell>
             ))}
         </div>
     );
