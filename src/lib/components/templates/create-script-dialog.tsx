@@ -1,8 +1,9 @@
-import { Card, Input, Label, Surface } from "@heroui/react";
+import { Input, Label } from "@heroui/react";
 import { FilePlus2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/lib/components/atoms/button";
+import { Surface } from "@/lib/components/atoms/surface";
 
 type CreateScriptDialogProps = {
     error?: string;
@@ -38,20 +39,22 @@ export function CreateScriptDialog({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
-            <Surface className="w-full max-w-lg rounded-lg border border-border bg-background shadow-xl">
-                <form className="p-5" onSubmit={handleSubmit}>
-                    <Card.Header className="mb-5 px-0 pt-0">
-                        <div className="flex items-start gap-3">
-                            <FilePlus2 className="mt-0.5 h-5 w-5 text-primary" />
-                            <div>
-                                <Card.Title>Create script</Card.Title>
-                                <Card.Description>
-                                    Create a global TypeScript script available
-                                    to every project.
-                                </Card.Description>
-                            </div>
+            <Surface className="w-full max-w-lg shadow-xl">
+                <form className="p-4" onSubmit={handleSubmit}>
+                    <div className="mb-4 flex items-start gap-3">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 text-primary">
+                            <FilePlus2 className="h-4 w-4" />
                         </div>
-                    </Card.Header>
+                        <div>
+                            <h2 className="text-base font-semibold">
+                                Create script
+                            </h2>
+                            <p className="mt-0.5 text-sm text-muted-foreground">
+                                Create a global TypeScript script available to
+                                every project.
+                            </p>
+                        </div>
+                    </div>
 
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="script-title">Title</Label>
@@ -66,15 +69,16 @@ export function CreateScriptDialog({
                     </div>
 
                     {error ? (
-                        <Surface className="mt-3 rounded-md border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger">
+                        <Surface className="mt-3 px-3 py-2 text-sm" variant="danger">
                             {error}
                         </Surface>
                     ) : null}
 
-                    <div className="mt-6 flex justify-end gap-2">
+                    <div className="mt-5 flex justify-end gap-2">
                         <Button
                             isDisabled={isSubmitting}
                             type="button"
+                            variant="ghost"
                             onPress={onClose}
                         >
                             <X className="h-4 w-4" />
@@ -82,8 +86,8 @@ export function CreateScriptDialog({
                         </Button>
                         <Button
                             isDisabled={isSubmitting || !title.trim()}
-                            tone="primary"
                             type="submit"
+                            variant="primary"
                         >
                             <FilePlus2 className="h-4 w-4" />
                             {isSubmitting ? "Creating..." : "Create"}

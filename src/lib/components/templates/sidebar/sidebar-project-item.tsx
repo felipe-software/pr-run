@@ -1,9 +1,10 @@
-import { Spinner, Surface } from "@heroui/react";
 import { ChevronDown, ChevronRight, Folder, RefreshCw } from "lucide-react";
 import { useEffect } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
 import { Button } from "@/lib/components/atoms/button";
+import { Skeleton } from "@/lib/components/atoms/skeleton";
+import { Surface } from "@/lib/components/atoms/surface";
 import { SidebarBranchItem } from "@/lib/components/templates/sidebar/sidebar-branch-item";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
@@ -38,7 +39,7 @@ export function SidebarProjectItem({
     onUpdateProject,
 }: SidebarProjectItemProps) {
     const rowClassName =
-        "flex w-full items-center gap-2 bg-transparent px-1.5 py-1.5 text-left text-foreground transition hover:bg-muted/20 hover:text-foreground";
+        "peer/menu-button flex min-h-10 w-full cursor-pointer items-center overflow-hidden rounded-md bg-transparent px-1.5 py-1 text-left text-sm text-sidebar-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring active:bg-sidebar-accent";
     const branchesQuery = useProjectBranchesQuery(project.id, isExpanded);
     const isAwaitingSshPassphrase = isHandledSshPromptError(
         branchesQuery.error,
@@ -60,63 +61,73 @@ export function SidebarProjectItem({
     }, [branchesQuery, isAwaitingSshPassphrase]);
 
     return (
-        <div className="relative">
+        <div className="group/menu-item relative">
             <div
                 className={cn(
-                    "relative flex items-stretch rounded-sm",
-                    isSelected && "bg-muted/20",
+                    "relative isolate flex items-stretch rounded-md",
+                    isSelected &&
+                        "bg-sidebar-accent text-sidebar-accent-foreground",
                 )}
             >
                 <button
                     aria-expanded={isExpanded}
-                    className={cn(rowClassName, "pr-10")}
+                    data-active={isSelected}
+                    className={rowClassName}
                     type="button"
                     onClick={() => onToggleProject(project.id)}
                 >
                     {isExpanded ? (
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
                     ) : (
-                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
                     )}
-                    <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] leading-[1.35] tracking-[-0.01em]">
+                    <Folder className="ml-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                    <span className="ml-2 min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium leading-4 tracking-tight">
                             {project.name}
                         </span>
-                        <span className="block truncate text-[11px] leading-[1.35] text-muted-foreground">
+                        <span className="block truncate text-[10px] leading-4 text-muted-foreground/65">
                             {shortenPath(project.path)}
                         </span>
                     </span>
                 </button>
-                <Button
-                    aria-label={`Reload ${project.name} worktrees`}
-                    className="absolute top-1/2 right-0.5 h-7 w-7 min-w-7 -translate-y-1/2 px-0 opacity-70 hover:opacity-100"
-                    isDisabled={isUpdatingProject}
-                    isIconOnly
-                    size="sm"
-                    type="button"
-                    onPress={() => void onUpdateProject(project)}
-                >
-                    <RefreshCw
-                        className={[
-                            "h-4 w-4",
-                            isUpdatingProject ? "animate-spin" : "",
-                        ].join(" ")}
-                    />
-                </Button>
+                <div className="pointer-events-none absolute top-1/2 right-1 z-10 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-focus-within/menu-item:pointer-events-auto group-focus-within/menu-item:opacity-100">
+                    <Button
+                        aria-label={`Reload ${project.name} worktrees`}
+                        className="border-transparent bg-sidebar/90 text-muted-foreground/65 shadow-sm data-[hover=true]:bg-sidebar-accent data-[hover=true]:text-sidebar-accent-foreground"
+                        isDisabled={isUpdatingProject}
+                        isIconOnly
+                        size="icon-xs"
+                        type="button"
+                        onPress={() => {
+                            onUpdateProject(project);
+                        }}
+                    >
+                        <RefreshCw
+                            className={[
+                                "h-3.5 w-3.5",
+                                isUpdatingProject ? "animate-spin" : "",
+                            ].join(" ")}
+                        />
+                    </Button>
+                </div>
             </div>
 
             {isExpanded ? (
-                <div className="relative mt-1 pl-4 before:absolute before:top-0 before:bottom-[17px] before:left-1 before:w-px before:bg-border before:content-['']">
+                <div className="relative ml-1 mt-0.5 flex min-w-0 flex-col gap-0.5 border-l border-sidebar-border/80 py-0.5 pl-1">
                     {branchesQuery.isPending ? (
-                        <Surface className="ml-2 flex items-center gap-2 px-2 py-1.5 text-[11px] leading-[1.45] text-muted-foreground">
-                            <Spinner size="sm" />
-                            Loading branches...
-                        </Surface>
+                        <div className="grid gap-1 px-1.5 py-1">
+                            <Skeleton className="h-5 w-11/12" />
+                            <Skeleton className="h-5 w-9/12" />
+                            <Skeleton className="h-5 w-10/12" />
+                        </div>
                     ) : null}
 
                     {!branchesQuery.isPending && isAwaitingSshPassphrase ? (
-                        <Surface className="ml-2 px-2 py-1.5 text-[11px] leading-[1.45] text-muted-foreground">
+                        <Surface
+                            className="border-0 bg-transparent px-2 py-1.5 text-[11px] leading-5 text-muted-foreground/70"
+                            variant="plain"
+                        >
                             Waiting for SSH passphrase...
                         </Surface>
                     ) : null}
@@ -124,7 +135,10 @@ export function SidebarProjectItem({
                     {!branchesQuery.isPending &&
                     !isAwaitingSshPassphrase &&
                     branchError ? (
-                        <Surface className="ml-2 border border-danger/20 px-2 py-1.5 text-[11px] leading-[1.45] text-danger">
+                        <Surface
+                            className="px-2 py-1.5 text-[11px] leading-5"
+                            variant="danger"
+                        >
                             {branchError}
                         </Surface>
                     ) : null}
@@ -132,7 +146,7 @@ export function SidebarProjectItem({
                     {!branchesQuery.isPending &&
                     !branchError &&
                     (branchesQuery.data?.length ?? 0) === 0 ? (
-                        <div className="ml-2 px-2 py-1.5 text-[11px] leading-[1.45] text-muted-foreground">
+                        <div className="px-2 py-1.5 text-[11px] leading-5 text-muted-foreground/70">
                             No remote branches.
                         </div>
                     ) : null}

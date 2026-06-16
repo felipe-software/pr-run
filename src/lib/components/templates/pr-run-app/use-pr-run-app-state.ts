@@ -22,8 +22,10 @@ import type {
     SelectedBranchView,
 } from "@/lib/components/templates/pr-run-app/types";
 
-const SIDEBAR_MIN_WIDTH = 240;
+const SIDEBAR_WIDTH_STORAGE_KEY = "pr-run.sidebar.width";
+const SIDEBAR_MIN_WIDTH = 256;
 const SIDEBAR_MAX_WIDTH = 560;
+const MAIN_CONTENT_MIN_WIDTH = 640;
 
 export function usePrRunAppState() {
     const isElectronApiAvailable = typeof window.prRun !== "undefined";
@@ -44,7 +46,7 @@ export function usePrRunAppState() {
             : "dark";
     });
     const [sidebarWidth, setSidebarWidth] = useState(() => {
-        const stored = Number(localStorage.getItem("pr-run-sidebar-width"));
+        const stored = Number(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
 
         return Number.isFinite(stored)
             ? clamp(stored, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
@@ -91,31 +93,42 @@ export function usePrRunAppState() {
         const previousCursor = document.body.style.cursor;
         const previousUserSelect = document.body.style.userSelect;
 
-        function handleMouseMove(event: MouseEvent) {
+        function handlePointerMove(event: PointerEvent) {
+            const maxWidth = Math.min(
+                SIDEBAR_MAX_WIDTH,
+                window.innerWidth - MAIN_CONTENT_MIN_WIDTH,
+            );
+
             setSidebarWidth(
-                clamp(event.clientX, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH),
+                clamp(
+                    event.clientX,
+                    SIDEBAR_MIN_WIDTH,
+                    Math.max(SIDEBAR_MIN_WIDTH, maxWidth),
+                ),
             );
         }
 
-        function handleMouseUp() {
+        function handlePointerUp() {
             setIsResizingSidebar(false);
         }
 
         document.body.style.cursor = "col-resize";
         document.body.style.userSelect = "none";
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", handleMouseUp);
+        window.addEventListener("pointermove", handlePointerMove);
+        window.addEventListener("pointerup", handlePointerUp);
+        window.addEventListener("pointercancel", handlePointerUp);
 
         return () => {
             document.body.style.cursor = previousCursor;
             document.body.style.userSelect = previousUserSelect;
-            window.removeEventListener("mousemove", handleMouseMove);
-            window.removeEventListener("mouseup", handleMouseUp);
+            window.removeEventListener("pointermove", handlePointerMove);
+            window.removeEventListener("pointerup", handlePointerUp);
+            window.removeEventListener("pointercancel", handlePointerUp);
         };
     }, [isResizingSidebar]);
 
     useEffect(() => {
-        localStorage.setItem("pr-run-sidebar-width", String(sidebarWidth));
+        localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
     }, [sidebarWidth]);
 
     useEffect(() => {

@@ -1,6 +1,8 @@
-import { Card, Spinner, Surface } from "@heroui/react";
 import { AlertTriangle } from "lucide-react";
 
+import { EmptyState } from "@/lib/components/atoms/empty-state";
+import { Skeleton } from "@/lib/components/atoms/skeleton";
+import { Surface } from "@/lib/components/atoms/surface";
 import { AddProjectDialog } from "@/lib/components/templates/add-project-dialog";
 import { CreateScriptDialog } from "@/lib/components/templates/create-script-dialog";
 import { MainPanel } from "@/lib/components/templates/main-panel";
@@ -13,30 +15,40 @@ export function PrRunApp() {
 
     if (state.configError) {
         return (
-            <div className="fixed inset-0 grid place-items-center overflow-hidden bg-background p-8 text-foreground [font-family:'SF_Pro_Display','Geist_Sans','Helvetica_Neue','Avenir_Next','Segoe_UI',sans-serif]">
-                <Card className="max-w-lg rounded-lg border border-danger/25 bg-danger/10 text-danger">
-                    <Card.Content className="flex gap-3 p-5">
-                        <AlertTriangle className="h-5 w-5 shrink-0" />
+            <div className="fixed inset-0 grid place-items-center overflow-hidden bg-background p-8 font-sans text-foreground">
+                <Surface
+                    className="max-w-lg px-4 py-3 text-sm"
+                    variant="danger"
+                >
+                    <div className="flex gap-3">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                         <span>{state.configError}</span>
-                    </Card.Content>
-                </Card>
+                    </div>
+                </Surface>
             </div>
         );
     }
 
     if (state.isLoadingConfig) {
         return (
-            <Surface className="fixed inset-0 grid place-items-center overflow-hidden bg-background text-sm text-muted-foreground [font-family:'SF_Pro_Display','Geist_Sans','Helvetica_Neue','Avenir_Next','Segoe_UI',sans-serif]">
-                <span className="flex items-center gap-2">
-                    <Spinner size="sm" />
-                    Loading PR Run...
-                </span>
+            <Surface
+                className="fixed inset-0 grid place-items-center overflow-hidden rounded-none border-0 bg-background font-sans"
+                variant="plain"
+            >
+                <EmptyState
+                    description="Loading projects, branches, and saved scripts."
+                    icon={<Skeleton className="size-4 rounded-sm" />}
+                    title="Opening PR Run"
+                />
             </Surface>
         );
     }
 
     return (
-        <Surface className="fixed inset-0 flex min-h-0 overflow-hidden rounded-none bg-background text-foreground [font-family:'SF_Pro_Display','Geist_Sans','Helvetica_Neue','Avenir_Next','Segoe_UI',sans-serif]">
+        <Surface
+            className="fixed inset-0 flex min-h-0 overflow-hidden rounded-none border-0 bg-background font-sans text-foreground"
+            variant="plain"
+        >
             <Sidebar
                 expandedGroups={state.expandedGroups}
                 expandedProjects={state.expandedProjects}

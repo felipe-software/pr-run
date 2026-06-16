@@ -19,6 +19,8 @@
     },
     "dependencies": {
         "@elysiajs/cors": "^1.4.2",
+        "@fontsource-variable/dm-sans": "^5.2.8",
+        "@fontsource/jetbrains-mono": "^5.2.8",
         "@heroicons/react": "^2.2.0",
         "@heroui/react": "^3.1.0",
         "@heroui/styles": "^3.1.0",

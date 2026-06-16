@@ -1,5 +1,7 @@
-import { Spinner, Surface } from "@heroui/react";
 import type { ReactNode } from "react";
+
+import { Skeleton } from "@/lib/components/atoms/skeleton";
+import { Surface } from "@/lib/components/atoms/surface";
 
 type MainPanelStateTone = "neutral" | "danger";
 
@@ -15,15 +17,14 @@ export function MainPanelState({
     tone = "neutral",
 }: MainPanelStateProps) {
     return (
-        <main className="flex h-screen min-h-0 flex-1 items-center justify-center overflow-y-auto bg-background p-8">
+        <main className="flex h-dvh min-h-0 flex-1 items-center justify-center overflow-y-auto bg-background p-8">
             <Surface
                 className={[
-                    "text-sm",
-                    tone === "danger"
-                        ? "rounded-md border border-danger/25 bg-danger/10 px-4 py-3 text-danger"
-                        : "text-muted-foreground",
+                    "px-4 py-3 text-sm",
+                    tone === "danger" ? "" : "text-muted-foreground",
                     icon ? "flex items-center gap-2" : "",
                 ].join(" ")}
+                variant={tone === "danger" ? "danger" : "muted"}
             >
                 {icon ?? null}
                 <span>{children}</span>
@@ -34,6 +35,8 @@ export function MainPanelState({
 
 export function MainPanelLoadingState({ children }: { children: ReactNode }) {
     return (
-        <MainPanelState icon={<Spinner size="sm" />}>{children}</MainPanelState>
+        <MainPanelState icon={<Skeleton className="size-4 rounded-sm" />}>
+            {children}
+        </MainPanelState>
     );
 }

@@ -1,6 +1,8 @@
-import { Card, Spinner, Surface } from "@heroui/react";
 import { GitCommitHorizontal } from "lucide-react";
 
+import { EmptyState } from "@/lib/components/atoms/empty-state";
+import { Skeleton } from "@/lib/components/atoms/skeleton";
+import { Surface } from "@/lib/components/atoms/surface";
 import { formatDate } from "@/lib/format";
 import type { CommitInfo } from "@/types/pr-run";
 
@@ -17,16 +19,26 @@ export function CommitHistory({
 }: CommitHistoryProps) {
     if (isLoading) {
         return (
-            <Surface className="flex items-center gap-2 rounded-md text-sm text-muted-foreground">
-                <Spinner size="sm" />
-                Loading commits...
+            <Surface className="overflow-hidden">
+                {Array.from({ length: 6 }).map((_, index) => (
+                    <div
+                        className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 border-b border-border/60 px-3 py-3 last:border-b-0"
+                        key={index}
+                    >
+                        <Skeleton className="h-5 w-20" />
+                        <div className="grid gap-2">
+                            <Skeleton className="h-4 w-10/12" />
+                            <Skeleton className="h-3 w-48" />
+                        </div>
+                    </div>
+                ))}
             </Surface>
         );
     }
 
     if (error) {
         return (
-            <Surface className="rounded-md border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger">
+            <Surface className="px-3 py-2 text-sm" variant="danger">
                 {error}
             </Surface>
         );
@@ -34,8 +46,12 @@ export function CommitHistory({
 
     if (commits.length === 0) {
         return (
-            <Surface className="rounded-md text-sm text-muted-foreground">
-                No commits found.
+            <Surface className="min-h-48" variant="muted">
+                <EmptyState
+                    description="This branch does not have commits to compare against the selected base."
+                    icon={<GitCommitHorizontal className="h-4 w-4" />}
+                    title="No commits found"
+                />
             </Surface>
         );
     }
@@ -45,7 +61,7 @@ export function CommitHistory({
     );
 
     return (
-        <Card className="overflow-hidden rounded-lg border border-border bg-surface">
+        <Surface className="overflow-hidden">
             {commits.map((commit, index) => {
                 const isOutsideBranch = !commit.isInSelectedBranch;
 
@@ -55,71 +71,66 @@ export function CommitHistory({
                         key={commit.hash}
                     >
                         {index === outsideBranchStartIndex ? (
-                            <div className="flex items-center gap-3 bg-muted/10 px-4 py-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-3 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
                                 <span className="h-2 w-2 rounded-full bg-success" />
                                 <span className="h-px flex-1 bg-border" />
                                 <span>Commits from the base history</span>
                                 <span className="h-px flex-1 bg-border" />
                             </div>
                         ) : null}
-                        <Card.Content
+                        <div
                             className={[
-                                "grid gap-2 px-4 py-3",
+                                "grid grid-cols-[7rem_minmax(0,1fr)] gap-3 px-3 py-3 max-[720px]:grid-cols-1",
                                 isOutsideBranch ? "opacity-65" : "",
                             ].join(" ")}
                         >
-                            <div className="flex items-start gap-3">
+                            <div className="flex items-start gap-2 font-mono text-xs text-muted-foreground">
                                 <span
                                     className={[
-                                        "mt-2 h-2 w-2 shrink-0 rounded-full",
+                                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
                                         isOutsideBranch
                                             ? "bg-muted-foreground/45"
                                             : "bg-success",
                                     ].join(" ")}
                                 />
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-start gap-2">
-                                        <Surface className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded bg-muted/20 px-2 py-0.5 font-mono text-xs text-muted-foreground">
-                                            <GitCommitHorizontal className="h-3 w-3" />
-                                            {commit.url ? (
-                                                <a
-                                                    className="hover:text-foreground hover:underline"
-                                                    href={commit.url}
-                                                    rel="noreferrer"
-                                                    target="_blank"
-                                                >
-                                                    {commit.shortHash}
-                                                </a>
-                                            ) : (
-                                                <span>{commit.shortHash}</span>
-                                            )}
-                                        </Surface>
-                                        <div className="min-w-0 flex-1">
-                                            {commit.url ? (
-                                                <a
-                                                    className="block truncate text-sm font-medium text-foreground transition hover:text-primary hover:underline"
-                                                    href={commit.url}
-                                                    rel="noreferrer"
-                                                    target="_blank"
-                                                >
-                                                    {commit.subject}
-                                                </a>
-                                            ) : (
-                                                <div className="truncate text-sm font-medium">
-                                                    {commit.subject}
-                                                </div>
-                                            )}
-                                        </div>
+                                <GitCommitHorizontal className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                {commit.url ? (
+                                    <a
+                                        className="hover:text-foreground hover:underline"
+                                        href={commit.url}
+                                        rel="noreferrer"
+                                        target="_blank"
+                                    >
+                                        {commit.shortHash}
+                                    </a>
+                                ) : (
+                                    <span>{commit.shortHash}</span>
+                                )}
+                            </div>
+                            <div className="min-w-0">
+                                {commit.url ? (
+                                    <a
+                                        className="block truncate text-sm font-medium text-foreground transition hover:text-primary hover:underline"
+                                        href={commit.url}
+                                        rel="noreferrer"
+                                        target="_blank"
+                                    >
+                                        {commit.subject}
+                                    </a>
+                                ) : (
+                                    <div className="truncate text-sm font-medium">
+                                        {commit.subject}
                                     </div>
-                                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                        {commit.authorAvatarUrl ? (
-                                            <img
-                                                alt={commit.authorName}
-                                                className="h-5 w-5 rounded-full border border-border object-cover"
-                                                src={commit.authorAvatarUrl}
-                                            />
-                                        ) : null}
-                                        {commit.authorUrl ? (
+                                )}
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                    {commit.authorAvatarUrl ? (
+                                        <img
+                                            alt={commit.authorName}
+                                            className="h-5 w-5 rounded-md border border-border object-cover"
+                                            src={commit.authorAvatarUrl}
+                                        />
+                                    ) : null}
+                                    {commit.authorUrl ? (
                                             <a
                                                 className="hover:text-foreground hover:underline"
                                                 href={commit.authorUrl}
@@ -132,15 +143,14 @@ export function CommitHistory({
                                         ) : (
                                             <span>{commit.authorName}</span>
                                         )}
-                                        <span>·</span>
-                                        <span>{formatDate(commit.date)}</span>
-                                    </div>
+                                    <span>·</span>
+                                    <span>{formatDate(commit.date)}</span>
                                 </div>
                             </div>
-                        </Card.Content>
+                        </div>
                     </div>
                 );
             })}
-        </Card>
+        </Surface>
     );
 }

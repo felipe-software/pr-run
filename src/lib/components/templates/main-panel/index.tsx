@@ -1,7 +1,9 @@
-import { Spinner, Surface } from "@heroui/react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
+import { EmptyState } from "@/lib/components/atoms/empty-state";
+import { Skeleton } from "@/lib/components/atoms/skeleton";
+import { Surface } from "@/lib/components/atoms/surface";
 import { BranchPageHeader } from "@/lib/components/templates/main-panel/branch-page-header";
 import {
     BranchPageTabs,
@@ -160,9 +162,9 @@ export function MainPanel({
     }
 
     return (
-        <main className="flex h-screen min-h-0 flex-1 overflow-hidden bg-background px-[18px] pt-5 pb-[18px] max-[900px]:px-[10px] max-[500px]:overflow-y-auto">
-            <div className="flex min-h-0 w-full flex-1 flex-col gap-3.5 max-[500px]:min-h-[500px]">
-                <div className="relative mt-[26px] shrink-0">
+        <main className="flex h-dvh min-h-0 flex-1 overflow-hidden bg-background px-3 py-3 max-[900px]:px-2 max-[500px]:overflow-y-auto">
+            <div className="flex min-h-0 w-full flex-1 flex-col gap-3 max-[500px]:min-h-[500px]">
+                <div className="flex shrink-0 flex-col gap-0">
                     <BranchPageTabs
                         activeTab={activeTab}
                         onSelectTab={setActiveTab}
@@ -198,9 +200,12 @@ export function MainPanel({
                             <div className="flex min-h-0 flex-1 flex-col gap-4">
                                 <Suspense
                                     fallback={
-                                        <Surface className="flex items-center gap-2 rounded-md border border-border bg-muted/10 px-3 py-2 text-sm text-muted-foreground">
-                                            <Spinner size="sm" /> Loading
-                                            scripts...
+                                        <Surface
+                                            className="grid gap-2 px-3 py-2"
+                                            variant="muted"
+                                        >
+                                            <Skeleton className="h-4 w-32" />
+                                            <Skeleton className="h-7 w-full" />
                                         </Surface>
                                     }
                                 >
@@ -214,9 +219,12 @@ export function MainPanel({
 
                                 <Suspense
                                     fallback={
-                                        <div className="grid h-[min(42vh,360px)] min-h-60 place-items-center overflow-hidden rounded border border-border bg-black px-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                                            Loading terminal...
-                                        </div>
+                                        <Surface
+                                            className="grid h-[min(42vh,360px)] min-h-60 place-items-center overflow-hidden px-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                                            variant="terminal"
+                                        >
+                                            <Skeleton className="h-4 w-36" />
+                                        </Surface>
                                     }
                                 >
                                     <WorktreeTerminal
@@ -228,15 +236,22 @@ export function MainPanel({
                                 </Suspense>
                             </div>
                         ) : (
-                            <Surface className="rounded-md border border-border bg-muted/10 px-3 py-2 text-sm text-muted-foreground">
-                                Create the worktree to run scripts.
+                            <Surface className="min-h-48" variant="muted">
+                                <EmptyState
+                                    description="Create the worktree before running project scripts in a terminal."
+                                    title="No worktree available"
+                                />
                             </Surface>
                         )
                     ) : (
                         <Suspense
                             fallback={
-                                <Surface className="rounded-md text-sm text-muted-foreground">
-                                    Loading diff...
+                                <Surface
+                                    className="grid gap-2 px-3 py-3"
+                                    variant="muted"
+                                >
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-40 w-full" />
                                 </Surface>
                             }
                         >

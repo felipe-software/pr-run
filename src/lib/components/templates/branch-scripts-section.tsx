@@ -1,8 +1,11 @@
-import { Card, Spinner, Surface, toast } from "@heroui/react";
+import { toast } from "@heroui/react";
 import { Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/lib/components/atoms/button";
 import { Chip } from "@/lib/components/atoms/chip";
+import { Skeleton } from "@/lib/components/atoms/skeleton";
+import { Surface } from "@/lib/components/atoms/surface";
 import { tryPromise } from "@/lib/error";
 import { useDeleteScriptMutation } from "@/lib/hooks/query/use-delete-script-mutation";
 import { useOpenScriptMutation } from "@/lib/hooks/query/use-open-script-mutation";
@@ -31,6 +34,8 @@ export function BranchScriptsSection({
     const runScriptMutation = useRunScriptMutation();
     const deleteScriptMutation = useDeleteScriptMutation();
     const openScriptMutation = useOpenScriptMutation();
+    const [scriptPendingDelete, setScriptPendingDelete] =
+        useState<ScriptInfo | null>(null);
 
     async function editScript(script: ScriptInfo) {
         const [error] = await tryPromise(
@@ -69,10 +74,6 @@ export function BranchScriptsSection({
     }
 
     async function deleteScript(script: ScriptInfo) {
-        if (!window.confirm(`Delete "${script.title}"?`)) {
-            return;
-        }
-
         const [error] = await tryPromise(
             deleteScriptMutation.mutateAsync(script.id),
         );
@@ -83,107 +84,145 @@ export function BranchScriptsSection({
         }
 
         toast.success(`${script.title} deleted.`, { timeout: 2400 });
+        setScriptPendingDelete(null);
     }
 
     return (
         <section className="min-w-0 shrink-0">
-            <Card className="rounded-lg border border-border bg-surface py-1! px-2">
-                <Card.Content className="px-0 py-0">
-                    <div className="mb-0 flex items-center justify-between gap-1">
-                        <h2 className="text-base font-semibold">Scripts</h2>
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs text-muted-foreground">
-                                {(scriptsQuery.data ?? []).length} available
-                            </span>
-                            <Button
-                                className="h-7"
-                                type="button"
-                                onPress={onCreateScript}
-                            >
-                                <Plus className="h-3.5 w-3.5" />
-                                Create script
-                            </Button>
-                        </div>
+            <Surface className="px-2 py-2">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                    <h2 className="text-sm font-semibold">Scripts</h2>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                            {(scriptsQuery.data ?? []).length} available
+                        </span>
+                        <Button
+                            size="xs"
+                            type="button"
+                            variant="outline"
+                            onPress={onCreateScript}
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            Create script
+                        </Button>
                     </div>
+                </div>
 
-                    {scriptsQuery.isPending ? (
-                        <Surface className="flex items-center gap-2 rounded-md border border-border bg-muted/10 px-3 py-1 text-sm text-muted-foreground">
-                            <Spinner size="sm" /> Loading scripts...
-                        </Surface>
-                    ) : scriptsQuery.error ? (
-                        <Surface className="rounded-md border border-danger/25 bg-danger/10 px-3 py-1 text-sm text-danger">
-                            {getErrorMessage(scriptsQuery.error)}
-                        </Surface>
-                    ) : scriptsQuery.data?.length ? (
-                        <div className="flex flex-wrap gap-2">
-                            {scriptsQuery.data.map((script) => {
-                                const isPreparing =
-                                    runScriptMutation.isPending &&
-                                    runScriptMutation.variables?.scriptId ===
-                                        script.id;
-                                const isDeleting =
-                                    deleteScriptMutation.isPending &&
-                                    deleteScriptMutation.variables ===
-                                        script.id;
+                {scriptsQuery.isPending ? (
+                    <div className="grid gap-1.5">
+                        <Skeleton className="h-7 w-full" />
+                        <Skeleton className="h-7 w-10/12" />
+                    </div>
+                ) : scriptsQuery.error ? (
+                    <Surface className="px-3 py-2 text-sm" variant="danger">
+                        {getErrorMessage(scriptsQuery.error)}
+                    </Surface>
+                ) : scriptsQuery.data?.length ? (
+                    <div className="flex flex-wrap gap-2">
+                        {scriptsQuery.data.map((script) => {
+                            const isPreparing =
+                                runScriptMutation.isPending &&
+                                runScriptMutation.variables?.scriptId ===
+                                    script.id;
+                            const isDeleting =
+                                deleteScriptMutation.isPending &&
+                                deleteScriptMutation.variables === script.id;
 
-                                return (
-                                    <div
-                                        className="group relative self-start"
-                                        key={script.id}
+                            return (
+                                <div
+                                    className="group relative self-start"
+                                    key={script.id}
+                                >
+                                    <Chip
+                                        as="button"
+                                        className="h-8 max-w-64 cursor-pointer justify-start gap-1.5 pr-[58px] text-left transition hover:bg-muted/30 disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-60"
+                                        disabled={
+                                            Boolean(script.loadError) ||
+                                            isPreparing
+                                        }
+                                        type="button"
+                                        onClick={() => void runScript(script)}
                                     >
-                                        <Chip
-                                            as="button"
-                                            className="max-w-60 cursor-pointer justify-start gap-1.5 pr-[54px] text-left transition hover:bg-muted/20 disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-60"
-                                            disabled={
-                                                Boolean(script.loadError) ||
-                                                isPreparing
-                                            }
+                                        <Play className="h-3.5 w-3.5 shrink-0" />
+                                        <span className="truncate">
+                                            {isPreparing
+                                                ? "Preparing..."
+                                                : script.title}
+                                        </span>
+                                    </Chip>
+                                    <div className="pointer-events-none absolute top-1/2 right-1 z-10 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+                                        <Button
+                                            aria-label={`Edit ${script.title}`}
+                                            isIconOnly
+                                            size="icon-xs"
                                             type="button"
-                                            onClick={() =>
-                                                void runScript(script)
+                                            variant="outline"
+                                            onPress={() =>
+                                                void editScript(script)
                                             }
                                         >
-                                            <Play className="h-3.5 w-3.5 shrink-0" />
-                                            <span className="truncate">
-                                                {script.title}
-                                            </span>
-                                        </Chip>
-                                        <div className="pointer-events-none absolute top-1/2 right-1 z-10 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-                                            <Button
-                                                aria-label={`Edit ${script.title}`}
-                                                className="h-6 w-6 min-w-6 border-border/80 bg-surface px-0 shadow-sm"
-                                                isIconOnly
-                                                type="button"
-                                                onPress={() =>
-                                                    void editScript(script)
-                                                }
-                                            >
-                                                <Pencil className="h-3.5 w-3.5" />
-                                            </Button>
-                                            <Button
-                                                aria-label={`Delete ${script.title}`}
-                                                className="h-6 w-6 min-w-6 border-border/80 bg-surface px-0 text-danger shadow-sm"
-                                                isDisabled={isDeleting}
-                                                isIconOnly
-                                                type="button"
-                                                onPress={() =>
-                                                    void deleteScript(script)
-                                                }
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
-                                        </div>
+                                            <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                            aria-label={`Delete ${script.title}`}
+                                            isDisabled={isDeleting}
+                                            isIconOnly
+                                            size="icon-xs"
+                                            type="button"
+                                            variant="danger"
+                                            onPress={() =>
+                                                setScriptPendingDelete(script)
+                                            }
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
                                     </div>
-                                );
-                            })}
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <Surface className="px-3 py-2 text-sm" variant="muted">
+                        Create a global script from the sidebar toolbar.
+                    </Surface>
+                )}
+            </Surface>
+            {scriptPendingDelete ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
+                    <Surface className="w-full max-w-sm px-4 py-4">
+                        <h3 className="text-sm font-semibold">
+                            Delete script
+                        </h3>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            Delete "{scriptPendingDelete.title}" from the
+                            global script list.
+                        </p>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <Button
+                                isDisabled={deleteScriptMutation.isPending}
+                                type="button"
+                                variant="ghost"
+                                onPress={() => setScriptPendingDelete(null)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                isDisabled={deleteScriptMutation.isPending}
+                                type="button"
+                                variant="danger"
+                                onPress={() =>
+                                    void deleteScript(scriptPendingDelete)
+                                }
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                {deleteScriptMutation.isPending
+                                    ? "Deleting..."
+                                    : "Delete"}
+                            </Button>
                         </div>
-                    ) : (
-                        <Surface className="rounded-md border border-border bg-muted/10 px-3 py-1 text-sm text-muted-foreground">
-                            Create a global script from the sidebar toolbar.
-                        </Surface>
-                    )}
-                </Card.Content>
-            </Card>
+                    </Surface>
+                </div>
+            ) : null}
         </section>
     );
 }
