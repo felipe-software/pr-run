@@ -17,7 +17,7 @@ export function SidebarSectionHeader({
     return (
         <button
             aria-expanded={isExpanded}
-            className="flex h-7 w-full items-center justify-between gap-2 rounded-lg px-2 text-left text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-foreground/20"
+            className="flex h-7 w-full items-center justify-between gap-2 rounded-md px-2 text-left text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
             type="button"
             onClick={onToggle}
         >

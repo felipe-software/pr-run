@@ -1,28 +1,204 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
+@custom-variant dark (&:is(.dark, .dark *));
+
 @theme inline {
+    --animate-skeleton: skeleton 2s -1s infinite linear;
+    --font-sans:
+        "DM Sans Variable", "DM Sans", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", system-ui, sans-serif;
+    --font-mono:
+        "SF Mono", "SFMono-Regular", "JetBrains Mono", Consolas,
+        "Liberation Mono", Menlo, monospace;
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-surface: var(--surface);
+    --color-surface-foreground: var(--surface-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-danger: var(--danger);
+    --color-danger-foreground: var(--danger-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent: var(--sidebar-accent);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+
+    @keyframes skeleton {
+        to {
+            background-position: -200% 0;
+        }
+    }
 }
 
 :root,
 [data-theme="light"] {
-    --sidebar: color-mix(in srgb, var(--background) 96%, var(--foreground));
+    color-scheme: light;
+    --radius: 0.625rem;
+    --background: oklch(0.985 0.002 264);
+    --app-chrome-background: color-mix(in srgb, var(--background) 96%, black);
+    --foreground: oklch(0.19 0.005 264);
+    --surface: color-mix(in srgb, var(--sidebar) 84%, var(--foreground));
+    --surface-foreground: var(--sidebar-foreground);
+    --muted: color-mix(in srgb, var(--foreground) 5%, transparent);
+    --muted-foreground: color-mix(in srgb, var(--foreground) 58%, white);
+    --border: color-mix(in srgb, var(--foreground) 10%, transparent);
+    --input: color-mix(in srgb, var(--foreground) 12%, transparent);
+    --ring: oklch(0.58 0.13 164);
+    --primary: oklch(0.54 0.13 164);
+    --primary-foreground: white;
+    --success: oklch(0.58 0.14 156);
+    --success-foreground: oklch(0.33 0.1 156);
+    --danger: oklch(0.58 0.19 28);
+    --danger-foreground: oklch(0.42 0.16 28);
+    --warning: oklch(0.72 0.14 78);
+    --warning-foreground: oklch(0.42 0.1 78);
+    --sidebar: color-mix(in srgb, var(--background) 92%, var(--foreground));
+    --sidebar-foreground: var(--foreground);
+    --sidebar-border: color-mix(in srgb, var(--border) 86%, transparent);
+    --sidebar-accent: color-mix(in srgb, var(--foreground) 6%, transparent);
+    --sidebar-accent-foreground: var(--foreground);
+}
+
+.dark,
+[data-theme="dark"] {
+    color-scheme: dark;
+    --background: oklch(0.145 0.004 264);
+    --app-chrome-background: color-mix(in srgb, var(--background) 92%, black);
+    --foreground: oklch(0.94 0.004 264);
+    --surface: color-mix(in srgb, var(--sidebar) 84%, black);
+    --surface-foreground: var(--sidebar-foreground);
+    --muted: color-mix(in srgb, var(--foreground) 7%, transparent);
+    --muted-foreground: color-mix(in srgb, var(--foreground) 58%, black);
+    --border: color-mix(in srgb, var(--foreground) 9%, transparent);
+    --input: color-mix(in srgb, var(--foreground) 12%, transparent);
+    --ring: oklch(0.66 0.12 164);
+    --primary: oklch(0.66 0.12 164);
+    --primary-foreground: oklch(0.13 0.004 264);
+    --success: oklch(0.68 0.13 156);
+    --success-foreground: oklch(0.78 0.12 156);
+    --danger: oklch(0.68 0.17 28);
+    --danger-foreground: oklch(0.74 0.15 28);
+    --warning: oklch(0.77 0.13 78);
+    --warning-foreground: oklch(0.82 0.12 78);
+    --sidebar: color-mix(in srgb, var(--background) 91%, white);
     --sidebar-foreground: var(--foreground);
     --sidebar-border: color-mix(in srgb, var(--border) 82%, transparent);
     --sidebar-accent: color-mix(in srgb, var(--foreground) 7%, transparent);
     --sidebar-accent-foreground: var(--foreground);
 }
 
-.dark,
-[data-theme="dark"] {
-    --sidebar: color-mix(in srgb, var(--background) 94%, var(--foreground));
-    --sidebar-foreground: var(--foreground);
-    --sidebar-border: color-mix(in srgb, var(--border) 78%, transparent);
-    --sidebar-accent: color-mix(in srgb, var(--foreground) 8%, transparent);
-    --sidebar-accent-foreground: var(--foreground);
+@layer base {
+    * {
+        border-color: var(--border);
+        outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
+    }
+
+    html {
+        min-height: calc(100svh + env(safe-area-inset-top));
+        background: var(--app-chrome-background);
+        scroll-behavior: smooth;
+        overscroll-behavior: none;
+    }
+
+    body {
+        position: relative;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background:
+            radial-gradient(
+                circle at 50% -20%,
+                color-mix(in srgb, var(--primary) 8%, transparent),
+                transparent 34rem
+            ),
+            var(--app-chrome-background);
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-variant-numeric: tabular-nums;
+        text-rendering: optimizeLegibility;
+    }
+
+    body::after {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        pointer-events: none;
+        content: "";
+        opacity: 0.026;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-repeat: repeat;
+        background-size: 256px 256px;
+    }
+
+    #root {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        overflow: hidden;
+        padding-top: max(env(safe-area-inset-top), 0px);
+        overscroll-behavior-y: none;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+        font: inherit;
+    }
+
+    pre,
+    code,
+    kbd,
+    samp {
+        font-family: var(--font-mono);
+    }
+}
+
+@utility pt-safe {
+    padding-top: max(env(safe-area-inset-top), 0px);
+}
+
+@utility pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
+@utility pl-safe {
+    padding-left: max(env(safe-area-inset-left), 0px);
+}
+
+@utility pr-safe {
+    padding-right: max(env(safe-area-inset-right), 0px);
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--foreground) 28%, transparent);
 }

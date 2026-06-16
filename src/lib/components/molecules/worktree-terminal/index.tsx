@@ -1,8 +1,10 @@
-import { Surface, toast } from "@heroui/react";
+import { toast } from "@heroui/react";
 import { TerminalSquare } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 
 import { Button } from "@/lib/components/atoms/button";
+import { EmptyState } from "@/lib/components/atoms/empty-state";
+import { Surface } from "@/lib/components/atoms/surface";
 import { TerminalPane } from "@/lib/components/molecules/worktree-terminal/terminal-pane";
 import { TerminalTabBar } from "@/lib/components/molecules/worktree-terminal/terminal-tab-bar";
 import { tryPromise } from "@/lib/error";
@@ -133,20 +135,21 @@ export function WorktreeTerminal({
                     ) : null}
                 </div>
             ) : (
-                <Surface className="grid min-h-0 flex-1 place-items-center rounded border border-dashed border-border bg-muted/10 px-6 text-center">
-                    <div className="flex max-w-sm flex-col items-center gap-3 text-sm text-muted-foreground">
-                        <TerminalSquare className="h-6 w-6 text-foreground" />
-                        <p>
-                            All terminal tabs are closed. Open a new shell or
-                            run a script to create another terminal.
-                        </p>
-                        <Button
-                            type="button"
-                            onPress={() => void createManualTerminal()}
-                        >
-                            New terminal
-                        </Button>
-                    </div>
+                <Surface className="min-h-0 flex-1" variant="muted">
+                    <EmptyState
+                        actions={
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onPress={() => void createManualTerminal()}
+                            >
+                                New terminal
+                            </Button>
+                        }
+                        description="Open a new shell or run a script to create another terminal."
+                        icon={<TerminalSquare className="h-4 w-4" />}
+                        title="All terminal tabs are closed"
+                    />
                 </Surface>
             )}
         </section>

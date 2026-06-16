@@ -1,9 +1,12 @@
 import { parsePatchFiles } from "@pierre/diffs";
 import { FileDiff, type FileDiffMetadata } from "@pierre/diffs/react";
-import { Spinner, Surface } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
+import { Button } from "@/lib/components/atoms/button";
+import { EmptyState } from "@/lib/components/atoms/empty-state";
+import { Skeleton } from "@/lib/components/atoms/skeleton";
+import { Surface } from "@/lib/components/atoms/surface";
 import { BranchDiffTree } from "@/lib/components/molecules/branch-diff-tree";
 import { useBranchDiffQuery } from "@/lib/hooks/query/use-branch-diff-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
@@ -18,6 +21,9 @@ type BranchDiffPanelProps = {
 const DIFF_SIDEBAR_MIN_WIDTH = 168;
 const DIFF_SIDEBAR_MAX_WIDTH = 320;
 const DIFF_SIDEBAR_DEFAULT_WIDTH = 208;
+const DIFF_SIDEBAR_WIDTH_STORAGE_KEY = "pr-run.diff.sidebar.width";
+const DIFF_WRAP_LINES_STORAGE_KEY = "pr-run.diff.wrap-lines";
+const DIFF_VIEW_MODE_STORAGE_KEY = "pr-run.diff.view-mode";
 
 export function BranchDiffPanel({
     baseBranchName,
@@ -25,11 +31,21 @@ export function BranchDiffPanel({
     projectId,
 }: BranchDiffPanelProps) {
     const [selectedPath, setSelectedPath] = useState<string>();
-    const [shouldWrapLines, setShouldWrapLines] = useState(false);
-    const [isUnifiedView, setIsUnifiedView] = useState(false);
-    const [diffSidebarWidth, setDiffSidebarWidth] = useState(
-        DIFF_SIDEBAR_DEFAULT_WIDTH,
+    const [shouldWrapLines, setShouldWrapLines] = useState(
+        () => localStorage.getItem(DIFF_WRAP_LINES_STORAGE_KEY) === "true",
     );
+    const [isUnifiedView, setIsUnifiedView] = useState(
+        () => localStorage.getItem(DIFF_VIEW_MODE_STORAGE_KEY) === "unified",
+    );
+    const [diffSidebarWidth, setDiffSidebarWidth] = useState(() => {
+        const stored = Number(
+            localStorage.getItem(DIFF_SIDEBAR_WIDTH_STORAGE_KEY),
+        );
+
+        return Number.isFinite(stored)
+            ? clamp(stored, DIFF_SIDEBAR_MIN_WIDTH, DIFF_SIDEBAR_MAX_WIDTH)
+            : DIFF_SIDEBAR_DEFAULT_WIDTH;
+    });
     const [isResizingDiffSidebar, setIsResizingDiffSidebar] = useState(false);
     const branchDiffQuery = useBranchDiffQuery(
         projectId,
@@ -52,9 +68,9 @@ export function BranchDiffPanel({
         const previousCursor = document.body.style.cursor;
         const previousUserSelect = document.body.style.userSelect;
 
-        function handleMouseMove(event: MouseEvent) {
+        function handlePointerMove(event: PointerEvent) {
             const body = document.body.getBoundingClientRect();
-            const nextWidth = event.clientX - body.left - 18;
+            const nextWidth = event.clientX - body.left - 12;
 
             setDiffSidebarWidth(
                 clamp(
@@ -65,22 +81,45 @@ export function BranchDiffPanel({
             );
         }
 
-        function handleMouseUp() {
+        function handlePointerUp() {
             setIsResizingDiffSidebar(false);
         }
 
         document.body.style.cursor = "col-resize";
         document.body.style.userSelect = "none";
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", handleMouseUp);
+        window.addEventListener("pointermove", handlePointerMove);
+        window.addEventListener("pointerup", handlePointerUp);
+        window.addEventListener("pointercancel", handlePointerUp);
 
         return () => {
             document.body.style.cursor = previousCursor;
             document.body.style.userSelect = previousUserSelect;
-            window.removeEventListener("mousemove", handleMouseMove);
-            window.removeEventListener("mouseup", handleMouseUp);
+            window.removeEventListener("pointermove", handlePointerMove);
+            window.removeEventListener("pointerup", handlePointerUp);
+            window.removeEventListener("pointercancel", handlePointerUp);
         };
     }, [isResizingDiffSidebar]);
+
+    useEffect(() => {
+        localStorage.setItem(
+            DIFF_SIDEBAR_WIDTH_STORAGE_KEY,
+            String(diffSidebarWidth),
+        );
+    }, [diffSidebarWidth]);
+
+    useEffect(() => {
+        localStorage.setItem(
+            DIFF_WRAP_LINES_STORAGE_KEY,
+            String(shouldWrapLines),
+        );
+    }, [shouldWrapLines]);
+
+    useEffect(() => {
+        localStorage.setItem(
+            DIFF_VIEW_MODE_STORAGE_KEY,
+            isUnifiedView ? "unified" : "split",
+        );
+    }, [isUnifiedView]);
 
     useEffect(() => {
         if (!isAwaitingSshPassphrase) {
@@ -129,16 +168,27 @@ export function BranchDiffPanel({
 
     if (branchDiffQuery.isPending) {
         return (
-            <Surface className="flex items-center gap-2 rounded-md text-sm text-muted-foreground">
-                <Spinner size="sm" />
-                Loading diff...
+            <Surface className="grid min-h-0 flex-1 grid-cols-[13rem_minmax(0,1fr)] overflow-hidden max-[900px]:grid-cols-1">
+                <div className="grid content-start gap-2 border-r border-border/70 px-3 py-3 max-[900px]:border-r-0 max-[900px]:border-b">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-6 w-10/12" />
+                    <Skeleton className="h-6 w-11/12" />
+                </div>
+                <div className="grid content-start gap-2 px-3 py-3">
+                    <Skeleton className="h-4 w-56" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-11/12" />
+                    <Skeleton className="h-3 w-10/12" />
+                    <Skeleton className="h-3 w-full" />
+                </div>
             </Surface>
         );
     }
 
     if (isAwaitingSshPassphrase) {
         return (
-            <Surface className="rounded-md text-sm text-muted-foreground">
+            <Surface className="px-3 py-2 text-sm" variant="muted">
                 Waiting for SSH passphrase...
             </Surface>
         );
@@ -146,7 +196,7 @@ export function BranchDiffPanel({
 
     if (error) {
         return (
-            <Surface className="rounded-md border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger">
+            <Surface className="px-3 py-2 text-sm" variant="danger">
                 {error}
             </Surface>
         );
@@ -154,41 +204,54 @@ export function BranchDiffPanel({
 
     if (!branchDiffQuery.data || branchDiffQuery.data.files.length === 0) {
         return (
-            <Surface className="rounded-md text-sm text-muted-foreground">
-                No changed files.
+            <Surface className="min-h-48" variant="muted">
+                <EmptyState
+                    description="The selected branch does not change files compared with its base."
+                    title="No changed files"
+                />
             </Surface>
         );
     }
 
     return (
-        <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border bg-surface">
-            <div className="flex min-h-[42px] shrink-0 items-center justify-between gap-4 border-b border-border bg-background/80 px-2.5 py-[7px] max-[900px]:flex-col max-[900px]:items-start max-[900px]:gap-2">
+        <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+            <div className="flex min-h-11 shrink-0 items-center justify-between gap-4 border-b border-border bg-background/70 px-2.5 py-2 max-[900px]:flex-col max-[900px]:items-start max-[900px]:gap-2">
                 <div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[11px] text-foreground">
                     <span>{selectedPath ?? "Diff"}</span>
                 </div>
-                <div className="flex items-center gap-3.5">
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs leading-none text-muted-foreground">
-                        <input
-                            className="m-0 h-3.5 w-3.5 accent-green-400"
-                            checked={shouldWrapLines}
-                            type="checkbox"
-                            onChange={(event) =>
-                                setShouldWrapLines(event.target.checked)
+                <div className="flex items-center gap-2">
+                    <div className="flex rounded-md border border-border/80 bg-muted/20 p-0.5">
+                        <button
+                            className={
+                                isUnifiedView
+                                    ? "h-6 rounded px-2 text-xs font-medium text-muted-foreground"
+                                    : "h-6 rounded bg-surface px-2 text-xs font-semibold text-foreground shadow-sm/5"
                             }
-                        />
-                        <span>Wrap lines</span>
-                    </label>
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs leading-none text-muted-foreground">
-                        <input
-                            className="m-0 h-3.5 w-3.5 accent-green-400"
-                            checked={isUnifiedView}
-                            type="checkbox"
-                            onChange={(event) =>
-                                setIsUnifiedView(event.target.checked)
+                            type="button"
+                            onClick={() => setIsUnifiedView(false)}
+                        >
+                            Split
+                        </button>
+                        <button
+                            className={
+                                isUnifiedView
+                                    ? "h-6 rounded bg-surface px-2 text-xs font-semibold text-foreground shadow-sm/5"
+                                    : "h-6 rounded px-2 text-xs font-medium text-muted-foreground"
                             }
-                        />
-                        <span>Unified view</span>
-                    </label>
+                            type="button"
+                            onClick={() => setIsUnifiedView(true)}
+                        >
+                            Unified
+                        </button>
+                    </div>
+                    <Button
+                        size="xs"
+                        type="button"
+                        variant={shouldWrapLines ? "outline" : "ghost"}
+                        onPress={() => setShouldWrapLines((value) => !value)}
+                    >
+                        Wrap
+                    </Button>
                 </div>
             </div>
             <div
@@ -210,8 +273,8 @@ export function BranchDiffPanel({
                 </aside>
                 <div
                     aria-hidden="true"
-                    className="relative cursor-col-resize max-[900px]:hidden after:absolute after:top-0 after:bottom-0 after:left-[3px] after:w-px after:bg-border after:content-['']"
-                    onMouseDown={() => setIsResizingDiffSidebar(true)}
+                    className="relative cursor-col-resize touch-none max-[900px]:hidden after:absolute after:top-0 after:bottom-0 after:left-[3px] after:w-px after:bg-border after:content-['']"
+                    onPointerDown={() => setIsResizingDiffSidebar(true)}
                 />
 
                 <div className="min-w-0 overflow-auto bg-background">
@@ -230,7 +293,7 @@ export function BranchDiffPanel({
                             }}
                         />
                     ) : (
-                        <Surface className="m-3 rounded-md text-sm text-muted-foreground">
+                        <Surface className="m-3 px-3 py-2 text-sm" variant="muted">
                             Select a changed file.
                         </Surface>
                     )}

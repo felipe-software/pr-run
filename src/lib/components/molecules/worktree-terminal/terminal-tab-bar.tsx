@@ -42,7 +42,7 @@ export function TerminalTabBar({
                     return (
                         <div
                             className={cn(
-                                "group -mr-px flex min-w-0 max-w-56 items-center gap-1 rounded-t-md border border-b-0 border-border pl-3 pr-1.5 py-1.5 text-xs font-semibold transition",
+                                "group -mr-px flex h-8 min-w-0 max-w-56 items-center gap-1 rounded-t-md border border-b-0 border-border pl-2.5 pr-1 py-1 text-xs font-semibold transition",
                                 isActive
                                     ? "bg-surface text-foreground"
                                     : "bg-background/90 text-muted-foreground hover:bg-muted/20 hover:text-foreground",
@@ -62,6 +62,8 @@ export function TerminalTabBar({
                             >
                                 {tab.busyState === "busy" ? (
                                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                                ) : tab.status === "exited" ? (
+                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-danger" />
                                 ) : null}
                                 <span className="truncate">{tab.label}</span>
                                 <span className="sr-only">
@@ -93,9 +95,11 @@ export function TerminalTabBar({
                 })}
                 <Button
                     aria-label="Create terminal"
-                    className="h-[30px] min-w-8 self-end rounded-t-md rounded-b-none border-b-0 px-0"
+                    className="self-end rounded-t-md rounded-b-none border-b-0"
                     isIconOnly
+                    size="icon-sm"
                     type="button"
+                    variant="outline"
                     onPress={onCreateTerminal}
                 >
                     <Plus className="h-3.5 w-3.5" />

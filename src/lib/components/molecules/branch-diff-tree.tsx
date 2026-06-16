@@ -93,8 +93,9 @@ function DiffTreeNodeRow({
         return (
             <button
                 className={cn(
-                    "flex w-full min-w-0 items-center gap-1 rounded bg-transparent py-[3px] pr-1 text-left text-muted-foreground transition hover:bg-muted/20 hover:text-foreground",
-                    selectedPath === node.path && "bg-muted/20 text-foreground",
+                    "flex w-full min-w-0 items-center gap-1 rounded-md bg-transparent py-[3px] pr-1 text-left text-muted-foreground outline-none transition hover:bg-muted/25 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                    selectedPath === node.path &&
+                        "bg-muted/30 text-foreground",
                 )}
                 style={{ paddingLeft }}
                 type="button"
@@ -120,7 +121,7 @@ function DiffTreeNodeRow({
         <Fragment>
             <button
                 aria-expanded={!isCollapsed}
-                className="flex w-full min-w-0 items-center gap-1 rounded bg-transparent py-[3px] pr-1 text-left text-muted-foreground transition hover:bg-muted/20 hover:text-foreground"
+                className="flex w-full min-w-0 items-center gap-1 rounded-md bg-transparent py-[3px] pr-1 text-left text-muted-foreground outline-none transition hover:bg-muted/25 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 style={{ paddingLeft }}
                 type="button"
                 onClick={() => onToggleFolder(node.path)}
