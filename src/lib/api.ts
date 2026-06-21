@@ -87,10 +87,42 @@ async function resolveBackendUrl() {
         return window.prRun.getBackendUrl();
     }
 
+    return resolveBrowserBackendUrl();
+}
+
+function resolveBrowserBackendUrl() {
+    const queryBackendUrl = getQueryBackendUrl();
+
+    if (queryBackendUrl) {
+        localStorage.setItem("pr-run.backend.url", queryBackendUrl);
+        return queryBackendUrl;
+    }
+
+    const configuredBackendUrl =
+        import.meta.env.VITE_PR_RUN_BACKEND_URL?.replace(/\/$/, "");
+
+    if (configuredBackendUrl) {
+        return configuredBackendUrl;
+    }
+
     return (
-        import.meta.env.VITE_PR_RUN_BACKEND_URL?.replace(/\/$/, "") ??
-        "http://127.0.0.1:3001"
+        localStorage.getItem("pr-run.backend.url") ?? "http://127.0.0.1:33134"
     );
+}
+
+function getQueryBackendUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const value = params.get("api") ?? params.get("backendUrl");
+
+    if (!value) {
+        return null;
+    }
+
+    try {
+        return new URL(value).toString().replace(/\/$/, "");
+    } catch {
+        return null;
+    }
 }
 
 async function toApiUrl(pathOrUrl: string) {

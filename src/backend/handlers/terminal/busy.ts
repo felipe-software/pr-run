@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 
-import type { TerminalBusyState } from "@/types/pr-run";
+import type { TerminalBusyState } from "@/backend/types";
 
 export type TerminalProcessRow = {
     pid: number;

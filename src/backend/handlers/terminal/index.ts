@@ -2,15 +2,15 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { tryPromise } from "@/backend/handlers/error";
-import { ApiError } from "@/backend/types";
-import type {
-    TerminalCreateOptions,
-    TerminalDataEvent,
-    TerminalExitEvent,
-    TerminalInputOptions,
-    TerminalSession,
-    TerminalSessionSnapshot,
-} from "@/types/pr-run";
+import {
+    ApiError,
+    type TerminalCreateOptions,
+    type TerminalDataEvent,
+    type TerminalExitEvent,
+    type TerminalInputOptions,
+    type TerminalSession,
+    type TerminalSessionSnapshot,
+} from "@/backend/types";
 
 type TerminalStreamEvent =
     | ({ type: "data" } & TerminalDataEvent)

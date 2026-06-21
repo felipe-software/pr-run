@@ -11,9 +11,9 @@ export function createBackendApp() {
 
     app.use(
         cors({
-            origin: ["http://localhost:5173", "http://127.0.0.1:5173", "null"],
-            methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
-            allowedHeaders: ["content-type"],
+            allowedHeaders: true,
+            methods: "*",
+            origin: true,
         }),
     );
 
