@@ -2,6 +2,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef } from "react";
 
+import { prRunApi } from "@/lib/api";
 import { tryPromise } from "@/lib/error";
 import type {
     TerminalDataEvent,
@@ -80,55 +81,36 @@ export function useTerminalPane({
 
         terminal.loadAddon(fitAddon);
         terminal.open(mount);
-        void fitTerminal(fitAddon);
+        fitTerminal(fitAddon);
         terminal.focus();
 
         const dataDisposable = terminal.onData((data) => {
             onManualInput();
-            void window.prRun.writeTerminalInput(sessionId, data, {
+            prRunApi.writeTerminalInput(sessionId, data, {
                 source: "keyboard",
             });
         });
-        const unsubscribeData = window.prRun.onTerminalData((event) => {
-            if (event.id !== sessionId) {
-                return;
-            }
+        let eventSource: EventSource | null = null;
 
-            handleTerminalEvent(
-                terminal,
-                lifecycle,
-                pendingEvents,
-                { ...event, type: "data" },
-                onUpdate,
-                () => undefined,
-                () => lastSequence,
-                (sequence) => {
-                    lastSequence = sequence;
-                },
-            );
-        });
-        const unsubscribeExit = window.prRun.onTerminalExit((event) => {
-            if (event.id !== sessionId) {
-                return;
-            }
-
-            handleTerminalEvent(
-                terminal,
-                lifecycle,
-                pendingEvents,
-                { ...event, type: "exit" },
-                onUpdate,
-                onExit,
-                () => lastSequence,
-                (sequence) => {
-                    lastSequence = sequence;
-                },
-            );
+        connectTerminalEvents({
+            lifecycle,
+            onExit,
+            onUpdate,
+            pendingEvents,
+            sessionId,
+            setEventSource: (source) => {
+                eventSource = source;
+            },
+            setLastSequence: (sequence) => {
+                lastSequence = sequence;
+            },
+            terminal,
+            getLastSequence: () => lastSequence,
         });
         const resizeObserver = new ResizeObserver(() => {
-            void fitTerminal(fitAddon).then(() => {
+            fitTerminal(fitAddon).then(() => {
                 if (!lifecycle.disposed) {
-                    void window.prRun.resizeTerminal(
+                    prRunApi.resizeTerminal(
                         sessionId,
                         terminal.cols,
                         terminal.rows,
@@ -139,7 +121,7 @@ export function useTerminalPane({
 
         resizeObserver.observe(mount);
 
-        void hydrateTerminal({
+        hydrateTerminal({
             lifecycle,
             onSnapshot,
             onUpdate,
@@ -154,8 +136,7 @@ export function useTerminalPane({
         return () => {
             lifecycle.disposed = true;
             resizeObserver.disconnect();
-            unsubscribeData();
-            unsubscribeExit();
+            eventSource?.close();
             dataDisposable.dispose();
             terminal.dispose();
         };
@@ -187,7 +168,7 @@ async function hydrateTerminal({
     terminal: Terminal;
 }) {
     const [error, snapshot] = await tryPromise(
-        window.prRun.getTerminalSessionSnapshot(sessionId),
+        prRunApi.getTerminalSessionSnapshot(sessionId),
     );
 
     if (lifecycle.disposed) {
@@ -229,6 +210,120 @@ async function hydrateTerminal({
         onUpdate(eventToSessionUpdate(event));
         setLastSequence(event.sequence);
     }
+}
+
+async function connectTerminalEvents({
+    getLastSequence,
+    lifecycle,
+    onExit,
+    onUpdate,
+    pendingEvents,
+    sessionId,
+    setEventSource,
+    setLastSequence,
+    terminal,
+}: {
+    getLastSequence: () => number;
+    lifecycle: { disposed: boolean; hydrated: boolean };
+    onExit: () => void;
+    onUpdate: (
+        snapshot: Pick<
+            TerminalSessionSnapshot,
+            "busyState" | "currentProcess" | "id" | "isAlive"
+        >,
+    ) => void;
+    pendingEvents: TerminalPaneEvent[];
+    sessionId: string;
+    setEventSource: (eventSource: EventSource) => void;
+    setLastSequence: (sequence: number) => void;
+    terminal: Terminal;
+}) {
+    const [error, eventSource] = await tryPromise(
+        prRunApi.createTerminalEventSource(sessionId),
+    );
+
+    if (lifecycle.disposed) {
+        eventSource?.close();
+        return;
+    }
+
+    if (error) {
+        terminal.writeln(
+            error instanceof Error
+                ? error.message
+                : "Failed to connect terminal events.",
+        );
+        return;
+    }
+
+    setEventSource(eventSource);
+    eventSource.onmessage = (message) => {
+        handleTerminalMessage({
+            getLastSequence,
+            lifecycle,
+            message,
+            onExit,
+            onUpdate,
+            pendingEvents,
+            setLastSequence,
+            terminal,
+        });
+    };
+}
+
+async function handleTerminalMessage({
+    getLastSequence,
+    lifecycle,
+    message,
+    onExit,
+    onUpdate,
+    pendingEvents,
+    setLastSequence,
+    terminal,
+}: {
+    getLastSequence: () => number;
+    lifecycle: { hydrated: boolean };
+    message: MessageEvent<string>;
+    onExit: () => void;
+    onUpdate: (
+        snapshot: Pick<
+            TerminalSessionSnapshot,
+            "busyState" | "currentProcess" | "id" | "isAlive"
+        >,
+    ) => void;
+    pendingEvents: TerminalPaneEvent[];
+    setLastSequence: (sequence: number) => void;
+    terminal: Terminal;
+}) {
+    const [error, event] = await tryPromise(
+        Promise.resolve().then(
+            () =>
+                JSON.parse(message.data) as
+                    | TerminalPaneEvent
+                    | { type: string },
+        ),
+    );
+
+    if (error || !isTerminalPaneEvent(event)) {
+        return;
+    }
+
+    handleTerminalEvent(
+        terminal,
+        lifecycle,
+        pendingEvents,
+        event,
+        onUpdate,
+        onExit,
+        getLastSequence,
+        setLastSequence,
+    );
+}
+
+function isTerminalPaneEvent(
+    event: TerminalPaneEvent | { type: string },
+): event is TerminalPaneEvent {
+    return event.type === "data" || event.type === "exit";
 }
 
 function handleTerminalEvent(

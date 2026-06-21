@@ -29,7 +29,6 @@ const SIDEBAR_MAX_WIDTH = 560;
 const MAIN_CONTENT_MIN_WIDTH = 640;
 
 export function usePrRunAppState() {
-    const isElectronApiAvailable = typeof window.prRun !== "undefined";
     const [selectedBranch, setSelectedBranch] =
         useState<SelectedBranchState | null>(null);
     const [actionError, setActionError] = useState<string>();
@@ -54,7 +53,7 @@ export function usePrRunAppState() {
             : 320;
     });
     const [isResizingSidebar, setIsResizingSidebar] = useState(false);
-    const configQuery = useConfigQuery(isElectronApiAvailable);
+    const configQuery = useConfigQuery();
     const addProjectMutation = useAddProjectMutation();
     const checkoutBranchMutation = useCheckoutBranchMutation();
     const createScriptMutation = useCreateScriptMutation();
@@ -77,11 +76,9 @@ export function usePrRunAppState() {
         branchName: selectedBranch?.branchName ?? null,
         project: selectedProject,
     };
-    const configError = !isElectronApiAvailable
-        ? "Electron API is unavailable. Open this app through Electron."
-        : configQuery.error
-          ? getErrorMessage(configQuery.error)
-          : undefined;
+    const configError = configQuery.error
+        ? getErrorMessage(configQuery.error)
+        : undefined;
 
     useEffect(() => {
         document.documentElement.dataset.theme = theme;

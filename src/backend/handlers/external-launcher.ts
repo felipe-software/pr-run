@@ -20,7 +20,7 @@ type EditorDefinition = {
     launchStyle: EditorLaunchStyle;
 };
 
-const EDITORS = [
+const EDITORS: readonly EditorDefinition[] = [
     { id: "cursor", commands: ["cursor"], launchStyle: "goto" },
     { id: "trae", commands: ["trae"], launchStyle: "goto" },
     {
@@ -87,7 +87,7 @@ const EDITORS = [
         commands: [],
         launchStyle: "file-manager",
     },
-] as const satisfies readonly EditorDefinition[];
+];
 
 type EditorLaunch = {
     args: string[];
@@ -134,7 +134,8 @@ function resolveEditorLaunch(
         ?.trim()
         .toLowerCase();
     const commandResolver =
-        options.commandResolver ?? ((command: string) => Bun.which(command));
+        options.commandResolver ??
+        ((command: string) => Bun.which(command) ?? undefined);
     const platform = options.platform ?? process.platform;
     const editor = configuredEditor
         ? EDITORS.find(

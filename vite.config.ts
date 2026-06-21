@@ -12,6 +12,8 @@ export default defineConfig({
         },
     },
     server: {
+        port: 33133,
+        strictPort: false,
         watch: {
             ignored: ["**/.pr-run/**"],
         },

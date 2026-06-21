@@ -7,6 +7,7 @@ import { EmptyState } from "@/lib/components/atoms/empty-state";
 import { Surface } from "@/lib/components/atoms/surface";
 import { TerminalPane } from "@/lib/components/molecules/worktree-terminal/terminal-pane";
 import { TerminalTabBar } from "@/lib/components/molecules/worktree-terminal/terminal-tab-bar";
+import { prRunApi } from "@/lib/api";
 import { tryPromise } from "@/lib/error";
 import { useWorktreeTerminalStore } from "@/lib/hooks/store/use-worktree-terminal-store";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -43,7 +44,7 @@ export function WorktreeTerminal({
 
     useEffect(() => {
         ensureOwner(ownerKey, worktreePath);
-        void tryPromise(ensureDefaultTerminal(ownerKey, worktreePath)).then(
+        tryPromise(ensureDefaultTerminal(ownerKey, worktreePath)).then(
             ([error]) => {
                 if (error) {
                     toast.danger(getErrorMessage(error), { timeout: 3200 });
@@ -69,7 +70,7 @@ export function WorktreeTerminal({
             await Promise.all(
                 aliveTabs.map(async (tab) => {
                     const [error, sessionState] = await tryPromise(
-                        window.prRun.getTerminalSessionState(tab.sessionId),
+                        prRunApi.getTerminalSessionState(tab.sessionId),
                     );
 
                     if (error || disposed) {
@@ -81,9 +82,9 @@ export function WorktreeTerminal({
             );
         }
 
-        void syncTerminalStates();
+        syncTerminalStates();
         const intervalId = window.setInterval(() => {
-            void syncTerminalStates();
+            syncTerminalStates();
         }, 500);
 
         return () => {
@@ -122,8 +123,12 @@ export function WorktreeTerminal({
                     <TerminalTabBar
                         activeTabId={owner.activeTabId}
                         tabs={owner.tabs}
-                        onCloseTab={(tabId) => void handleCloseTab(tabId)}
-                        onCreateTerminal={() => void createManualTerminal()}
+                        onCloseTab={(tabId) => {
+                            handleCloseTab(tabId);
+                        }}
+                        onCreateTerminal={() => {
+                            createManualTerminal();
+                        }}
                         onSelectTab={(tabId) => setActiveTab(ownerKey, tabId)}
                     />
                     {activeTab ? (
@@ -141,7 +146,9 @@ export function WorktreeTerminal({
                             <Button
                                 type="button"
                                 variant="outline"
-                                onPress={() => void createManualTerminal()}
+                                onPress={() => {
+                                    createManualTerminal();
+                                }}
                             >
                                 New terminal
                             </Button>

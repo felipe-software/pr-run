@@ -46,7 +46,7 @@ export function SidebarGroupSection({
             </SidebarSectionHeader>
 
             {isExpanded ? (
-                <div className="relative mt-1 flex min-w-0 flex-col gap-0.5 ">
+                <div className="relative mt-1 flex min-w-0 flex-col gap-0.5">
                     {group.projects.length === 0 ? (
                         <SidebarEmptyState>
                             No projects added.
