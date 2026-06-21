@@ -56,7 +56,7 @@ export function PrRunApp() {
         >
             <Sidebar
                 expandedGroups={state.expandedGroups}
-                expandedProjects={state.expandedProjects}
+                collapsedProjects={state.collapsedProjects}
                 groups={state.groups}
                 isCreatingScript={state.isCreatingScript}
                 pendingProjectUpdateId={state.pendingProjectUpdateId}

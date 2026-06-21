@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Folder, RefreshCw } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
 import { Button } from "@/lib/components/atoms/button";
@@ -26,6 +26,8 @@ type SidebarProjectItemProps = {
     onUpdateProject: (project: ProjectConfig) => Promise<void>;
 };
 
+const INITIAL_VISIBLE_BRANCH_COUNT = 5;
+
 export function SidebarProjectItem({
     isExpanded,
     isSelected,
@@ -38,6 +40,10 @@ export function SidebarProjectItem({
     onToggleProject,
     onUpdateProject,
 }: SidebarProjectItemProps) {
+    const [areAllRecentBranchesVisible, setAreAllRecentBranchesVisible] =
+        useState(false);
+    const [areStaleBranchesVisible, setAreStaleBranchesVisible] =
+        useState(false);
     const branchesQuery = useProjectBranchesQuery(project.id, isExpanded);
     const isAwaitingSshPassphrase = isHandledSshPromptError(
         branchesQuery.error,
@@ -45,6 +51,27 @@ export function SidebarProjectItem({
     const branchError = branchesQuery.error
         ? getErrorMessage(branchesQuery.error)
         : undefined;
+    const sortedBranches = useMemo(
+        () =>
+            [...(branchesQuery.data ?? [])].sort(
+                (left, right) =>
+                    (right.lastCommitTimestamp ?? 0) -
+                    (left.lastCommitTimestamp ?? 0),
+            ),
+        [branchesQuery.data],
+    );
+    const recentBranches = sortedBranches.filter((branch) => !branch.isStale);
+    const staleBranches = sortedBranches.filter((branch) => branch.isStale);
+    const hiddenRecentBranchCount = Math.max(
+        recentBranches.length - INITIAL_VISIBLE_BRANCH_COUNT,
+        0,
+    );
+    const visibleBranches = [
+        ...(areAllRecentBranchesVisible
+            ? recentBranches
+            : recentBranches.slice(0, INITIAL_VISIBLE_BRANCH_COUNT)),
+        ...(areStaleBranchesVisible ? staleBranches : []),
+    ];
 
     useEffect(() => {
         if (!isAwaitingSshPassphrase) {
@@ -62,7 +89,7 @@ export function SidebarProjectItem({
         <div className="group/menu-item relative">
             <div
                 className={cn(
-                    "relative isolate flex items-stretch rounded-md",
+                    "group relative isolate flex items-stretch rounded-md",
                     isSelected &&
                         "bg-sidebar-accent text-sidebar-accent-foreground",
                 )}
@@ -75,7 +102,7 @@ export function SidebarProjectItem({
                         hover:text-sidebar-accent-foreground
                         focus-visible:ring-ring active:bg-sidebar-accent flex
                         min-w-0 flex-1 cursor-pointer items-center
-                        overflow-hidden rounded-md bg-transparent px-1.5 py-2.5
+                        overflow-hidden rounded-md bg-transparent px-2 py-1.5
                         text-left text-sm transition-colors outline-none
                         focus-visible:ring-2"
                     type="button"
@@ -112,19 +139,19 @@ export function SidebarProjectItem({
                     </div>
                 </button>
                 <div
-                    className="pointer-events-none flex shrink-0 items-center
-                        pr-1 opacity-0 transition-opacity duration-150
-                        group-focus-within/menu-item:pointer-events-auto
-                        group-focus-within/menu-item:opacity-100
-                        group-hover/menu-item:pointer-events-auto
-                        group-hover/menu-item:opacity-100"
+                    className="bg-sidebar/80 pointer-events-none absolute
+                        inset-y-0 right-0 flex items-center rounded-r-md px-1
+                        opacity-0 backdrop-blur-md transition-opacity
+                        duration-150
+                        group-[&:is(:hover,:focus-within)]/menu-item:pointer-events-auto
+                        group-[&:is(:hover,:focus-within)]/menu-item:opacity-100"
                 >
                     <Button
                         aria-label={`Reload ${project.name} worktrees`}
-                        className="bg-sidebar/90 text-muted-foreground/65
+                        className="text-muted-foreground/65
                             data-[hover=true]:bg-sidebar-accent
                             data-[hover=true]:text-sidebar-accent-foreground
-                            border-transparent shadow-sm"
+                            border-transparent bg-transparent shadow-none"
                         isDisabled={isUpdatingProject}
                         isIconOnly
                         size="icon-xs"
@@ -145,7 +172,7 @@ export function SidebarProjectItem({
 
             {isExpanded ? (
                 <div
-                    className="border-sidebar-border/80 relative mt-0.5 ml-1
+                    className="border-sidebar-border/80 relative mt-0.5 ml-2
                         flex min-w-0 flex-col gap-0.5 border-l py-0.5 pl-1"
                 >
                     {branchesQuery.isPending ? (
@@ -189,7 +216,7 @@ export function SidebarProjectItem({
                         </div>
                     ) : null}
 
-                    {(branchesQuery.data ?? []).map((branch) => (
+                    {visibleBranches.map((branch) => (
                         <SidebarBranchItem
                             branch={branch}
                             isRemovingWorktree={
@@ -206,6 +233,36 @@ export function SidebarProjectItem({
                             }
                         />
                     ))}
+
+                    {!areAllRecentBranchesVisible &&
+                    hiddenRecentBranchCount > 0 ? (
+                        <Button
+                            className="text-muted-foreground
+                                hover:text-sidebar-accent-foreground h-7
+                                justify-start rounded-md px-2 text-[11px]"
+                            size="xs"
+                            type="button"
+                            onPress={() => setAreAllRecentBranchesVisible(true)}
+                        >
+                            Show more ({hiddenRecentBranchCount})
+                        </Button>
+                    ) : null}
+
+                    {(areAllRecentBranchesVisible ||
+                        hiddenRecentBranchCount === 0) &&
+                    !areStaleBranchesVisible &&
+                    staleBranches.length > 0 ? (
+                        <Button
+                            className="text-muted-foreground
+                                hover:text-sidebar-accent-foreground h-7
+                                justify-start rounded-md px-2 text-[11px]"
+                            size="xs"
+                            type="button"
+                            onPress={() => setAreStaleBranchesVisible(true)}
+                        >
+                            Show stale ({staleBranches.length})
+                        </Button>
+                    ) : null}
                 </div>
             ) : null}
         </div>

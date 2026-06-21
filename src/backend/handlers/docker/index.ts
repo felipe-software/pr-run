@@ -2,7 +2,8 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { tryPromise } from "@/backend/handlers/error";
-import { exists, worktreePathFor } from "@/backend/handlers/git/helpers";
+import { exists } from "@/backend/handlers/git/helpers";
+import { requireWorktreePath } from "@/backend/handlers/git/worktree-inventory";
 import { logger } from "@/backend/logger";
 import {
     ApiError,
@@ -153,9 +154,9 @@ export async function prepareTerminalCommand(
 }
 
 async function getWorktreePath(project: ProjectConfig, branch: string) {
-    const worktreePath = worktreePathFor(project.path, branch);
+    const worktreePath = await requireWorktreePath(project, branch);
 
-    if (!(await exists(worktreePath))) {
+    if (!worktreePath) {
         throw new ApiError(
             "WORKTREE_NOT_FOUND",
             "No worktree exists for this branch yet.",

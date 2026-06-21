@@ -2,7 +2,7 @@ import type { ProjectConfig, ProjectGroup } from "@/types/pr-run";
 
 export type SidebarProps = {
     expandedGroups: Set<string>;
-    expandedProjects: Set<string>;
+    collapsedProjects: Set<string>;
     groups: ProjectGroup[];
     isCreatingScript: boolean;
     pendingProjectUpdateId?: string;

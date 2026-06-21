@@ -6,6 +6,7 @@ import { useAddProjectMutation } from "@/lib/hooks/query/use-add-project-mutatio
 import { useCheckoutBranchMutation } from "@/lib/hooks/query/use-checkout-branch-mutation";
 import { useConfigQuery } from "@/lib/hooks/query/use-config-query";
 import { useCreateScriptMutation } from "@/lib/hooks/query/use-create-script-mutation";
+import { usePreloadProjects } from "@/lib/hooks/query/use-preload-projects";
 import { useRemoveWorktreeMutation } from "@/lib/hooks/query/use-remove-worktree-mutation";
 import { useUpdateProjectWorktreesMutation } from "@/lib/hooks/query/use-update-project-worktrees-mutation";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
@@ -35,7 +36,7 @@ export function usePrRunAppState() {
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
         () => new Set(["default"]),
     );
-    const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
+    const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(
         () => new Set(),
     );
     const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
@@ -60,13 +61,17 @@ export function usePrRunAppState() {
     const removeWorktreeMutation = useRemoveWorktreeMutation();
     const updateProjectWorktreesMutation = useUpdateProjectWorktreesMutation();
     const groups = configQuery.data?.groups ?? [];
+    const projects = useMemo(
+        () => groups.flatMap((group) => group.projects),
+        [groups],
+    );
+    usePreloadProjects(projects);
     const selectedProject = useMemo(
         () =>
-            groups
-                .flatMap((group) => group.projects)
-                .find((project) => project.id === selectedBranch?.projectId) ??
-            null,
-        [groups, selectedBranch?.projectId],
+            projects.find(
+                (project) => project.id === selectedBranch?.projectId,
+            ) ?? null,
+        [projects, selectedBranch?.projectId],
     );
     const selectedBranchView: SelectedBranchView = {
         branchName: selectedBranch?.branchName ?? null,
@@ -154,7 +159,7 @@ export function usePrRunAppState() {
     }
 
     function toggleProject(projectId: string) {
-        setExpandedProjects((current) => {
+        setCollapsedProjects((current) => {
             const next = new Set(current);
 
             if (next.has(projectId)) {
@@ -288,7 +293,7 @@ export function usePrRunAppState() {
             : undefined,
         configError,
         expandedGroups,
-        expandedProjects,
+        collapsedProjects,
         groups,
         isAddProjectOpen,
         isAddingProject: addProjectMutation.isPending,

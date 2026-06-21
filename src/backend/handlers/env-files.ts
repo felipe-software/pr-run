@@ -5,8 +5,8 @@ import { tryPromise } from "@/backend/handlers/error";
 import {
     linkSharedEnv,
     listEnvFileNames,
-    worktreePathFor,
 } from "@/backend/handlers/git/helpers";
+import { requireWorktreePath } from "@/backend/handlers/git/worktree-inventory";
 import {
     ApiError,
     type EnvFileItem,
@@ -15,10 +15,9 @@ import {
 } from "@/backend/types";
 
 async function getWorktreePath(project: ProjectConfig, branch: string) {
-    const worktreePath = worktreePathFor(project.path, branch);
-    const [statError, worktreeStat] = await tryPromise(lstat(worktreePath));
+    const worktreePath = await requireWorktreePath(project, branch);
 
-    if (statError || !worktreeStat.isDirectory()) {
+    if (!worktreePath) {
         throw new ApiError(
             "WORKTREE_NOT_FOUND",
             "No worktree exists for this branch yet.",

@@ -8,16 +8,19 @@ import {
     gitText,
 } from "@/backend/handlers/git/command";
 import {
-    exists,
     gitError,
     hasLocalBranch,
     linkSharedEnv,
     normalizeBranchName,
-    parseWorktreeList,
     remoteBranch,
     worktreePathFor,
     STALE_BRANCH_DAYS,
 } from "@/backend/handlers/git/helpers";
+import {
+    listWorktreeInventory,
+    requireWorktreePath,
+    type WorktreeInventory,
+} from "@/backend/handlers/git/worktree-inventory";
 import {
     findGitHubRepository,
     listGitHubPullRequests,
@@ -35,11 +38,15 @@ import {
 
 export async function listBranches(
     project: ProjectConfig,
+    existingInventory?: WorktreeInventory,
 ): Promise<BranchInfo[]> {
-    const repository = await findGitHubRepository(project);
+    const [repository, inventory] = await Promise.all([
+        findGitHubRepository(project),
+        existingInventory ?? listWorktreeInventory(project),
+    ]);
     const [pullRequests, branches] = await Promise.all([
         listGitHubPullRequests(project, repository),
-        listRemoteBranches(project, repository),
+        listRemoteBranches(project, inventory, repository),
     ]);
 
     if (!repository || pullRequests === undefined) {
@@ -49,38 +56,35 @@ export async function listBranches(
     const pullRequestBranchNames = new Set(
         pullRequests.map((pullRequest) => pullRequest.branchName),
     );
-    const pullRequestBranches = await Promise.all(
-        pullRequests.map(async (pullRequest) => {
-            const worktreePath = worktreePathFor(
-                project.path,
-                pullRequest.branchName,
-            );
-            const lastCommitTimestamp = pullRequest.updatedAt
-                ? Date.parse(pullRequest.updatedAt)
-                : null;
+    const pullRequestBranches = pullRequests.map((pullRequest) => {
+        const worktree = inventory.byBranch.get(pullRequest.branchName);
+        const lastCommitTimestamp = pullRequest.updatedAt
+            ? Date.parse(pullRequest.updatedAt)
+            : null;
 
-            return {
-                name: pullRequest.branchName,
-                remoteName: `origin/${pullRequest.branchName}`,
-                worktreePath,
-                hasWorktree: await exists(worktreePath),
-                lastCommitTimestamp: Number.isFinite(lastCommitTimestamp)
-                    ? lastCommitTimestamp
-                    : null,
-                isStale: false,
-                source: "pull-request" as const,
-                compareBranchName: pullRequest.baseBranchName,
-                repository,
-                pullRequest: {
-                    number: pullRequest.number,
-                    title: pullRequest.title,
-                    url: pullRequest.url,
-                    baseBranchName: pullRequest.baseBranchName,
-                    author: pullRequest.author,
-                },
-            };
-        }),
-    );
+        return {
+            name: pullRequest.branchName,
+            remoteName: `origin/${pullRequest.branchName}`,
+            worktreePath:
+                worktree?.path ??
+                worktreePathFor(project.path, pullRequest.branchName),
+            hasWorktree: Boolean(worktree),
+            lastCommitTimestamp: Number.isFinite(lastCommitTimestamp)
+                ? lastCommitTimestamp
+                : null,
+            isStale: false,
+            source: "pull-request" as const,
+            compareBranchName: pullRequest.baseBranchName,
+            repository,
+            pullRequest: {
+                number: pullRequest.number,
+                title: pullRequest.title,
+                url: pullRequest.url,
+                baseBranchName: pullRequest.baseBranchName,
+                author: pullRequest.author,
+            },
+        };
+    });
 
     return [
         ...pullRequestBranches,
@@ -92,6 +96,7 @@ export async function listBranches(
 
 async function listRemoteBranches(
     project: ProjectConfig,
+    inventory: WorktreeInventory,
     repository?: BranchInfo["repository"],
 ): Promise<BranchInfo[]> {
     const [error, output] = await tryPromise(
@@ -143,22 +148,21 @@ async function listRemoteBranches(
             );
         });
 
-    return Promise.all(
-        branches.map(async (branch) => {
-            const worktreePath = worktreePathFor(project.path, branch.name);
+    return branches.map((branch) => {
+        const worktree = inventory.byBranch.get(branch.name);
 
-            return {
-                name: branch.name,
-                remoteName: branch.remoteName,
-                worktreePath,
-                hasWorktree: await exists(worktreePath),
-                lastCommitTimestamp: branch.lastCommitTimestamp,
-                isStale: branch.isStale,
-                repository,
-                source: "branch",
-            };
-        }),
-    );
+        return {
+            name: branch.name,
+            remoteName: branch.remoteName,
+            worktreePath:
+                worktree?.path ?? worktreePathFor(project.path, branch.name),
+            hasWorktree: Boolean(worktree),
+            lastCommitTimestamp: branch.lastCommitTimestamp,
+            isStale: branch.isStale,
+            repository,
+            source: "branch",
+        };
+    });
 }
 
 export async function checkoutBranch(
@@ -167,6 +171,7 @@ export async function checkoutBranch(
 ): Promise<CheckoutResult> {
     const { name, remoteName } = remoteBranch(branch);
     const targetPath = worktreePathFor(project.path, name);
+    const registeredPath = await requireWorktreePath(project, name);
 
     const [branchError] = await tryPromise(
         gitQuiet(project.path, [
@@ -191,13 +196,13 @@ export async function checkoutBranch(
         );
     }
 
-    if (await exists(targetPath)) {
-        await linkSharedEnv(project.path, targetPath);
+    if (registeredPath) {
+        await linkSharedEnv(project.path, registeredPath);
 
         return {
             status: "ready",
             branch: name,
-            worktreePath: targetPath,
+            worktreePath: registeredPath,
             message: "worktree ready",
         };
     }
@@ -268,9 +273,9 @@ export async function updateWorktree(
     branch: string,
 ): Promise<UpdateResult> {
     const { name, remoteName } = remoteBranch(branch);
-    const targetPath = worktreePathFor(project.path, name);
+    const targetPath = await requireWorktreePath(project, name);
 
-    if (!(await exists(targetPath))) {
+    if (!targetPath) {
         throw new ApiError(
             "WORKTREE_NOT_FOUND",
             "No worktree exists for this branch yet.",
@@ -304,9 +309,9 @@ export async function removeWorktree(
     branch: string,
 ): Promise<RemoveWorktreeResult> {
     const { name } = remoteBranch(branch);
-    const targetPath = worktreePathFor(project.path, name);
+    const targetPath = await requireWorktreePath(project, name);
 
-    if (!(await exists(targetPath))) {
+    if (!targetPath) {
         throw new ApiError(
             "WORKTREE_NOT_FOUND",
             "No worktree exists for this branch yet.",
@@ -335,16 +340,10 @@ export async function updateProjectWorktrees(
 ): Promise<UpdateWorktreesResult> {
     const projectWorktreesRoot = path.join(project.path, ".pr-run");
 
-    let output = "";
-
-    const [listError] = await tryPromise(
+    const [listError, inventory] = await tryPromise(
         (async () => {
             await gitQuiet(project.path, ["fetch", "origin"]);
-            output = await gitText(project.path, [
-                "worktree",
-                "list",
-                "--porcelain",
-            ]);
+            return await listWorktreeInventory(project);
         })(),
     );
 
@@ -352,11 +351,13 @@ export async function updateProjectWorktrees(
         throw gitError("Failed to list project worktrees.", listError);
     }
 
-    const remoteBranches = (await listBranches(project)).map((branch) => ({
-        name: branch.name,
-        normalizedName: normalizeBranchName(branch.name),
-    }));
-    const worktrees = parseWorktreeList(output).filter((item) =>
+    const remoteBranches = (await listBranches(project, inventory)).map(
+        (branch) => ({
+            name: branch.name,
+            normalizedName: normalizeBranchName(branch.name),
+        }),
+    );
+    const worktrees = inventory.worktrees.filter((item) =>
         item.path.startsWith(`${projectWorktreesRoot}${path.sep}`),
     );
 

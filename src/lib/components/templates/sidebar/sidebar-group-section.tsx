@@ -6,7 +6,7 @@ import type { ProjectGroup } from "@/types/pr-run";
 
 type SidebarGroupSectionProps = Pick<
     SidebarProps,
-    | "expandedProjects"
+    | "collapsedProjects"
     | "pendingProjectUpdateId"
     | "pendingWorktreeRemovalKey"
     | "selectedBranchName"
@@ -22,7 +22,7 @@ type SidebarGroupSectionProps = Pick<
 };
 
 export function SidebarGroupSection({
-    expandedProjects,
+    collapsedProjects,
     group,
     isExpanded,
     pendingProjectUpdateId,
@@ -46,7 +46,7 @@ export function SidebarGroupSection({
             </SidebarSectionHeader>
 
             {isExpanded ? (
-                <div className="relative mt-1 flex min-w-0 flex-col gap-0.5">
+                <div className="relative mt-1 flex min-w-0 flex-col gap-0.5 ">
                     {group.projects.length === 0 ? (
                         <SidebarEmptyState>
                             No projects added.
@@ -55,7 +55,7 @@ export function SidebarGroupSection({
 
                     {group.projects.map((project) => (
                         <SidebarProjectItem
-                            isExpanded={expandedProjects.has(project.id)}
+                            isExpanded={!collapsedProjects.has(project.id)}
                             isSelected={selectedProjectId === project.id}
                             isUpdatingProject={
                                 pendingProjectUpdateId === project.id

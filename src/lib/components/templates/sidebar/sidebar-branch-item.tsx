@@ -38,7 +38,7 @@ export function SidebarBranchItem({
                     hover:text-sidebar-accent-foreground focus-visible:ring-ring
                     active:bg-sidebar-accent flex min-w-0 flex-1 grow
                     cursor-pointer items-center gap-2 overflow-hidden rounded-md
-                    bg-transparent px-1.5 py-2 text-left transition-colors
+                    bg-transparent px-1.5 py-1.5 text-left transition-colors
                     outline-none focus-visible:ring-2`,
                     isSelected && "text-sidebar-accent-foreground",
                     branch.isStale && !isSelected && "text-muted-foreground",
@@ -68,18 +68,18 @@ export function SidebarBranchItem({
             </button>
             {branch.hasWorktree ? (
                 <div
-                    className="pointer-events-none flex shrink-0 items-center
-                        pr-1 opacity-0 transition-opacity duration-150
-                        group-focus-within/menu-sub-item:pointer-events-auto
-                        group-focus-within/menu-sub-item:opacity-100
-                        group-hover/menu-sub-item:pointer-events-auto
-                        group-hover/menu-sub-item:opacity-100"
+                    className="bg-sidebar/80 pointer-events-none absolute
+                        inset-y-0 right-0 flex items-center rounded-r-md px-1
+                        opacity-0 backdrop-blur-md transition-opacity
+                        duration-150
+                        group-[&:is(:hover,:focus-within)]/menu-sub-item:pointer-events-auto
+                        group-[&:is(:hover,:focus-within)]/menu-sub-item:opacity-100"
                 >
                     <Button
                         aria-label={`Remove ${branch.name} worktree`}
-                        className="border-sidebar-border/80 bg-sidebar
-                            text-danger-foreground data-[hover=true]:bg-sidebar
-                            shadow-sm"
+                        className="text-danger-foreground
+                            data-[hover=true]:bg-sidebar-accent
+                            border-transparent bg-transparent shadow-none"
                         isDisabled={isRemovingWorktree}
                         isIconOnly
                         size="icon-xs"
