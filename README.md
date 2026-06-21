@@ -1,7 +1,7 @@
 # PR-run (Work in progress)
 
 The app made for people who review multiple Pull Requests every day.
-
+[![Publish npm package](https://github.com/felipe-software/pr-run/actions/workflows/publish-npm.yml/badge.svg)](https://github.com/felipe-software/pr-run/actions/workflows/publish-npm.yml)
 <img width="1030" height="620" alt="image" src="https://github.com/user-attachments/assets/03bfd05f-ddd9-457b-8129-09f052272183" />
 <br>
 
