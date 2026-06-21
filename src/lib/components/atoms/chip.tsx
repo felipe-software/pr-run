@@ -26,7 +26,8 @@ export function Chip<T extends ElementType = "span">({
     return (
         <Component
             className={cn(
-                "inline-flex min-w-0 items-center gap-2 rounded-md border px-2 py-1 text-xs leading-none",
+                `inline-flex min-w-0 items-center gap-2 rounded-md border px-2
+                py-1 text-xs leading-none`,
                 chipToneClassName[tone],
                 className,
             )}

@@ -19,23 +19,32 @@ export function SidebarHeader({
     onOpenSshPassphrase,
     onToggleTheme,
 }: SidebarHeaderProps) {
-    const actionButtonClassName =
-        "border-transparent text-muted-foreground/75 data-[hover=true]:bg-sidebar-accent data-[hover=true]:text-sidebar-accent-foreground";
-
     return (
-        <header className="flex min-h-11 items-center justify-between gap-3 border-b border-sidebar-border/70 px-2.5 py-2">
+        <header
+            className="border-sidebar-border/70 flex min-h-11 items-center
+                justify-between gap-3 border-b px-2.5 py-2"
+        >
             <div className="min-w-0">
-                <div className="truncate text-[13px] font-semibold tracking-tight text-sidebar-foreground">
+                <div
+                    className="text-sidebar-foreground truncate text-[13px]
+                        font-semibold tracking-tight"
+                >
                     PR Run
                 </div>
-                <div className="truncate font-mono text-[10px] leading-3 text-muted-foreground/55">
+                <div
+                    className="text-muted-foreground/55 truncate font-mono
+                        text-[10px] leading-3"
+                >
                     branches + worktrees
                 </div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
                 <Button
                     aria-label="Toggle theme"
-                    className={actionButtonClassName}
+                    className="text-muted-foreground/75
+                        data-[hover=true]:bg-sidebar-accent
+                        data-[hover=true]:text-sidebar-accent-foreground
+                        border-transparent"
                     isIconOnly
                     size="icon-xs"
                     type="button"
@@ -49,7 +58,10 @@ export function SidebarHeader({
                 </Button>
                 <Button
                     aria-label="Create script"
-                    className={actionButtonClassName}
+                    className="text-muted-foreground/75
+                        data-[hover=true]:bg-sidebar-accent
+                        data-[hover=true]:text-sidebar-accent-foreground
+                        border-transparent"
                     isDisabled={isCreatingScript}
                     isIconOnly
                     size="icon-xs"
@@ -60,7 +72,10 @@ export function SidebarHeader({
                 </Button>
                 <Button
                     aria-label="SSH passphrase"
-                    className={actionButtonClassName}
+                    className="text-muted-foreground/75
+                        data-[hover=true]:bg-sidebar-accent
+                        data-[hover=true]:text-sidebar-accent-foreground
+                        border-transparent"
                     isIconOnly
                     size="icon-xs"
                     type="button"
@@ -70,7 +85,10 @@ export function SidebarHeader({
                 </Button>
                 <Button
                     aria-label="Add project"
-                    className={actionButtonClassName}
+                    className="text-muted-foreground/75
+                        data-[hover=true]:bg-sidebar-accent
+                        data-[hover=true]:text-sidebar-accent-foreground
+                        border-transparent"
                     isIconOnly
                     size="icon-xs"
                     type="button"

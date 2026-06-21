@@ -15,7 +15,10 @@ export function PrRunApp() {
 
     if (state.configError) {
         return (
-            <div className="fixed inset-0 grid place-items-center overflow-hidden bg-background p-8 font-sans text-foreground">
+            <div
+                className="bg-background text-foreground fixed inset-0 grid
+                    place-items-center overflow-hidden p-8 font-sans"
+            >
                 <Surface
                     className="max-w-lg px-4 py-3 text-sm"
                     variant="danger"
@@ -32,7 +35,8 @@ export function PrRunApp() {
     if (state.isLoadingConfig) {
         return (
             <Surface
-                className="fixed inset-0 grid place-items-center overflow-hidden rounded-none border-0 bg-background font-sans"
+                className="bg-background fixed inset-0 grid place-items-center
+                    overflow-hidden rounded-none border-0 font-sans"
                 variant="plain"
             >
                 <EmptyState
@@ -46,12 +50,13 @@ export function PrRunApp() {
 
     return (
         <Surface
-            className="fixed inset-0 flex min-h-0 overflow-hidden rounded-none border-0 bg-background font-sans text-foreground"
+            className="bg-background text-foreground fixed inset-0 flex min-h-0
+                overflow-hidden rounded-none border-0 font-sans"
             variant="plain"
         >
             <Sidebar
                 expandedGroups={state.expandedGroups}
-                expandedProjects={state.expandedProjects}
+                collapsedProjects={state.collapsedProjects}
                 groups={state.groups}
                 isCreatingScript={state.isCreatingScript}
                 pendingProjectUpdateId={state.pendingProjectUpdateId}

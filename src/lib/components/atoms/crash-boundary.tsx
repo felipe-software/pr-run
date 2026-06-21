@@ -32,16 +32,16 @@ export class CrashBoundary extends Component<
         }
 
         return (
-            <main className="fixed inset-0 grid place-items-center bg-background p-8 font-sans text-foreground">
+            <main className="bg-background text-foreground fixed inset-0 grid place-items-center p-8 font-sans">
                 <Surface className="w-full max-w-3xl px-5 py-4">
                     <h1 className="mb-3 text-lg font-semibold">
                         Renderer crash
                     </h1>
-                    <p className="mb-4 text-muted-foreground">
+                    <p className="text-muted-foreground mb-4">
                         Check the Electron terminal output for the full stack
                         trace.
                     </p>
-                    <pre className="m-0 whitespace-pre-wrap break-words font-mono text-sm">
+                    <pre className="m-0 font-mono text-sm break-words whitespace-pre-wrap">
                         {this.state.error.stack ?? this.state.error.message}
                     </pre>
                 </Surface>

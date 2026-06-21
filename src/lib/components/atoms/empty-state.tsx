@@ -20,19 +20,33 @@ export function EmptyState({
     return (
         <div
             className={cn(
-                "flex min-w-0 flex-1 flex-col items-center justify-center p-6 text-center",
+                `flex min-w-0 flex-1 flex-col items-center justify-center p-6
+                text-center h-full`,
                 className,
             )}
         >
             {icon ? (
-                <div className="relative mb-5 flex size-10 items-center justify-center rounded-md border border-border bg-surface text-muted-foreground shadow-sm/5 before:absolute before:inset-0 before:rounded-[calc(var(--radius-md)-1px)] before:shadow-[0_1px_rgba(255,255,255,0.08)]">
+                <div
+                    className="border-border bg-surface text-muted-foreground
+                        relative mb-5 flex size-10 items-center justify-center
+                        rounded-md border shadow-sm/5 before:absolute
+                        before:inset-0
+                        before:rounded-[calc(var(--radius-md)-1px)]
+                        before:shadow-[0_1px_rgba(255,255,255,0.08)]"
+                >
                     {icon}
                 </div>
             ) : null}
-            <div className="max-w-sm text-balance text-base font-semibold text-foreground">
+            <div
+                className="text-foreground max-w-sm text-base font-semibold
+                    text-balance"
+            >
                 {title}
             </div>
-            <div className="mt-1 max-w-sm text-balance text-sm leading-6 text-muted-foreground">
+            <div
+                className="text-muted-foreground mt-1 max-w-sm text-sm leading-6
+                    text-balance"
+            >
                 {description}
             </div>
             {actions ? <div className="mt-5 flex gap-2">{actions}</div> : null}

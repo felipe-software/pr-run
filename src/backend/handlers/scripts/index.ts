@@ -10,7 +10,7 @@ import path from "node:path";
 
 import { tryPromise } from "@/backend/handlers/error";
 import { externalLauncherHandler } from "@/backend/handlers/external-launcher";
-import { exists, worktreePathFor } from "@/backend/handlers/git/helpers";
+import { requireWorktreePath } from "@/backend/handlers/git/worktree-inventory";
 import { logger } from "@/backend/logger";
 import {
     ApiError,
@@ -216,9 +216,9 @@ async function prepareTerminalCommand(
     branch: string,
     scriptId: string,
 ): Promise<ScriptTerminalCommandResult> {
-    const worktreePath = worktreePathFor(project.path, branch);
+    const worktreePath = await requireWorktreePath(project, branch);
 
-    if (!(await exists(worktreePath))) {
+    if (!worktreePath) {
         throw new ApiError(
             "WORKTREE_NOT_FOUND",
             "No worktree exists for this branch yet.",
@@ -263,9 +263,9 @@ async function runScript(
     branch: string,
     scriptId: string,
 ): Promise<ScriptRunResult> {
-    const worktreePath = worktreePathFor(project.path, branch);
+    const worktreePath = await requireWorktreePath(project, branch);
 
-    if (!(await exists(worktreePath))) {
+    if (!worktreePath) {
         throw new ApiError(
             "WORKTREE_NOT_FOUND",
             "No worktree exists for this branch yet.",
@@ -313,9 +313,9 @@ async function streamScript(
     branch: string,
     scriptId: string,
 ) {
-    const worktreePath = worktreePathFor(project.path, branch);
+    const worktreePath = await requireWorktreePath(project, branch);
 
-    if (!(await exists(worktreePath))) {
+    if (!worktreePath) {
         throw new ApiError(
             "WORKTREE_NOT_FOUND",
             "No worktree exists for this branch yet.",

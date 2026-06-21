@@ -7,13 +7,15 @@ type SidebarItemIconProps = {
 };
 
 export function SidebarItemIcon({ branch }: SidebarItemIconProps) {
-    const markerClassName = getMarkerClassName(branch);
-
     return (
         <span
             className={[
                 "grid h-5 w-5 flex-none place-items-center rounded-md",
-                markerClassName,
+                branch.hasWorktree
+                    ? "bg-success/15 text-success"
+                    : branch.source === "pull-request"
+                      ? "bg-blue-500/20 text-blue-600 dark:text-blue-300"
+                      : "bg-muted/45 text-muted-foreground/75",
             ].join(" ")}
         >
             {branch.source === "pull-request" ? (
@@ -23,16 +25,4 @@ export function SidebarItemIcon({ branch }: SidebarItemIconProps) {
             )}
         </span>
     );
-}
-
-function getMarkerClassName(branch: BranchInfo) {
-    if (branch.hasWorktree) {
-        return "bg-success/15 text-success";
-    }
-
-    if (branch.source === "pull-request") {
-        return "bg-blue-500/20 text-blue-600 dark:text-blue-300";
-    }
-
-    return "bg-muted/45 text-muted-foreground/75";
 }

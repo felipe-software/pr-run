@@ -43,7 +43,8 @@ export function TerminalTabBar({
 
                         return (
                             <TabShell
-                                className="group max-w-56 items-center gap-1 pl-2.5 pr-1 py-0.5 text-xs font-semibold"
+                                className="group max-w-56 items-center gap-1
+                                    py-0.5 pr-1 pl-2.5 text-xs font-semibold"
                                 isActive={isActive}
                                 key={tab.id}
                                 size="sm"
@@ -55,14 +56,21 @@ export function TerminalTabBar({
                                 }
                             >
                                 <button
-                                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                    className="flex min-w-0 flex-1 items-center
+                                        gap-2 text-left"
                                     type="button"
                                     onClick={() => onSelectTab(tab.id)}
                                 >
                                     {tab.busyState === "busy" ? (
-                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                                        <span
+                                            className="h-1.5 w-1.5 shrink-0
+                                                rounded-full bg-emerald-400"
+                                        />
                                     ) : tab.status === "exited" ? (
-                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-danger" />
+                                        <span
+                                            className="bg-danger h-1.5 w-1.5
+                                                shrink-0 rounded-full"
+                                        />
                                     ) : null}
                                     <span className="truncate">
                                         {tab.label}
@@ -78,10 +86,14 @@ export function TerminalTabBar({
                                 <button
                                     aria-label={`Close ${tab.label}`}
                                     className={cn(
-                                        "flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground transition hover:bg-muted/20 hover:text-foreground",
+                                        `text-muted-foreground hover:bg-muted/20
+                                        hover:text-foreground flex h-4 w-4
+                                        shrink-0 items-center justify-center
+                                        rounded transition`,
                                         isActive
                                             ? "opacity-100"
-                                            : "opacity-0 group-hover:opacity-100",
+                                            : `opacity-0
+                                                group-hover:opacity-100`,
                                     )}
                                     type="button"
                                     onClick={(event) => {
@@ -97,7 +109,10 @@ export function TerminalTabBar({
                 </div>
                 <Button
                     aria-label="Create terminal"
-                    className="mb-1 shrink-0 border-border/80 bg-background/90 text-muted-foreground shadow-sm/5 data-[hover=true]:bg-muted/20 data-[hover=true]:text-foreground"
+                    className="border-border/80 bg-background/90
+                        text-muted-foreground data-[hover=true]:bg-muted/20
+                        data-[hover=true]:text-foreground mb-1 shrink-0
+                        shadow-sm/5"
                     isIconOnly
                     size="icon-xs"
                     type="button"

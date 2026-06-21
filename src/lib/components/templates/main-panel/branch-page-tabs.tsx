@@ -1,6 +1,6 @@
 import { TabShell } from "@/lib/components/atoms/tab-shell";
 
-type BranchPageTab = "general" | "run" | "diff";
+type BranchPageTab = "general" | "run" | "diff" | "docker" | "env";
 
 type BranchPageTabsProps = {
     activeTab: BranchPageTab;
@@ -11,6 +11,8 @@ const tabs: { label: string; value: BranchPageTab }[] = [
     { label: "General", value: "general" },
     { label: "Run", value: "run" },
     { label: "Diff", value: "diff" },
+    { label: "Docker", value: "docker" },
+    { label: "Env", value: "env" },
 ];
 
 export function BranchPageTabs({
@@ -19,7 +21,7 @@ export function BranchPageTabs({
 }: BranchPageTabsProps) {
     return (
         <div
-            className="relative z-10 mb-[-1px] flex w-fit items-end pl-1 pr-1"
+            className="relative z-10 mb-[-1px] flex w-fit items-end pr-1 pl-1"
             role="tablist"
         >
             {tabs.map((tab) => (
@@ -30,7 +32,8 @@ export function BranchPageTabs({
                 >
                     <button
                         aria-selected={activeTab === tab.value}
-                        className="h-full w-full px-3 text-xs leading-none font-[inherit]"
+                        className="h-full w-full px-3 font-[inherit] text-xs
+                            leading-none"
                         role="tab"
                         type="button"
                         onClick={() => onSelectTab(tab.value)}

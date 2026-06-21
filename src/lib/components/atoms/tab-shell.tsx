@@ -17,11 +17,13 @@ export function TabShell({
     return (
         <div
             className={cn(
-                "-mr-px flex min-w-0 rounded-t-md border border-b-0 border-border transition",
+                `border-border -mr-px flex min-w-0 rounded-t-md border
+                border-b-0 transition`,
                 size === "sm" ? "h-7" : "h-8",
                 isActive
                     ? "bg-surface text-foreground"
-                    : "bg-background/90 text-muted-foreground hover:bg-muted/20 hover:text-foreground",
+                    : `bg-background/90 text-muted-foreground hover:bg-muted/20
+                        hover:text-foreground`,
                 className,
             )}
             {...props}
