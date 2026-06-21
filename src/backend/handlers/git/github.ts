@@ -175,7 +175,7 @@ export async function listGitHubPullRequests(
     }
 
     return pullRequests
-        .map((pullRequest) => {
+        .map((pullRequest): GitHubPullRequest | null => {
             if (
                 !pullRequest.number ||
                 !pullRequest.title ||

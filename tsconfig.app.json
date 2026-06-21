@@ -19,5 +19,5 @@
         "skipLibCheck": true
     },
     "include": ["src"],
-    "exclude": ["src/backend", "src/**/*.test.ts"]
+    "exclude": ["src/backend", "src/cli", "src/**/*.test.ts"]
 }

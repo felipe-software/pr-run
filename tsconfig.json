@@ -8,6 +8,9 @@
             "path": "./tsconfig.backend.json"
         },
         {
+            "path": "./tsconfig.cli.json"
+        },
+        {
             "path": "./tsconfig.electron.json"
         }
     ],

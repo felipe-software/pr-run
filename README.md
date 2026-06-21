@@ -5,6 +5,21 @@ The app made for people who review multiple Pull Requests every day.
 <img width="1030" height="620" alt="image" src="https://github.com/user-attachments/assets/03bfd05f-ddd9-457b-8129-09f052272183" />
 <br>
 
+## Run
+
+PR-run requires [Bun](https://bun.sh/docs/installation).
+
+```bash
+bunx pr-run
+```
+
+This starts the local backend, serves the browser UI, and opens it in your
+default browser. Use `bunx pr-run --no-open` to print the URL without opening a
+browser. Press `Ctrl+C` to stop the local servers.
+
+Git, GitHub CLI (`gh`), Docker, and editor CLIs are optional and are only needed
+for the workflows that use them.
+
 When reading diffs on github isn't enough, you may need to run a PR in your local machine. So you have to: <br>
 
 - Manually create a worktree.
