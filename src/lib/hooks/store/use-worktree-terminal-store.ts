@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { prRunApi } from "@/lib/api";
 import { tryPromise } from "@/lib/error";
 import type {
     TerminalBusyState,
@@ -212,7 +213,7 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
         async createTerminal(ownerKey, worktreePath, reason) {
             get().ensureOwner(ownerKey, worktreePath);
             const [error, session] = await tryPromise(
-                window.prRun.createTerminalSession({
+                prRunApi.createTerminalSession({
                     cwd: worktreePath,
                     cols: DEFAULT_TERMINAL_COLS,
                     rows: DEFAULT_TERMINAL_ROWS,
@@ -356,7 +357,7 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
 
             if (activeTab) {
                 const [stateError, sessionState] = await tryPromise(
-                    window.prRun.getTerminalSessionState(activeTab.sessionId),
+                    prRunApi.getTerminalSessionState(activeTab.sessionId),
                 );
 
                 if (!stateError) {
@@ -437,7 +438,7 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
             }
 
             const [writeError] = await tryPromise(
-                window.prRun.writeTerminalInput(
+                prRunApi.writeTerminalInput(
                     targetTab.sessionId,
                     `${command.replace(/[\r\n]+$/, "")}\r`,
                     {
@@ -470,9 +471,7 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
                 },
             }));
 
-            await tryPromise(
-                window.prRun.disposeTerminalSession(tab.sessionId),
-            );
+            await tryPromise(prRunApi.disposeTerminalSession(tab.sessionId));
         },
         async disposeOwner(ownerKey) {
             const owner = get().owners[ownerKey];
@@ -483,7 +482,7 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
 
             for (const tab of owner.tabs) {
                 await tryPromise(
-                    window.prRun.disposeTerminalSession(tab.sessionId),
+                    prRunApi.disposeTerminalSession(tab.sessionId),
                 );
             }
 

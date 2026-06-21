@@ -17,7 +17,7 @@ import type {
 
 declare global {
     interface Window {
-        prRun: {
+        prRun?: {
             getBackendUrl(): Promise<string>;
             getConfig(): Promise<ProjectsConfig>;
             addProject(path: string): Promise<ProjectConfig>;

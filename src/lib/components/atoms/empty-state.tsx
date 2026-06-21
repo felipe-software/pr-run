@@ -20,8 +20,8 @@ export function EmptyState({
     return (
         <div
             className={cn(
-                `flex min-w-0 flex-1 flex-col items-center justify-center p-6
-                text-center h-full`,
+                `flex h-full min-w-0 flex-1 flex-col items-center justify-center
+                p-6 text-center`,
                 className,
             )}
         >

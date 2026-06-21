@@ -20,6 +20,10 @@ import type {
     ScriptStreamEvent,
     ScriptTerminalCommandResult,
     SshPassphraseResult,
+    TerminalCreateOptions,
+    TerminalInputOptions,
+    TerminalSession,
+    TerminalSessionSnapshot,
     UpdateResult,
     UpdateWorktreesResult,
 } from "@/types/pr-run";
@@ -73,9 +77,20 @@ const SCRIPT_EVENT_MARKER = "__PR_RUN_SCRIPT_EVENT__";
 
 let backendUrlPromise: Promise<string> | null = null;
 
-function getBackendUrl() {
-    backendUrlPromise ??= window.prRun.getBackendUrl();
+export function getBackendUrl() {
+    backendUrlPromise ??= resolveBackendUrl();
     return backendUrlPromise;
+}
+
+async function resolveBackendUrl() {
+    if (window.prRun) {
+        return window.prRun.getBackendUrl();
+    }
+
+    return (
+        import.meta.env.VITE_PR_RUN_BACKEND_URL?.replace(/\/$/, "") ??
+        "http://127.0.0.1:3001"
+    );
 }
 
 async function toApiUrl(pathOrUrl: string) {
@@ -296,6 +311,19 @@ export const prRunApi = {
         );
     },
     clearSshPassphrase: clearSshPassphraseCache,
+    async createTerminalEventSource(sessionId: string) {
+        return new EventSource(
+            await toApiUrl(
+                `/terminal/sessions/${encodeURIComponent(sessionId)}/events`,
+            ),
+        );
+    },
+    createTerminalSession(options: TerminalCreateOptions) {
+        return requestOne<TerminalSession>("/terminal/sessions", {
+            json: options,
+            method: "POST",
+        });
+    },
     createScript(title: string) {
         return requestOne<ScriptInfo>("/scripts", {
             json: { title },
@@ -346,6 +374,19 @@ export const prRunApi = {
     },
     getConfig() {
         return requestOne<ProjectsConfig>("/config");
+    },
+    getTerminalSessionSnapshot(sessionId: string) {
+        return requestOne<TerminalSessionSnapshot>(
+            `/terminal/sessions/${encodeURIComponent(sessionId)}`,
+        );
+    },
+    getTerminalSessionState(sessionId: string) {
+        return requestOne<
+            Pick<
+                TerminalSessionSnapshot,
+                "busyState" | "currentProcess" | "id" | "isAlive" | "sequence"
+            >
+        >(`/terminal/sessions/${encodeURIComponent(sessionId)}/state`);
     },
     listBranches(projectId: string) {
         return requestMany<BranchInfo>(
@@ -399,6 +440,15 @@ export const prRunApi = {
             {
                 json: { branch },
                 method: "DELETE",
+            },
+        );
+    },
+    resizeTerminal(sessionId: string, cols: number, rows: number) {
+        return requestOne<{ ok: true }>(
+            `/terminal/sessions/${encodeURIComponent(sessionId)}/resize`,
+            {
+                json: { cols, rows },
+                method: "POST",
             },
         );
     },
@@ -462,6 +512,25 @@ export const prRunApi = {
                 json: { branch },
                 method: "POST",
             },
+        );
+    },
+    writeTerminalInput(
+        sessionId: string,
+        data: string,
+        options?: TerminalInputOptions,
+    ) {
+        return requestOne<{ ok: true }>(
+            `/terminal/sessions/${encodeURIComponent(sessionId)}/input`,
+            {
+                json: { data, options },
+                method: "POST",
+            },
+        );
+    },
+    disposeTerminalSession(sessionId: string) {
+        return requestOne<{ ok: true }>(
+            `/terminal/sessions/${encodeURIComponent(sessionId)}`,
+            { method: "DELETE" },
         );
     },
 };

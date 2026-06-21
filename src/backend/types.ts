@@ -226,6 +226,7 @@ export type ApiErrorCode =
     | "DOCKER_INSPECT_FAILED"
     | "DOCKER_SERVICE_NOT_FOUND"
     | "ENV_FILES_READ_FAILED"
+    | "TERMINAL_SESSION_FAILED"
     | "BAD_REQUEST"
     | "NOT_FOUND";
 
