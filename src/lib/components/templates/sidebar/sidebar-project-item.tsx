@@ -38,8 +38,6 @@ export function SidebarProjectItem({
     onToggleProject,
     onUpdateProject,
 }: SidebarProjectItemProps) {
-    const rowClassName =
-        "peer/menu-button flex min-h-10 w-full cursor-pointer items-center overflow-hidden rounded-md bg-transparent px-1.5 py-1 text-left text-sm text-sidebar-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring active:bg-sidebar-accent";
     const branchesQuery = useProjectBranchesQuery(project.id, isExpanded);
     const isAwaitingSshPassphrase = isHandledSshPromptError(
         branchesQuery.error,
@@ -72,29 +70,61 @@ export function SidebarProjectItem({
                 <button
                     aria-expanded={isExpanded}
                     data-active={isSelected}
-                    className={rowClassName}
+                    className="peer/menu-button text-sidebar-foreground
+                        hover:bg-sidebar-accent
+                        hover:text-sidebar-accent-foreground
+                        focus-visible:ring-ring active:bg-sidebar-accent flex
+                        min-w-0 flex-1 cursor-pointer items-center
+                        overflow-hidden rounded-md bg-transparent px-1.5 py-2.5
+                        text-left text-sm transition-colors outline-none
+                        focus-visible:ring-2"
                     type="button"
                     onClick={() => onToggleProject(project.id)}
                 >
                     {isExpanded ? (
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                        <ChevronDown
+                            className="text-muted-foreground/70 h-3.5 w-3.5
+                                shrink-0"
+                        />
                     ) : (
-                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                        <ChevronRight
+                            className="text-muted-foreground/70 h-3.5 w-3.5
+                                shrink-0"
+                        />
                     )}
-                    <Folder className="ml-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
-                    <span className="ml-2 min-w-0 flex-1">
-                        <span className="block truncate text-xs font-medium leading-4 tracking-tight">
+                    <Folder
+                        className="text-muted-foreground/70 ml-0.5 h-3.5 w-3.5
+                            shrink-0"
+                    />
+                    <div className="ml-2 flex min-w-0 flex-1 justify-between">
+                        <span
+                            className="block truncate text-xs leading-4
+                                font-medium tracking-tight"
+                        >
                             {project.name}
                         </span>
-                        <span className="block truncate text-[10px] leading-4 text-muted-foreground/65">
+                        <span
+                            className="text-muted-foreground/65 block truncate
+                                text-[10px] leading-4"
+                        >
                             {shortenPath(project.path)}
                         </span>
-                    </span>
+                    </div>
                 </button>
-                <div className="pointer-events-none absolute top-1/2 right-1 z-10 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover/menu-item:pointer-events-auto group-hover/menu-item:opacity-100 group-focus-within/menu-item:pointer-events-auto group-focus-within/menu-item:opacity-100">
+                <div
+                    className="pointer-events-none flex shrink-0 items-center
+                        pr-1 opacity-0 transition-opacity duration-150
+                        group-focus-within/menu-item:pointer-events-auto
+                        group-focus-within/menu-item:opacity-100
+                        group-hover/menu-item:pointer-events-auto
+                        group-hover/menu-item:opacity-100"
+                >
                     <Button
                         aria-label={`Reload ${project.name} worktrees`}
-                        className="border-transparent bg-sidebar/90 text-muted-foreground/65 shadow-sm data-[hover=true]:bg-sidebar-accent data-[hover=true]:text-sidebar-accent-foreground"
+                        className="bg-sidebar/90 text-muted-foreground/65
+                            data-[hover=true]:bg-sidebar-accent
+                            data-[hover=true]:text-sidebar-accent-foreground
+                            border-transparent shadow-sm"
                         isDisabled={isUpdatingProject}
                         isIconOnly
                         size="icon-xs"
@@ -114,7 +144,10 @@ export function SidebarProjectItem({
             </div>
 
             {isExpanded ? (
-                <div className="relative ml-1 mt-0.5 flex min-w-0 flex-col gap-0.5 border-l border-sidebar-border/80 py-0.5 pl-1">
+                <div
+                    className="border-sidebar-border/80 relative mt-0.5 ml-1
+                        flex min-w-0 flex-col gap-0.5 border-l py-0.5 pl-1"
+                >
                     {branchesQuery.isPending ? (
                         <div className="grid gap-1 px-1.5 py-1">
                             <Skeleton className="h-5 w-11/12" />
@@ -125,7 +158,9 @@ export function SidebarProjectItem({
 
                     {!branchesQuery.isPending && isAwaitingSshPassphrase ? (
                         <Surface
-                            className="border-0 bg-transparent px-2 py-1.5 text-[11px] leading-5 text-muted-foreground/70"
+                            className="text-muted-foreground/70 border-0
+                                bg-transparent px-2 py-1.5 text-[11px]
+                                leading-5"
                             variant="plain"
                         >
                             Waiting for SSH passphrase...
@@ -146,7 +181,10 @@ export function SidebarProjectItem({
                     {!branchesQuery.isPending &&
                     !branchError &&
                     (branchesQuery.data?.length ?? 0) === 0 ? (
-                        <div className="px-2 py-1.5 text-[11px] leading-5 text-muted-foreground/70">
+                        <div
+                            className="text-muted-foreground/70 px-2 py-1.5
+                                text-[11px] leading-5"
+                        >
                             No remote branches.
                         </div>
                     ) : null}

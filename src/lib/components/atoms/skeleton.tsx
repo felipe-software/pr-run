@@ -10,7 +10,9 @@ export function Skeleton({
         <div
             aria-hidden="true"
             className={cn(
-                "animate-skeleton rounded-md bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--foreground)_8%,transparent),transparent)] bg-[length:200%_100%]",
+                `animate-skeleton rounded-md
+                bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--foreground)_8%,transparent),transparent)]
+                bg-[length:200%_100%]`,
                 "bg-muted/35",
                 className,
             )}

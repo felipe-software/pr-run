@@ -59,6 +59,55 @@ export type BranchDiffResult = {
     patch: string;
 };
 
+export type DockerServiceState =
+    | "created"
+    | "dead"
+    | "exited"
+    | "not-created"
+    | "paused"
+    | "restarting"
+    | "running"
+    | "unknown";
+
+export type DockerServiceSummary = {
+    containerName?: string;
+    health?: string;
+    isRunning: boolean;
+    name: string;
+    state: DockerServiceState;
+    statusText?: string;
+};
+
+export type DockerOverviewResult = {
+    branch: string;
+    composeCli: string | null;
+    composeFilePath: string | null;
+    services: DockerServiceSummary[];
+    worktreePath: string;
+};
+
+export type DockerTerminalCommandAction = "down" | "logs" | "restart" | "up";
+
+export type DockerTerminalCommandResult = {
+    action: DockerTerminalCommandAction;
+    command: string;
+    serviceName?: string;
+};
+
+export type EnvFileItem = {
+    content?: string;
+    isSymbolicLink: boolean;
+    linkedPath?: string;
+    name: string;
+    readError?: string;
+};
+
+export type EnvFilesOverviewResult = {
+    branch: string;
+    files: EnvFileItem[];
+    worktreePath: string;
+};
+
 export type CheckoutResult =
     | {
           status: "created";

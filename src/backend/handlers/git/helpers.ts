@@ -1,4 +1,4 @@
-import { access, lstat, symlink } from "node:fs/promises";
+import { access, lstat, readdir, symlink } from "node:fs/promises";
 import path from "node:path";
 
 import { tryPromise } from "@/backend/handlers/error";
@@ -150,14 +150,55 @@ export async function validateProjectPath(projectPath: string) {
 }
 
 export async function linkSharedEnv(projectPath: string, targetPath: string) {
-    const source = path.join(projectPath, ".env");
-    const destination = path.join(targetPath, ".env");
+    const [error, envFileNames] = await tryPromise(
+        listEnvFileNames(projectPath),
+    );
 
-    if (!(await exists(source)) || (await exists(destination))) {
+    if (error) {
         return;
     }
 
-    await tryPromise(symlink(source, destination));
+    await Promise.all(
+        envFileNames.map(async (fileName) => {
+            const source = path.join(projectPath, fileName);
+            const destination = path.join(targetPath, fileName);
+
+            if (await exists(destination)) {
+                return;
+            }
+
+            await tryPromise(symlink(source, destination));
+        }),
+    );
+}
+
+export function isEnvFileName(fileName: string) {
+    return fileName === ".env" || /^\.env\..+/.test(fileName);
+}
+
+export function compareEnvFileNames(left: string, right: string) {
+    if (left === ".env") {
+        return -1;
+    }
+
+    if (right === ".env") {
+        return 1;
+    }
+
+    return left.localeCompare(right);
+}
+
+export async function listEnvFileNames(directoryPath: string) {
+    const entries = await readdir(directoryPath, { withFileTypes: true });
+
+    return entries
+        .filter(
+            (entry) =>
+                isEnvFileName(entry.name) &&
+                (entry.isFile() || entry.isSymbolicLink()),
+        )
+        .map((entry) => entry.name)
+        .sort(compareEnvFileNames);
 }
 
 export function parseWorktreeList(output: string): WorktreeRecord[] {

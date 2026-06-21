@@ -93,9 +93,12 @@ function DiffTreeNodeRow({
         return (
             <button
                 className={cn(
-                    "flex w-full min-w-0 items-center gap-1 rounded-md bg-transparent py-[3px] pr-1 text-left text-muted-foreground outline-none transition hover:bg-muted/25 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                    selectedPath === node.path &&
-                        "bg-muted/30 text-foreground",
+                    `text-muted-foreground hover:bg-muted/25
+                    hover:text-foreground focus-visible:ring-ring flex w-full
+                    min-w-0 items-center gap-1 rounded-md bg-transparent
+                    py-[3px] pr-1 text-left transition outline-none
+                    focus-visible:ring-2`,
+                    selectedPath === node.path && "bg-muted/30 text-foreground",
                 )}
                 style={{ paddingLeft }}
                 type="button"
@@ -104,7 +107,8 @@ function DiffTreeNodeRow({
                 <span className="h-3 w-3 shrink-0" />
                 <File className="h-3 w-3 shrink-0" />
                 <span
-                    className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-[1.35]"
+                    className="min-w-0 flex-1 overflow-hidden text-[11px]
+                        leading-[1.35] text-ellipsis whitespace-nowrap"
                     title={node.path}
                 >
                     {node.name}
@@ -121,7 +125,11 @@ function DiffTreeNodeRow({
         <Fragment>
             <button
                 aria-expanded={!isCollapsed}
-                className="flex w-full min-w-0 items-center gap-1 rounded-md bg-transparent py-[3px] pr-1 text-left text-muted-foreground outline-none transition hover:bg-muted/25 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="text-muted-foreground hover:bg-muted/25
+                    hover:text-foreground focus-visible:ring-ring flex w-full
+                    min-w-0 items-center gap-1 rounded-md bg-transparent
+                    py-[3px] pr-1 text-left transition outline-none
+                    focus-visible:ring-2"
                 style={{ paddingLeft }}
                 type="button"
                 onClick={() => onToggleFolder(node.path)}
@@ -133,7 +141,8 @@ function DiffTreeNodeRow({
                 )}
                 <Folder className="h-3 w-3 shrink-0" />
                 <span
-                    className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-[1.35]"
+                    className="min-w-0 flex-1 overflow-hidden text-[11px]
+                        leading-[1.35] text-ellipsis whitespace-nowrap"
                     title={node.path}
                 >
                     {node.name}
@@ -167,7 +176,10 @@ type DiffCountsProps = {
 
 function DiffCounts({ additions, deletions }: DiffCountsProps) {
     return (
-        <span className="inline-flex flex-none items-center gap-1 text-[10px] leading-[1.35] tabular-nums">
+        <span
+            className="inline-flex flex-none items-center gap-1 text-[10px]
+                leading-[1.35] tabular-nums"
+        >
             <span className="text-success">+{additions}</span>
             <span className="text-danger">-{deletions}</span>
         </span>

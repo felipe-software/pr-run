@@ -93,7 +93,7 @@ export function BranchScriptsSection({
                 <div className="mb-2 flex items-center justify-between gap-2">
                     <h2 className="text-sm font-semibold">Scripts</h2>
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                             {(scriptsQuery.data ?? []).length} available
                         </span>
                         <Button
@@ -135,7 +135,13 @@ export function BranchScriptsSection({
                                 >
                                     <Chip
                                         as="button"
-                                        className="h-8 max-w-64 cursor-pointer justify-start gap-1.5 pr-[58px] text-left transition hover:bg-muted/30 disabled:cursor-not-allowed disabled:text-muted-foreground disabled:opacity-60"
+                                        className="hover:bg-muted/30
+                                            disabled:text-muted-foreground h-8
+                                            max-w-64 cursor-pointer
+                                            justify-start gap-1.5 pr-[58px]
+                                            text-left transition
+                                            disabled:cursor-not-allowed
+                                            disabled:opacity-60"
                                         disabled={
                                             Boolean(script.loadError) ||
                                             isPreparing
@@ -150,7 +156,17 @@ export function BranchScriptsSection({
                                                 : script.title}
                                         </span>
                                     </Chip>
-                                    <div className="pointer-events-none absolute top-1/2 right-1 z-10 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+                                    <div
+                                        className="pointer-events-none absolute
+                                            top-1/2 right-1 z-10 flex
+                                            -translate-y-1/2 items-center gap-1
+                                            opacity-0 transition-opacity
+                                            duration-150
+                                            group-focus-within:pointer-events-auto
+                                            group-focus-within:opacity-100
+                                            group-hover:pointer-events-auto
+                                            group-hover:opacity-100"
+                                    >
                                         <Button
                                             aria-label={`Edit ${script.title}`}
                                             isIconOnly
@@ -188,14 +204,15 @@ export function BranchScriptsSection({
                 )}
             </Surface>
             {scriptPendingDelete ? (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
+                <div
+                    className="fixed inset-0 z-50 flex items-center
+                        justify-center bg-black/35 px-4"
+                >
                     <Surface className="w-full max-w-sm px-4 py-4">
-                        <h3 className="text-sm font-semibold">
-                            Delete script
-                        </h3>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                            Delete "{scriptPendingDelete.title}" from the
-                            global script list.
+                        <h3 className="text-sm font-semibold">Delete script</h3>
+                        <p className="text-muted-foreground mt-2 text-sm">
+                            Delete "{scriptPendingDelete.title}" from the global
+                            script list.
                         </p>
                         <div className="mt-4 flex justify-end gap-2">
                             <Button

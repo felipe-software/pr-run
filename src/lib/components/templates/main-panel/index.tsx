@@ -43,6 +43,18 @@ const BranchDiffPanel = lazy(() =>
     })),
 );
 
+const BranchDockerPanel = lazy(() =>
+    import("@/lib/components/templates/branch-docker-panel").then((module) => ({
+        default: module.BranchDockerPanel,
+    })),
+);
+
+const BranchEnvPanel = lazy(() =>
+    import("@/lib/components/templates/branch-env-panel").then((module) => ({
+        default: module.BranchEnvPanel,
+    })),
+);
+
 type MainPanelProps = {
     actionError?: string;
     branchName: string | null;
@@ -146,7 +158,7 @@ export function MainPanel({
         project.id,
         currentBranch.name,
     );
-    async function runScriptCommand({
+    async function runTerminalCommand({
         command,
         scriptTitle,
     }: {
@@ -162,8 +174,14 @@ export function MainPanel({
     }
 
     return (
-        <main className="flex h-dvh min-h-0 flex-1 overflow-hidden bg-background px-3 py-3 max-[900px]:px-2 max-[500px]:overflow-y-auto">
-            <div className="flex min-h-0 w-full flex-1 flex-col gap-3 max-[500px]:min-h-[500px]">
+        <main
+            className="bg-background flex h-dvh min-h-0 flex-1 overflow-hidden
+                px-3 py-3 max-[900px]:px-2 max-[500px]:overflow-y-auto"
+        >
+            <div
+                className="flex min-h-0 w-full flex-1 flex-col gap-3
+                    max-[500px]:min-h-[500px]"
+            >
                 <div className="flex shrink-0 flex-col gap-0">
                     <BranchPageTabs
                         activeTab={activeTab}
@@ -213,14 +231,19 @@ export function MainPanel({
                                         branchName={currentBranch.name}
                                         projectId={project.id}
                                         onCreateScript={onCreateScript}
-                                        onRunScriptCommand={runScriptCommand}
+                                        onRunScriptCommand={runTerminalCommand}
                                     />
                                 </Suspense>
 
                                 <Suspense
                                     fallback={
                                         <Surface
-                                            className="grid h-[min(42vh,360px)] min-h-60 place-items-center overflow-hidden px-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                                            className="text-muted-foreground
+                                                grid h-[min(42vh,360px)]
+                                                min-h-60 place-items-center
+                                                overflow-hidden px-2 text-[11px]
+                                                font-bold tracking-[0.08em]
+                                                uppercase"
                                             variant="terminal"
                                         >
                                             <Skeleton className="h-4 w-36" />
@@ -243,7 +266,7 @@ export function MainPanel({
                                 />
                             </Surface>
                         )
-                    ) : (
+                    ) : activeTab === "diff" ? (
                         <Suspense
                             fallback={
                                 <Surface
@@ -261,6 +284,59 @@ export function MainPanel({
                                 projectId={project.id}
                             />
                         </Suspense>
+                    ) : activeTab === "docker" ? (
+                        selectedBranch.hasWorktree ? (
+                            <Suspense
+                                fallback={
+                                    <Surface
+                                        className="grid gap-2 px-3 py-3"
+                                        variant="muted"
+                                    >
+                                        <Skeleton className="h-4 w-32" />
+                                        <Skeleton className="h-16 w-full" />
+                                        <Skeleton className="h-20 w-full" />
+                                    </Surface>
+                                }
+                            >
+                                <BranchDockerPanel
+                                    branchName={currentBranch.name}
+                                    projectId={project.id}
+                                    onRunDockerCommand={runTerminalCommand}
+                                />
+                            </Suspense>
+                        ) : (
+                            <Surface className="min-h-48" variant="muted">
+                                <EmptyState
+                                    description="Create the worktree before running Docker Compose commands for this branch."
+                                    title="No worktree available"
+                                />
+                            </Surface>
+                        )
+                    ) : selectedBranch.hasWorktree ? (
+                        <Suspense
+                            fallback={
+                                <Surface
+                                    className="grid gap-2 px-3 py-3"
+                                    variant="muted"
+                                >
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-16 w-full" />
+                                    <Skeleton className="h-20 w-full" />
+                                </Surface>
+                            }
+                        >
+                            <BranchEnvPanel
+                                branchName={currentBranch.name}
+                                projectId={project.id}
+                            />
+                        </Suspense>
+                    ) : (
+                        <Surface className="min-h-48" variant="muted">
+                            <EmptyState
+                                description="Create the worktree before reading env files for this branch."
+                                title="No worktree available"
+                            />
+                        </Surface>
                     )}
                 </div>
             </div>

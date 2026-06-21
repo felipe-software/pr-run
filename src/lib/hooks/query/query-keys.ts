@@ -24,4 +24,18 @@ export const prRunQueryKeys = {
             baseBranchName,
             "diff",
         ] as const,
+    docker: (projectId: string, branchName: string) =>
+        [
+            ...prRunQueryKeys.project(projectId),
+            "branch",
+            branchName,
+            "docker",
+        ] as const,
+    env: (projectId: string, branchName: string) =>
+        [
+            ...prRunQueryKeys.project(projectId),
+            "branch",
+            branchName,
+            "env",
+        ] as const,
 };

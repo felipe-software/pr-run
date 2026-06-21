@@ -17,7 +17,11 @@ export function SidebarSectionHeader({
     return (
         <button
             aria-expanded={isExpanded}
-            className="flex h-7 w-full items-center justify-between gap-2 rounded-md px-2 text-left text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="text-muted-foreground/60 hover:bg-sidebar-accent
+                hover:text-sidebar-accent-foreground focus-visible:ring-ring
+                flex w-full items-center justify-between gap-2 rounded-md px-2
+                py-1.5 text-left text-[10px] font-medium tracking-wider
+                uppercase transition-colors outline-none focus-visible:ring-2"
             type="button"
             onClick={onToggle}
         >

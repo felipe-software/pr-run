@@ -6,6 +6,10 @@ import type {
     BranchInfo,
     CheckoutResult,
     CommitInfo,
+    DockerOverviewResult,
+    DockerTerminalCommandAction,
+    DockerTerminalCommandResult,
+    EnvFilesOverviewResult,
     ProjectConfig,
     ProjectsConfig,
     RemoveWorktreeResult,
@@ -304,11 +308,7 @@ export const prRunApi = {
             { method: "DELETE" },
         );
     },
-    getCommitHistory(
-        projectId: string,
-        branch: string,
-        baseBranch?: string,
-    ) {
+    getCommitHistory(projectId: string, branch: string, baseBranch?: string) {
         const params = new URLSearchParams({ branch });
 
         if (baseBranch) {
@@ -330,6 +330,20 @@ export const prRunApi = {
             `/projects/${encodeURIComponent(projectId)}/diff?${params.toString()}`,
         );
     },
+    getDockerOverview(projectId: string, branch: string) {
+        const params = new URLSearchParams({ branch });
+
+        return requestOne<DockerOverviewResult>(
+            `/projects/${encodeURIComponent(projectId)}/docker?${params.toString()}`,
+        );
+    },
+    getEnvFiles(projectId: string, branch: string) {
+        const params = new URLSearchParams({ branch });
+
+        return requestOne<EnvFilesOverviewResult>(
+            `/projects/${encodeURIComponent(projectId)}/env?${params.toString()}`,
+        );
+    },
     getConfig() {
         return requestOne<ProjectsConfig>("/config");
     },
@@ -345,6 +359,20 @@ export const prRunApi = {
         return requestOne<ScriptOpenResult>(
             `/scripts/${encodeURIComponent(scriptId)}/open`,
             { method: "POST" },
+        );
+    },
+    prepareDockerTerminalCommand(
+        projectId: string,
+        branch: string,
+        action: DockerTerminalCommandAction,
+        service?: string,
+    ) {
+        return requestOne<DockerTerminalCommandResult>(
+            `/projects/${encodeURIComponent(projectId)}/docker/terminal-command`,
+            {
+                json: { action, branch, service },
+                method: "POST",
+            },
         );
     },
     prepareScriptTerminalCommand(

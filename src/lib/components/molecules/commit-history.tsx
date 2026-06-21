@@ -22,7 +22,9 @@ export function CommitHistory({
             <Surface className="overflow-hidden">
                 {Array.from({ length: 6 }).map((_, index) => (
                     <div
-                        className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 border-b border-border/60 px-3 py-3 last:border-b-0"
+                        className="border-border/60 grid
+                            grid-cols-[7rem_minmax(0,1fr)] gap-3 border-b px-3
+                            py-3 last:border-b-0"
                         key={index}
                     >
                         <Skeleton className="h-5 w-20" />
@@ -67,15 +69,20 @@ export function CommitHistory({
 
                 return (
                     <div
-                        className={index > 0 ? "border-t border-border" : ""}
+                        className={index > 0 ? "border-border border-t" : ""}
                         key={commit.hash}
                     >
                         {index === outsideBranchStartIndex ? (
-                            <div className="flex items-center gap-3 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                                <span className="h-2 w-2 rounded-full bg-success" />
-                                <span className="h-px flex-1 bg-border" />
+                            <div
+                                className="bg-muted/20 text-muted-foreground
+                                    flex items-center gap-3 px-3 py-2 text-xs"
+                            >
+                                <span
+                                    className="bg-success h-2 w-2 rounded-full"
+                                />
+                                <span className="bg-border h-px flex-1" />
                                 <span>Commits from the base history</span>
-                                <span className="h-px flex-1 bg-border" />
+                                <span className="bg-border h-px flex-1" />
                             </div>
                         ) : null}
                         <div
@@ -84,7 +91,10 @@ export function CommitHistory({
                                 isOutsideBranch ? "opacity-65" : "",
                             ].join(" ")}
                         >
-                            <div className="flex items-start gap-2 font-mono text-xs text-muted-foreground">
+                            <div
+                                className="text-muted-foreground flex
+                                    items-start gap-2 font-mono text-xs"
+                            >
                                 <span
                                     className={[
                                         "mt-1.5 h-2 w-2 shrink-0 rounded-full",
@@ -93,10 +103,13 @@ export function CommitHistory({
                                             : "bg-success",
                                     ].join(" ")}
                                 />
-                                <GitCommitHorizontal className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                <GitCommitHorizontal
+                                    className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                                />
                                 {commit.url ? (
                                     <a
-                                        className="hover:text-foreground hover:underline"
+                                        className="hover:text-foreground
+                                            hover:underline"
                                         href={commit.url}
                                         rel="noreferrer"
                                         target="_blank"
@@ -110,7 +123,10 @@ export function CommitHistory({
                             <div className="min-w-0">
                                 {commit.url ? (
                                     <a
-                                        className="block truncate text-sm font-medium text-foreground transition hover:text-primary hover:underline"
+                                        className="text-foreground
+                                            hover:text-primary block truncate
+                                            text-sm font-medium transition
+                                            hover:underline"
                                         href={commit.url}
                                         rel="noreferrer"
                                         target="_blank"
@@ -118,31 +134,38 @@ export function CommitHistory({
                                         {commit.subject}
                                     </a>
                                 ) : (
-                                    <div className="truncate text-sm font-medium">
+                                    <div
+                                        className="truncate text-sm font-medium"
+                                    >
                                         {commit.subject}
                                     </div>
                                 )}
-                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <div
+                                    className="text-muted-foreground mt-2 flex
+                                        flex-wrap items-center gap-2 text-xs"
+                                >
                                     {commit.authorAvatarUrl ? (
                                         <img
                                             alt={commit.authorName}
-                                            className="h-5 w-5 rounded-md border border-border object-cover"
+                                            className="border-border h-5 w-5
+                                                rounded-md border object-cover"
                                             src={commit.authorAvatarUrl}
                                         />
                                     ) : null}
                                     {commit.authorUrl ? (
-                                            <a
-                                                className="hover:text-foreground hover:underline"
-                                                href={commit.authorUrl}
-                                                rel="noreferrer"
-                                                target="_blank"
-                                            >
-                                                {commit.authorLogin ??
-                                                    commit.authorName}
-                                            </a>
-                                        ) : (
-                                            <span>{commit.authorName}</span>
-                                        )}
+                                        <a
+                                            className="hover:text-foreground
+                                                hover:underline"
+                                            href={commit.authorUrl}
+                                            rel="noreferrer"
+                                            target="_blank"
+                                        >
+                                            {commit.authorLogin ??
+                                                commit.authorName}
+                                        </a>
+                                    ) : (
+                                        <span>{commit.authorName}</span>
+                                    )}
                                     <span>·</span>
                                     <span>{formatDate(commit.date)}</span>
                                 </div>

@@ -192,6 +192,8 @@ export async function checkoutBranch(
     }
 
     if (await exists(targetPath)) {
+        await linkSharedEnv(project.path, targetPath);
+
         return {
             status: "ready",
             branch: name,
@@ -286,6 +288,8 @@ export async function updateWorktree(
     if (error) {
         throw gitError("Failed to update the worktree.", error);
     }
+
+    await linkSharedEnv(project.path, targetPath);
 
     return {
         status: "updated",

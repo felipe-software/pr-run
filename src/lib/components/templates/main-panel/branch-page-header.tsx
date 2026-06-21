@@ -29,12 +29,21 @@ export function BranchPageHeader({
     return (
         <header>
             <Surface className="rounded-t-none px-3 py-2.5">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div
+                    className="flex flex-col gap-3 lg:flex-row lg:items-center
+                        lg:justify-between"
+                >
                     <div className="min-w-0">
-                        <h1 className="truncate font-mono text-lg font-semibold leading-6 tracking-tight text-foreground">
+                        <h1
+                            className="text-foreground truncate font-mono
+                                text-lg leading-6 font-semibold tracking-tight"
+                        >
                             {branch.name}
                         </h1>
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        <div
+                            className="text-muted-foreground mt-2 flex flex-wrap
+                                items-center gap-1.5 text-xs"
+                        >
                             <StatusPill
                                 tone={
                                     branch.source === "pull-request"
@@ -58,7 +67,10 @@ export function BranchPageHeader({
                             </span>
                             {branch.pullRequest ? (
                                 <a
-                                    className="inline-flex items-center gap-1 text-foreground transition hover:text-primary hover:underline"
+                                    className="text-foreground
+                                        hover:text-primary inline-flex
+                                        items-center gap-1 transition
+                                        hover:underline"
                                     href={branch.pullRequest.url}
                                     rel="noreferrer"
                                     target="_blank"
@@ -68,7 +80,10 @@ export function BranchPageHeader({
                             ) : null}
                             {branch.repository ? (
                                 <a
-                                    className="inline-flex min-w-0 items-center gap-1 text-foreground transition hover:text-primary hover:underline"
+                                    className="text-foreground
+                                        hover:text-primary inline-flex min-w-0
+                                        items-center gap-1 transition
+                                        hover:underline"
                                     href={branch.repository.url}
                                     rel="noreferrer"
                                     target="_blank"

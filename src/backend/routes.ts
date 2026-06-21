@@ -1,5 +1,7 @@
 import type { Elysia } from "elysia";
 
+import { envFilesHandler } from "@/backend/handlers/env-files";
+import { dockerHandler } from "@/backend/handlers/docker";
 import { gitHandler } from "@/backend/handlers/git";
 import { projectConfigHandler } from "@/backend/handlers/project-config";
 import { scriptsHandler } from "@/backend/handlers/scripts";
@@ -204,6 +206,73 @@ export function registerRoutes(app: Elysia) {
                 await gitHandler.getBranchDiff(project, branch, baseBranch),
             ]);
         })
+        .get("/projects/:projectId/docker", async ({ params, query }) => {
+            const branch = String(query.branch ?? "");
+
+            if (!branch) {
+                throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
+            }
+
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            return success("Docker overview loaded.", [
+                await dockerHandler.getDockerOverview(project, branch),
+            ]);
+        })
+        .get("/projects/:projectId/env", async ({ params, query }) => {
+            const branch = String(query.branch ?? "");
+
+            if (!branch) {
+                throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
+            }
+
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            return success("Env files loaded.", [
+                await envFilesHandler.getEnvFilesOverview(project, branch),
+            ]);
+        })
+        .post(
+            "/projects/:projectId/docker/terminal-command",
+            async ({ body, params }) => {
+                const payload = body as {
+                    action?: string;
+                    branch?: string;
+                    service?: string;
+                };
+
+                if (!payload.branch) {
+                    throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
+                }
+
+                if (
+                    payload.action !== "down" &&
+                    payload.action !== "logs" &&
+                    payload.action !== "restart" &&
+                    payload.action !== "up"
+                ) {
+                    throw new ApiError(
+                        "BAD_REQUEST",
+                        "Enter a valid Docker action.",
+                        400,
+                    );
+                }
+
+                const project = await projectConfigHandler.findProject(
+                    params.projectId,
+                );
+                return success("Docker command prepared.", [
+                    await dockerHandler.prepareTerminalCommand(
+                        project,
+                        payload.branch,
+                        payload.action,
+                        payload.service?.trim() || undefined,
+                    ),
+                ]);
+            },
+        )
         .post(
             "/projects/:projectId/scripts/:scriptId/terminal-command",
             async ({ params, body }) => {

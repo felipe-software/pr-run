@@ -17,7 +17,10 @@ export function MainPanelState({
     tone = "neutral",
 }: MainPanelStateProps) {
     return (
-        <main className="flex h-dvh min-h-0 flex-1 items-center justify-center overflow-y-auto bg-background p-8">
+        <main
+            className="bg-background flex h-dvh min-h-0 flex-1 items-center
+                justify-center overflow-y-auto p-8"
+        >
             <Surface
                 className={[
                     "px-4 py-3 text-sm",
