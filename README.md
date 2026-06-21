@@ -17,7 +17,8 @@ I don't know if someone already solved this problem, but I lost so much time doi
 <img width="1918" height="1055" alt="general" src="https://github.com/user-attachments/assets/0517d5f6-7de4-42a4-8354-87fdbac5398c" />
 
 ## Scripts
-Typescript files that can be manually or automatically executed. You can also use it for shell commands, like "npm install", "rm -r node_modules"
+Typescript files that can be manually or automatically executed. You can also use it for shell commands, like "npm install", "rm -r node_modules"<br>
+<img width="759" height="275" alt="image" src="https://github.com/user-attachments/assets/f2d96a26-211c-4cc4-b291-2a7fda7838c7" />
 <img width="1917" height="1050" alt="scripts" src="https://github.com/user-attachments/assets/2a0c2e6b-b4e1-4272-bcfe-3fa1ffa21343" />
 
 ## Diffs
