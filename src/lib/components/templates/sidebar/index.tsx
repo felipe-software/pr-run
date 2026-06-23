@@ -6,6 +6,8 @@ import { SidebarShell } from "@/lib/components/templates/sidebar/sidebar-shell";
 import type { SidebarProps } from "@/lib/components/templates/sidebar/types";
 
 export function Sidebar({
+    busyOwnerKeys,
+    busyProjectIds,
     collapsedProjects,
     expandedGroups,
     groups,
@@ -43,6 +45,8 @@ export function Sidebar({
             <SidebarContent>
                 {groups.map((group) => (
                     <SidebarGroupSection
+                        busyOwnerKeys={busyOwnerKeys}
+                        busyProjectIds={busyProjectIds}
                         collapsedProjects={collapsedProjects}
                         group={group}
                         isExpanded={expandedGroups.has(group.id)}

@@ -5,7 +5,7 @@ import { EmptyState } from "@/lib/components/atoms/empty-state";
 export function BranchEmptyState() {
     return (
         <main
-            className="bg-background flex h-dvh min-h-0 flex-1 overflow-y-auto"
+            className="bg-background flex h-full min-h-0 flex-1 overflow-y-auto"
         >
             <EmptyState
                 description="Pick a project in the sidebar and choose a remote branch to inspect commits, scripts, and diffs."

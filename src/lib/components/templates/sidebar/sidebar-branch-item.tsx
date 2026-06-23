@@ -1,5 +1,6 @@
 import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
 
+import { BusyDot } from "@/lib/components/atoms/busy-dot";
 import { Button } from "@/lib/components/atoms/button";
 import { StatusPill } from "@/lib/components/atoms/status-pill";
 import { formatBranchAge } from "@/lib/format";
@@ -10,6 +11,7 @@ import type { BranchInfo } from "@/types/pr-run";
 
 type SidebarBranchItemProps = {
     branch: BranchInfo;
+    isBusy: boolean;
     isCheckingOutWorktree: boolean;
     isRemovingWorktree: boolean;
     isSelected: boolean;
@@ -20,6 +22,7 @@ type SidebarBranchItemProps = {
 
 export function SidebarBranchItem({
     branch,
+    isBusy,
     isCheckingOutWorktree,
     isRemovingWorktree,
     isSelected,
@@ -53,6 +56,7 @@ export function SidebarBranchItem({
                 onClick={() => onSelectBranch(branch.name)}
             >
                 <SidebarItemIcon branch={branch} />
+                {isBusy ? <BusyDot /> : null}
                 <span
                     className="min-w-0 flex-1 grow truncate text-[13px]
                         leading-4 tracking-tight"

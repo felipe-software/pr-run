@@ -8,6 +8,7 @@ import { CreateScriptDialog } from "@/lib/components/templates/create-script-dia
 import { MainPanel } from "@/lib/components/templates/main-panel";
 import { Sidebar } from "@/lib/components/templates/sidebar";
 import { SshPassphraseDialog } from "@/lib/components/templates/ssh-passphrase-dialog";
+import { StatusBar } from "@/lib/components/templates/status-bar";
 import { usePrRunAppState } from "@/lib/components/templates/pr-run-app/use-pr-run-app-state";
 
 export function PrRunApp() {
@@ -55,6 +56,8 @@ export function PrRunApp() {
             variant="plain"
         >
             <Sidebar
+                busyOwnerKeys={state.statusSummary.busyOwnerKeys}
+                busyProjectIds={state.statusSummary.busyProjectIds}
                 expandedGroups={state.expandedGroups}
                 collapsedProjects={state.collapsedProjects}
                 groups={state.groups}
@@ -84,14 +87,17 @@ export function PrRunApp() {
                 }
                 onUpdateProject={state.updateProject}
             />
-            <MainPanel
-                actionError={state.actionError}
-                branchName={state.selectedBranchView.branchName}
-                isCheckingOutWorktree={state.isCheckingOutWorktree}
-                project={state.selectedBranchView.project}
-                onCheckoutBranch={state.checkoutBranch}
-                onCreateScript={state.openCreateScript}
-            />
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                <MainPanel
+                    actionError={state.actionError}
+                    branchName={state.selectedBranchView.branchName}
+                    isCheckingOutWorktree={state.isCheckingOutWorktree}
+                    project={state.selectedBranchView.project}
+                    onCheckoutBranch={state.checkoutBranch}
+                    onCreateScript={state.openCreateScript}
+                />
+                <StatusBar summary={state.statusSummary} />
+            </div>
             <AddProjectDialog
                 error={state.addProjectError}
                 isOpen={state.isAddProjectOpen}

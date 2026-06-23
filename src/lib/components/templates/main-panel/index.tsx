@@ -175,7 +175,7 @@ export function MainPanel({
 
     return (
         <main
-            className="bg-background flex h-dvh min-h-0 flex-1 overflow-hidden
+            className="bg-background flex h-full min-h-0 flex-1 overflow-hidden
                 px-3 py-3 max-[900px]:px-2 max-[500px]:overflow-y-auto"
         >
             <div

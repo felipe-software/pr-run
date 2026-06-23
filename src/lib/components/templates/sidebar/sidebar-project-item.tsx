@@ -2,19 +2,27 @@ import { ChevronDown, ChevronRight, Folder, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
+import { BusyDot } from "@/lib/components/atoms/busy-dot";
 import { Button } from "@/lib/components/atoms/button";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
 import { SidebarBranchItem } from "@/lib/components/templates/sidebar/sidebar-branch-item";
+import {
+    getVisibleSidebarBranches,
+    sortBranchesByLastCommit,
+} from "@/lib/components/templates/sidebar/sidebar-sort";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
+import { getWorktreeOwnerKey } from "@/lib/hooks/store/use-worktree-terminal-store";
 import { shortenPath } from "@/lib/format";
 import { cn } from "@/lib/utils/cn";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { ProjectConfig } from "@/types/pr-run";
 
 type SidebarProjectItemProps = {
+    busyOwnerKeys: Set<string>;
     isExpanded: boolean;
+    isBusy: boolean;
     isSelected: boolean;
     isUpdatingProject: boolean;
     pendingWorktreeCheckoutKey?: string;
@@ -31,7 +39,9 @@ type SidebarProjectItemProps = {
 const INITIAL_VISIBLE_BRANCH_COUNT = 5;
 
 export function SidebarProjectItem({
+    busyOwnerKeys,
     isExpanded,
+    isBusy,
     isSelected,
     isUpdatingProject,
     pendingWorktreeCheckoutKey,
@@ -56,26 +66,27 @@ export function SidebarProjectItem({
         ? getErrorMessage(branchesQuery.error)
         : undefined;
     const sortedBranches = useMemo(
-        () =>
-            [...(branchesQuery.data ?? [])].sort(
-                (left, right) =>
-                    (right.lastCommitTimestamp ?? 0) -
-                    (left.lastCommitTimestamp ?? 0),
-            ),
+        () => sortBranchesByLastCommit(branchesQuery.data ?? []),
         [branchesQuery.data],
     );
-    const recentBranches = sortedBranches.filter((branch) => !branch.isStale);
-    const staleBranches = sortedBranches.filter((branch) => branch.isStale);
-    const hiddenRecentBranchCount = Math.max(
-        recentBranches.length - INITIAL_VISIBLE_BRANCH_COUNT,
-        0,
+    const { hiddenRecentBranchCount, staleBranches, visibleBranches } = useMemo(
+        () =>
+            getVisibleSidebarBranches({
+                areAllRecentBranchesVisible,
+                areStaleBranchesVisible,
+                branches: sortedBranches,
+                busyOwnerKeys,
+                initialVisibleBranchCount: INITIAL_VISIBLE_BRANCH_COUNT,
+                projectId: project.id,
+            }),
+        [
+            areAllRecentBranchesVisible,
+            areStaleBranchesVisible,
+            busyOwnerKeys,
+            project.id,
+            sortedBranches,
+        ],
     );
-    const visibleBranches = [
-        ...(areAllRecentBranchesVisible
-            ? recentBranches
-            : recentBranches.slice(0, INITIAL_VISIBLE_BRANCH_COUNT)),
-        ...(areStaleBranchesVisible ? staleBranches : []),
-    ];
 
     useEffect(() => {
         if (!isAwaitingSshPassphrase) {
@@ -128,6 +139,7 @@ export function SidebarProjectItem({
                         className="text-muted-foreground/70 ml-0.5 h-3.5 w-3.5
                             shrink-0"
                     />
+                    {isBusy ? <BusyDot /> : null}
                     <div className="ml-2 flex min-w-0 flex-1 justify-between">
                         <span
                             className="block truncate text-xs leading-4
@@ -234,6 +246,9 @@ export function SidebarProjectItem({
                     {visibleBranches.map((branch) => (
                         <SidebarBranchItem
                             branch={branch}
+                            isBusy={busyOwnerKeys.has(
+                                getWorktreeOwnerKey(project.id, branch.name),
+                            )}
                             isCheckingOutWorktree={
                                 pendingWorktreeCheckoutKey ===
                                 `${project.id}:${branch.name}`

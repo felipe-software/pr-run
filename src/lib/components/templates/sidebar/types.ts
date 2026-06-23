@@ -1,6 +1,8 @@
 import type { ProjectConfig, ProjectGroup } from "@/types/pr-run";
 
 export type SidebarProps = {
+    busyOwnerKeys: Set<string>;
+    busyProjectIds: Set<string>;
     expandedGroups: Set<string>;
     collapsedProjects: Set<string>;
     groups: ProjectGroup[];
