@@ -12,6 +12,7 @@ import { useOpenScriptMutation } from "@/lib/hooks/query/use-open-script-mutatio
 import { useRunScriptMutation } from "@/lib/hooks/query/use-run-script-mutation";
 import { useScriptsQuery } from "@/lib/hooks/query/use-scripts-query";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { cn } from "@/lib/utils/cn";
 import type { ScriptInfo } from "@/types/pr-run";
 
 type BranchScriptsSectionProps = {
@@ -127,6 +128,7 @@ export function BranchScriptsSection({
                             const isDeleting =
                                 deleteScriptMutation.isPending &&
                                 deleteScriptMutation.variables === script.id;
+                            const isActionVisible = isDeleting;
 
                             return (
                                 <div
@@ -138,8 +140,8 @@ export function BranchScriptsSection({
                                         className="hover:bg-muted/30
                                             disabled:text-muted-foreground h-8
                                             max-w-64 cursor-pointer
-                                            justify-start gap-1.5 pr-[58px]
-                                            text-left transition
+                                            justify-start gap-1.5 text-left
+                                            transition
                                             disabled:cursor-not-allowed
                                             disabled:opacity-60"
                                         disabled={
@@ -147,25 +149,52 @@ export function BranchScriptsSection({
                                             isPreparing
                                         }
                                         type="button"
-                                        onClick={() => void runScript(script)}
+                                        onClick={() => {
+                                            runScript(script);
+                                        }}
                                     >
-                                        <Play className="h-3.5 w-3.5 shrink-0" />
-                                        <span className="truncate">
-                                            {isPreparing
-                                                ? "Preparing..."
-                                                : script.title}
+                                        <span
+                                            className="flex min-w-0 items-center
+                                                gap-1.5"
+                                        >
+                                            <Play
+                                                className="h-3.5 w-3.5 shrink-0"
+                                            />
+                                            <span className="truncate">
+                                                {isPreparing
+                                                    ? "Preparing..."
+                                                    : script.title}
+                                            </span>
+                                        </span>
+                                        <span
+                                            aria-hidden
+                                            className={cn(
+                                                `block h-full w-14 shrink-0
+                                                    transition-opacity
+                                                    duration-150
+                                                    group-focus-within:opacity-0
+                                                    group-hover:opacity-0`,
+                                                isActionVisible && "opacity-0",
+                                            )}
+                                        >
+                                            &nbsp;
                                         </span>
                                     </Chip>
                                     <div
-                                        className="pointer-events-none absolute
-                                            top-1/2 right-1 z-10 flex
-                                            -translate-y-1/2 items-center gap-1
-                                            opacity-0 transition-opacity
-                                            duration-150
-                                            group-focus-within:pointer-events-auto
-                                            group-focus-within:opacity-100
-                                            group-hover:pointer-events-auto
-                                            group-hover:opacity-100"
+                                        className={cn(
+                                            `pointer-events-none absolute
+                                                top-1/2 right-1 z-10 flex
+                                                -translate-y-1/2 items-center
+                                                gap-1 opacity-0
+                                                transition-opacity duration-150
+                                                group-focus-within:pointer-events-auto
+                                                group-focus-within:opacity-100
+                                                group-hover:pointer-events-auto
+                                                group-hover:opacity-100`,
+                                            isActionVisible &&
+                                                `pointer-events-auto
+                                                    opacity-100`,
+                                        )}
                                     >
                                         <Button
                                             aria-label={`Edit ${script.title}`}
@@ -173,9 +202,9 @@ export function BranchScriptsSection({
                                             size="icon-xs"
                                             type="button"
                                             variant="outline"
-                                            onPress={() =>
-                                                void editScript(script)
-                                            }
+                                            onPress={() => {
+                                                editScript(script);
+                                            }}
                                         >
                                             <Pencil className="h-3.5 w-3.5" />
                                         </Button>
@@ -227,9 +256,9 @@ export function BranchScriptsSection({
                                 isDisabled={deleteScriptMutation.isPending}
                                 type="button"
                                 variant="danger"
-                                onPress={() =>
-                                    void deleteScript(scriptPendingDelete)
-                                }
+                                onPress={() => {
+                                    deleteScript(scriptPendingDelete);
+                                }}
                             >
                                 <Trash2 className="h-4 w-4" />
                                 {deleteScriptMutation.isPending

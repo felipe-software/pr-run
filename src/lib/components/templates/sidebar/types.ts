@@ -1,11 +1,14 @@
 import type { ProjectConfig, ProjectGroup } from "@/types/pr-run";
 
 export type SidebarProps = {
+    busyOwnerKeys: Set<string>;
+    busyProjectIds: Set<string>;
     expandedGroups: Set<string>;
     collapsedProjects: Set<string>;
     groups: ProjectGroup[];
     isCreatingScript: boolean;
     pendingProjectUpdateId?: string;
+    pendingWorktreeCheckoutKey?: string;
     pendingWorktreeRemovalKey?: string;
     selectedBranchName?: string;
     selectedProjectId?: string;
@@ -14,6 +17,7 @@ export type SidebarProps = {
     onAddProject: () => void;
     onBeginResize: () => void;
     onCreateScript: () => void;
+    onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onOpenSshPassphrase: () => void;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
     onSelectBranch: (projectId: string, branchName: string) => void;

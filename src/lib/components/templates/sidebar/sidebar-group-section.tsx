@@ -1,16 +1,21 @@
 import { SidebarEmptyState } from "@/lib/components/templates/sidebar/sidebar-empty-state";
 import { SidebarProjectItem } from "@/lib/components/templates/sidebar/sidebar-project-item";
+import { sortProjectsByBusyState } from "@/lib/components/templates/sidebar/sidebar-sort";
 import { SidebarSectionHeader } from "@/lib/components/templates/sidebar/sidebar-section-header";
 import type { SidebarProps } from "@/lib/components/templates/sidebar/types";
 import type { ProjectGroup } from "@/types/pr-run";
 
 type SidebarGroupSectionProps = Pick<
     SidebarProps,
+    | "busyOwnerKeys"
+    | "busyProjectIds"
     | "collapsedProjects"
     | "pendingProjectUpdateId"
+    | "pendingWorktreeCheckoutKey"
     | "pendingWorktreeRemovalKey"
     | "selectedBranchName"
     | "selectedProjectId"
+    | "onCheckoutBranch"
     | "onRemoveWorktree"
     | "onSelectBranch"
     | "onToggleGroup"
@@ -22,19 +27,28 @@ type SidebarGroupSectionProps = Pick<
 };
 
 export function SidebarGroupSection({
+    busyOwnerKeys,
+    busyProjectIds,
     collapsedProjects,
     group,
     isExpanded,
     pendingProjectUpdateId,
+    pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     selectedBranchName,
     selectedProjectId,
+    onCheckoutBranch,
     onRemoveWorktree,
     onSelectBranch,
     onToggleGroup,
     onToggleProject,
     onUpdateProject,
 }: SidebarGroupSectionProps) {
+    const sortedProjects = sortProjectsByBusyState(
+        group.projects,
+        busyProjectIds,
+    );
+
     return (
         <section className="py-0.5">
             <SidebarSectionHeader
@@ -53,9 +67,11 @@ export function SidebarGroupSection({
                         </SidebarEmptyState>
                     ) : null}
 
-                    {group.projects.map((project) => (
+                    {sortedProjects.map((project) => (
                         <SidebarProjectItem
+                            busyOwnerKeys={busyOwnerKeys}
                             isExpanded={!collapsedProjects.has(project.id)}
+                            isBusy={busyProjectIds.has(project.id)}
                             isSelected={selectedProjectId === project.id}
                             isUpdatingProject={
                                 pendingProjectUpdateId === project.id
@@ -64,12 +80,16 @@ export function SidebarGroupSection({
                             pendingWorktreeRemovalKey={
                                 pendingWorktreeRemovalKey
                             }
+                            pendingWorktreeCheckoutKey={
+                                pendingWorktreeCheckoutKey
+                            }
                             project={project}
                             selectedBranchName={
                                 selectedProjectId === project.id
                                     ? selectedBranchName
                                     : undefined
                             }
+                            onCheckoutBranch={onCheckoutBranch}
                             onRemoveWorktree={onRemoveWorktree}
                             onSelectBranch={onSelectBranch}
                             onToggleProject={onToggleProject}

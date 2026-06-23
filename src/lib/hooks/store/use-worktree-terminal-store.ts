@@ -34,6 +34,12 @@ export type WorktreeTerminalOwnerState = {
     worktreePath: string;
 };
 
+export type BusyTerminalSummary = {
+    busyOwnerKeys: Set<WorktreeTerminalOwnerKey>;
+    busyProjectIds: Set<string>;
+    busyTerminalCount: number;
+};
+
 type CreateTerminalReason =
     | { type: "default" | "manual" }
     | { type: "script"; scriptTitle: string };
@@ -129,6 +135,39 @@ export function removeWorktreeTerminalTab(
         ...owner,
         activeTabId,
         tabs,
+    };
+}
+
+export function getBusyTerminalSummary(
+    owners: Record<WorktreeTerminalOwnerKey, WorktreeTerminalOwnerState>,
+): BusyTerminalSummary {
+    const busyOwnerKeys = new Set<WorktreeTerminalOwnerKey>();
+    const busyProjectIds = new Set<string>();
+    let busyTerminalCount = 0;
+
+    for (const [ownerKey, owner] of Object.entries(owners)) {
+        const busyTabCount = owner.tabs.filter(
+            (tab) => tab.status === "alive" && tab.busyState === "busy",
+        ).length;
+
+        if (busyTabCount === 0) {
+            continue;
+        }
+
+        busyTerminalCount += busyTabCount;
+        busyOwnerKeys.add(ownerKey);
+
+        const projectId = ownerKey.split(":")[0];
+
+        if (projectId) {
+            busyProjectIds.add(projectId);
+        }
+    }
+
+    return {
+        busyOwnerKeys,
+        busyProjectIds,
+        busyTerminalCount,
     };
 }
 

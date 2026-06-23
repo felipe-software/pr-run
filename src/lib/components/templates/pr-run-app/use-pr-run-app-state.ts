@@ -22,6 +22,7 @@ import type {
     SelectedBranchState,
     SelectedBranchView,
 } from "@/lib/components/templates/pr-run-app/types";
+import { useAppStatusSummary } from "@/lib/components/templates/pr-run-app/use-app-status-summary";
 
 const SIDEBAR_WIDTH_STORAGE_KEY = "pr-run.sidebar.width";
 const SIDEBAR_MIN_WIDTH = 256;
@@ -65,6 +66,7 @@ export function usePrRunAppState() {
         [groups],
     );
     usePreloadProjects(projects);
+    const statusSummary = useAppStatusSummary(projects);
     const selectedProject = useMemo(
         () =>
             projects.find(
@@ -306,11 +308,15 @@ export function usePrRunAppState() {
         pendingProjectUpdateId: updateProjectWorktreesMutation.isPending
             ? updateProjectWorktreesMutation.variables
             : undefined,
+        pendingWorktreeCheckoutKey: checkoutBranchMutation.isPending
+            ? `${checkoutBranchMutation.variables?.projectId}:${checkoutBranchMutation.variables?.branchName}`
+            : undefined,
         pendingWorktreeRemovalKey: removeWorktreeMutation.isPending
             ? `${removeWorktreeMutation.variables?.projectId}:${removeWorktreeMutation.variables?.branchName}`
             : undefined,
         selectedBranchView,
         sidebarWidth,
+        statusSummary,
         theme,
         beginResize: () => setIsResizingSidebar(true),
         closeAddProject: () => setIsAddProjectOpen(false),
