@@ -1,9 +1,11 @@
+import { BusyIcon } from "@/lib/components/atoms/busy-icon";
 import { TabShell } from "@/lib/components/atoms/tab-shell";
 
 type BranchPageTab = "general" | "run" | "diff" | "docker" | "env";
 
 type BranchPageTabsProps = {
     activeTab: BranchPageTab;
+    isRunTabBusy: boolean;
     onSelectTab: (tab: BranchPageTab) => void;
 };
 
@@ -17,6 +19,7 @@ const tabs: { label: string; value: BranchPageTab }[] = [
 
 export function BranchPageTabs({
     activeTab,
+    isRunTabBusy,
     onSelectTab,
 }: BranchPageTabsProps) {
     return (
@@ -32,12 +35,16 @@ export function BranchPageTabs({
                 >
                     <button
                         aria-selected={activeTab === tab.value}
-                        className="h-full w-full px-3 font-[inherit] text-xs
+                        className="flex h-full w-full items-center
+                            justify-center gap-1.5 px-3 font-[inherit] text-xs
                             leading-none"
                         role="tab"
                         type="button"
                         onClick={() => onSelectTab(tab.value)}
                     >
+                        {tab.value === "run" && isRunTabBusy ? (
+                            <BusyIcon size="sm" />
+                        ) : null}
                         {tab.label}
                     </button>
                 </TabShell>

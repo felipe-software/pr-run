@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight, Folder, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
-import { BusyDot } from "@/lib/components/atoms/busy-dot";
+import { BusyIcon } from "@/lib/components/atoms/busy-icon";
 import { Button } from "@/lib/components/atoms/button";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
@@ -58,7 +58,10 @@ export function SidebarProjectItem({
         useState(false);
     const [areStaleBranchesVisible, setAreStaleBranchesVisible] =
         useState(false);
-    const branchesQuery = useProjectBranchesQuery(project.id, isExpanded);
+    const branchesQuery = useProjectBranchesQuery(
+        project.id,
+        isExpanded || isBusy,
+    );
     const isAwaitingSshPassphrase = isHandledSshPromptError(
         branchesQuery.error,
     );
@@ -135,11 +138,19 @@ export function SidebarProjectItem({
                                 shrink-0"
                         />
                     )}
-                    <Folder
-                        className="text-muted-foreground/70 ml-0.5 h-3.5 w-3.5
-                            shrink-0"
-                    />
-                    {isBusy ? <BusyDot /> : null}
+                    <span
+                        className="bg-muted/45 text-muted-foreground/75 relative
+                            grid h-5 w-5 flex-none place-items-center
+                            rounded-md"
+                    >
+                        <Folder className="h-3.5 w-3.5" />
+                        {isBusy ? (
+                            <BusyIcon
+                                className="absolute -right-1 -bottom-1"
+                                size="sm"
+                            />
+                        ) : null}
+                    </span>
                     <div className="ml-2 flex min-w-0 flex-1 justify-between">
                         <span
                             className="block truncate text-xs leading-4
@@ -197,12 +208,15 @@ export function SidebarProjectItem({
                 </div>
             </div>
 
-            {isExpanded ? (
+            {isExpanded || isBusy ? (
                 <div
-                    className="border-sidebar-border/80 relative mt-0.5 ml-2
-                        flex min-w-0 flex-col gap-0.5 border-l py-0.5 pl-1"
+                    className={cn(
+                        `border-sidebar-border/80 relative mt-0.5 ml-2 flex
+                            min-w-0 flex-col gap-0.5 border-l py-0.5 pl-1`,
+                        !isExpanded && "opacity-90",
+                    )}
                 >
-                    {branchesQuery.isPending ? (
+                    {branchesQuery.isPending && isExpanded ? (
                         <div className="grid gap-1 px-1.5 py-1">
                             <Skeleton className="h-5 w-11/12" />
                             <Skeleton className="h-5 w-9/12" />
@@ -210,7 +224,9 @@ export function SidebarProjectItem({
                         </div>
                     ) : null}
 
-                    {!branchesQuery.isPending && isAwaitingSshPassphrase ? (
+                    {!branchesQuery.isPending &&
+                    isExpanded &&
+                    isAwaitingSshPassphrase ? (
                         <Surface
                             className="text-muted-foreground/70 border-0
                                 bg-transparent px-2 py-1.5 text-[11px]
@@ -222,6 +238,7 @@ export function SidebarProjectItem({
                     ) : null}
 
                     {!branchesQuery.isPending &&
+                    isExpanded &&
                     !isAwaitingSshPassphrase &&
                     branchError ? (
                         <Surface
@@ -233,6 +250,7 @@ export function SidebarProjectItem({
                     ) : null}
 
                     {!branchesQuery.isPending &&
+                    isExpanded &&
                     !branchError &&
                     (branchesQuery.data?.length ?? 0) === 0 ? (
                         <div
@@ -243,35 +261,48 @@ export function SidebarProjectItem({
                         </div>
                     ) : null}
 
-                    {visibleBranches.map((branch) => (
-                        <SidebarBranchItem
-                            branch={branch}
-                            isBusy={busyOwnerKeys.has(
-                                getWorktreeOwnerKey(project.id, branch.name),
-                            )}
-                            isCheckingOutWorktree={
-                                pendingWorktreeCheckoutKey ===
-                                `${project.id}:${branch.name}`
-                            }
-                            isRemovingWorktree={
-                                pendingWorktreeRemovalKey ===
-                                `${project.id}:${branch.name}`
-                            }
-                            isSelected={selectedBranchName === branch.name}
-                            key={branch.remoteName}
-                            onCheckoutBranch={(branchName) =>
-                                onCheckoutBranch(project.id, branchName)
-                            }
-                            onRemoveWorktree={(branchName) =>
-                                onRemoveWorktree(project.id, branchName)
-                            }
-                            onSelectBranch={(branchName) =>
-                                onSelectBranch(project.id, branchName)
-                            }
-                        />
-                    ))}
+                    {(isExpanded
+                        ? visibleBranches
+                        : visibleBranches.filter((branch) =>
+                              busyOwnerKeys.has(
+                                  getWorktreeOwnerKey(project.id, branch.name),
+                              ),
+                          )
+                    ).map((branch) => {
+                        const isBranchBusy = busyOwnerKeys.has(
+                            getWorktreeOwnerKey(project.id, branch.name),
+                        );
 
-                    {!areAllRecentBranchesVisible &&
+                        return (
+                            <SidebarBranchItem
+                                branch={branch}
+                                isBusy={isBranchBusy}
+                                isCollapsedPreview={!isExpanded}
+                                isCheckingOutWorktree={
+                                    pendingWorktreeCheckoutKey ===
+                                    `${project.id}:${branch.name}`
+                                }
+                                isRemovingWorktree={
+                                    pendingWorktreeRemovalKey ===
+                                    `${project.id}:${branch.name}`
+                                }
+                                isSelected={selectedBranchName === branch.name}
+                                key={branch.remoteName}
+                                onCheckoutBranch={(branchName) =>
+                                    onCheckoutBranch(project.id, branchName)
+                                }
+                                onRemoveWorktree={(branchName) =>
+                                    onRemoveWorktree(project.id, branchName)
+                                }
+                                onSelectBranch={(branchName) =>
+                                    onSelectBranch(project.id, branchName)
+                                }
+                            />
+                        );
+                    })}
+
+                    {isExpanded &&
+                    !areAllRecentBranchesVisible &&
                     hiddenRecentBranchCount > 0 ? (
                         <Button
                             className="text-muted-foreground
@@ -285,7 +316,8 @@ export function SidebarProjectItem({
                         </Button>
                     ) : null}
 
-                    {(areAllRecentBranchesVisible ||
+                    {isExpanded &&
+                    (areAllRecentBranchesVisible ||
                         hiddenRecentBranchCount === 0) &&
                     !areStaleBranchesVisible &&
                     staleBranches.length > 0 ? (

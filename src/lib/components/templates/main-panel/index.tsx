@@ -75,6 +75,9 @@ export function MainPanel({
     const [activeTab, setActiveTab] = useState<BranchPageTab>("general");
     const selectedKey =
         project && branchName ? `${project.id}:${branchName}` : "";
+    const selectedTerminalOwner = useWorktreeTerminalStore((state) =>
+        selectedKey ? state.owners[selectedKey] : undefined,
+    );
     const branchesQuery = useProjectBranchesQuery(
         project?.id,
         Boolean(project),
@@ -97,6 +100,11 @@ export function MainPanel({
     );
     const isAwaitingCommitPassphrase = isHandledSshPromptError(
         commitsQuery.error,
+    );
+    const isRunTabBusy = Boolean(
+        selectedTerminalOwner?.tabs.some(
+            (tab) => tab.status === "alive" && tab.busyState === "busy",
+        ),
     );
 
     useEffect(() => {
@@ -185,6 +193,7 @@ export function MainPanel({
                 <div className="flex shrink-0 flex-col gap-0">
                     <BranchPageTabs
                         activeTab={activeTab}
+                        isRunTabBusy={isRunTabBusy}
                         onSelectTab={setActiveTab}
                     />
                     <BranchPageHeader

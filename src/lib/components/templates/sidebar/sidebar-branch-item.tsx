@@ -1,6 +1,6 @@
 import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
 
-import { BusyDot } from "@/lib/components/atoms/busy-dot";
+import { BusyIcon } from "@/lib/components/atoms/busy-icon";
 import { Button } from "@/lib/components/atoms/button";
 import { StatusPill } from "@/lib/components/atoms/status-pill";
 import { formatBranchAge } from "@/lib/format";
@@ -12,6 +12,7 @@ import type { BranchInfo } from "@/types/pr-run";
 type SidebarBranchItemProps = {
     branch: BranchInfo;
     isBusy: boolean;
+    isCollapsedPreview?: boolean;
     isCheckingOutWorktree: boolean;
     isRemovingWorktree: boolean;
     isSelected: boolean;
@@ -23,6 +24,7 @@ type SidebarBranchItemProps = {
 export function SidebarBranchItem({
     branch,
     isBusy,
+    isCollapsedPreview = false,
     isCheckingOutWorktree,
     isRemovingWorktree,
     isSelected,
@@ -51,12 +53,20 @@ export function SidebarBranchItem({
                     outline-none focus-visible:ring-2`,
                     isSelected && "text-sidebar-accent-foreground",
                     branch.isStale && !isSelected && "text-muted-foreground",
+                    isCollapsedPreview && "py-1 opacity-85 shadow-none",
                 )}
                 type="button"
                 onClick={() => onSelectBranch(branch.name)}
             >
-                <SidebarItemIcon branch={branch} />
-                {isBusy ? <BusyDot /> : null}
+                <span className="relative flex h-5 w-5 flex-none items-center">
+                    <SidebarItemIcon branch={branch} />
+                    {isBusy ? (
+                        <BusyIcon
+                            className="absolute -right-1 -bottom-1"
+                            size="sm"
+                        />
+                    ) : null}
+                </span>
                 <span
                     className="min-w-0 flex-1 grow truncate text-[13px]
                         leading-4 tracking-tight"
