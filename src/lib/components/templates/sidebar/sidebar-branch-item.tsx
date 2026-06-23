@@ -105,6 +105,10 @@ function getBranchStatus(branch: BranchInfo): {
     label: string;
     tone: "branch" | "pull-request" | "stale" | "worktree";
 } {
+    if (branch.hasWorktree && branch.isStale) {
+        return { label: "Stale Worktree", tone: "stale" };
+    }
+
     if (branch.hasWorktree) {
         return { label: "Worktree", tone: "worktree" };
     }
