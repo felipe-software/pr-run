@@ -1,23 +1,32 @@
 import { GitBranch, GitPullRequest, Terminal } from "lucide-react";
-import type { ReactNode } from "react";
+import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 
 import type { AppStatusSummary } from "@/lib/components/templates/pr-run-app/use-app-status-summary";
 import { cn } from "@/lib/utils/cn";
 
 type StatusBarProps = {
     summary: AppStatusSummary;
+    onBeginTerminalPanelResize: (
+        event: ReactPointerEvent<HTMLDivElement>,
+    ) => void;
+    onOpenBusyTerminals: () => void;
 };
 
-export function StatusBar({ summary }: StatusBarProps) {
+export function StatusBar({
+    summary,
+    onBeginTerminalPanelResize,
+    onOpenBusyTerminals,
+}: StatusBarProps) {
     return (
         <footer
             className={cn(
-                `border-sidebar-border bg-sidebar text-sidebar-foreground flex
-                h-7 shrink-0 [scrollbar-width:none] items-center gap-1
-                overflow-x-auto border-t px-2 text-[11px] leading-none
+                `border-sidebar-border bg-sidebar text-sidebar-foreground
+                relative flex h-7 shrink-0 [scrollbar-width:none] items-center
+                gap-1 overflow-x-auto border-t px-2 text-[11px] leading-none
                 whitespace-nowrap [&::-webkit-scrollbar]:hidden`,
                 summary.isLoadingBranchCounts && "text-muted-foreground",
             )}
+            onPointerDown={onBeginTerminalPanelResize}
         >
             <StatusBarItem
                 icon={
@@ -38,6 +47,7 @@ export function StatusBar({ summary }: StatusBarProps) {
                 }
                 label="busy terminals"
                 value={summary.busyTerminalCount}
+                onPress={onOpenBusyTerminals}
             />
             <StatusBarItem
                 icon={
@@ -78,10 +88,11 @@ export function StatusBar({ summary }: StatusBarProps) {
 type StatusBarItemProps = {
     icon: ReactNode;
     label: string;
+    onPress?: () => void;
     value: number;
 };
 
-function StatusBarItem({ icon, label, value }: StatusBarItemProps) {
+function StatusBarItem({ icon, label, onPress, value }: StatusBarItemProps) {
     return (
         <button
             className={cn(
@@ -91,6 +102,10 @@ function StatusBarItem({ icon, label, value }: StatusBarItemProps) {
                 focus-visible:ring-2`,
             )}
             type="button"
+            onPointerDown={(event) => {
+                event.stopPropagation();
+            }}
+            onClick={onPress}
         >
             {icon}
             <span className="tabular-nums">{value}</span>
