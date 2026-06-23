@@ -4,6 +4,7 @@ import { Button } from "@/lib/components/atoms/button";
 import { StatusPill } from "@/lib/components/atoms/status-pill";
 import { formatBranchAge } from "@/lib/format";
 import { SidebarItemIcon } from "@/lib/components/templates/sidebar/sidebar-item-icon";
+import { getSidebarItemStatus } from "@/lib/components/templates/sidebar/sidebar-item-status";
 import { cn } from "@/lib/utils/cn";
 import type { BranchInfo } from "@/types/pr-run";
 
@@ -22,7 +23,7 @@ export function SidebarBranchItem({
     onRemoveWorktree,
     onSelectBranch,
 }: SidebarBranchItemProps) {
-    const status = getBranchStatus(branch);
+    const status = getSidebarItemStatus(branch);
 
     return (
         <div
@@ -57,7 +58,9 @@ export function SidebarBranchItem({
                     className="ml-auto flex shrink-0 items-center justify-end
                         gap-0 text-right"
                 >
-                    <StatusPill tone={status.tone}>{status.label}</StatusPill>
+                    <StatusPill className={status.pillClassName} tone="custom">
+                        {status.label}
+                    </StatusPill>
                     <span
                         className="text-muted-foreground/70 min-w-5 shrink-0
                             text-right text-[10px] leading-4 tabular-nums"
@@ -99,27 +102,4 @@ export function SidebarBranchItem({
             ) : null}
         </div>
     );
-}
-
-function getBranchStatus(branch: BranchInfo): {
-    label: string;
-    tone: "branch" | "pull-request" | "stale" | "worktree";
-} {
-    if (branch.hasWorktree && branch.isStale) {
-        return { label: "Stale Worktree", tone: "stale" };
-    }
-
-    if (branch.hasWorktree) {
-        return { label: "Worktree", tone: "worktree" };
-    }
-
-    if (branch.isStale) {
-        return { label: "Stale", tone: "stale" };
-    }
-
-    if (branch.source === "pull-request") {
-        return { label: "PR", tone: "pull-request" };
-    }
-
-    return { label: "Branch", tone: "branch" };
 }
