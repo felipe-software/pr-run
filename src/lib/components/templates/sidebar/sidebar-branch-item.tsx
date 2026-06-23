@@ -1,4 +1,4 @@
-import { RefreshCw, Trash2 } from "lucide-react";
+import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
 
 import { Button } from "@/lib/components/atoms/button";
 import { StatusPill } from "@/lib/components/atoms/status-pill";
@@ -10,20 +10,25 @@ import type { BranchInfo } from "@/types/pr-run";
 
 type SidebarBranchItemProps = {
     branch: BranchInfo;
+    isCheckingOutWorktree: boolean;
     isRemovingWorktree: boolean;
     isSelected: boolean;
+    onCheckoutBranch: (branchName: string) => Promise<void>;
     onRemoveWorktree: (branchName: string) => Promise<void>;
     onSelectBranch: (branchName: string) => void;
 };
 
 export function SidebarBranchItem({
     branch,
+    isCheckingOutWorktree,
     isRemovingWorktree,
     isSelected,
+    onCheckoutBranch,
     onRemoveWorktree,
     onSelectBranch,
 }: SidebarBranchItemProps) {
     const status = getSidebarItemStatus(branch);
+    const isActionPending = isCheckingOutWorktree || isRemovingWorktree;
 
     return (
         <div
@@ -62,22 +67,32 @@ export function SidebarBranchItem({
                         {status.label}
                     </StatusPill>
                     <span
-                        className="text-muted-foreground/70 min-w-5 shrink-0
-                            text-right text-[10px] leading-4 tabular-nums"
+                        className={cn(
+                            `text-muted-foreground/70 pointer-events-none w-7
+                            shrink-0 text-right text-[10px] leading-4
+                            tabular-nums transition-opacity duration-150
+                            group-focus-within/menu-sub-item:opacity-0
+                            group-hover/menu-sub-item:opacity-0`,
+                            isActionPending && "opacity-0",
+                        )}
                     >
                         {formatBranchAge(branch.lastCommitTimestamp)}
                     </span>
                 </span>
             </button>
-            {branch.hasWorktree ? (
-                <div
-                    className="bg-sidebar/80 pointer-events-none absolute
-                        inset-y-0 right-0 flex items-center rounded-r-md px-1
-                        opacity-0 backdrop-blur-md transition-opacity
-                        duration-150
-                        group-[&:is(:hover,:focus-within)]/menu-sub-item:pointer-events-auto
-                        group-[&:is(:hover,:focus-within)]/menu-sub-item:opacity-100"
-                >
+            <div
+                className={cn(
+                    `pointer-events-none absolute inset-y-0 right-0 flex w-7
+                    items-center justify-center opacity-0 transition-opacity
+                    duration-150
+                    group-focus-within/menu-sub-item:pointer-events-auto
+                    group-focus-within/menu-sub-item:opacity-100
+                    group-hover/menu-sub-item:pointer-events-auto
+                    group-hover/menu-sub-item:opacity-100`,
+                    isActionPending && "pointer-events-auto opacity-100",
+                )}
+            >
+                {branch.hasWorktree ? (
                     <Button
                         aria-label={`Remove ${branch.name} worktree`}
                         className="text-danger-foreground
@@ -98,8 +113,29 @@ export function SidebarBranchItem({
                             <Trash2 className="h-3.5 w-3.5" />
                         )}
                     </Button>
-                </div>
-            ) : null}
+                ) : (
+                    <Button
+                        aria-label={`Create ${branch.name} worktree`}
+                        className="text-danger-foreground
+                            data-[hover=true]:bg-sidebar-accent
+                            border-transparent bg-transparent shadow-none"
+                        isDisabled={isCheckingOutWorktree}
+                        isIconOnly
+                        size="icon-xs"
+                        type="button"
+                        variant="ghost"
+                        onPress={() => {
+                            onCheckoutBranch(branch.name);
+                        }}
+                    >
+                        {isCheckingOutWorktree ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                            <FolderPlus className="h-3.5 w-3.5" />
+                        )}
+                    </Button>
+                )}
+            </div>
         </div>
     );
 }

@@ -60,6 +60,7 @@ export function PrRunApp() {
                 groups={state.groups}
                 isCreatingScript={state.isCreatingScript}
                 pendingProjectUpdateId={state.pendingProjectUpdateId}
+                pendingWorktreeCheckoutKey={state.pendingWorktreeCheckoutKey}
                 pendingWorktreeRemovalKey={state.pendingWorktreeRemovalKey}
                 selectedBranchName={
                     state.selectedBranchView.branchName ?? undefined
@@ -69,6 +70,7 @@ export function PrRunApp() {
                 theme={state.theme}
                 onAddProject={state.openAddProject}
                 onBeginResize={state.beginResize}
+                onCheckoutBranch={state.checkoutBranch}
                 onCreateScript={state.openCreateScript}
                 onOpenSshPassphrase={state.openSshPassphrase}
                 onRemoveWorktree={state.removeWorktree}

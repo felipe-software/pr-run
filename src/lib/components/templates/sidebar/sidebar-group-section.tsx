@@ -8,9 +8,11 @@ type SidebarGroupSectionProps = Pick<
     SidebarProps,
     | "collapsedProjects"
     | "pendingProjectUpdateId"
+    | "pendingWorktreeCheckoutKey"
     | "pendingWorktreeRemovalKey"
     | "selectedBranchName"
     | "selectedProjectId"
+    | "onCheckoutBranch"
     | "onRemoveWorktree"
     | "onSelectBranch"
     | "onToggleGroup"
@@ -26,9 +28,11 @@ export function SidebarGroupSection({
     group,
     isExpanded,
     pendingProjectUpdateId,
+    pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     selectedBranchName,
     selectedProjectId,
+    onCheckoutBranch,
     onRemoveWorktree,
     onSelectBranch,
     onToggleGroup,
@@ -64,12 +68,16 @@ export function SidebarGroupSection({
                             pendingWorktreeRemovalKey={
                                 pendingWorktreeRemovalKey
                             }
+                            pendingWorktreeCheckoutKey={
+                                pendingWorktreeCheckoutKey
+                            }
                             project={project}
                             selectedBranchName={
                                 selectedProjectId === project.id
                                     ? selectedBranchName
                                     : undefined
                             }
+                            onCheckoutBranch={onCheckoutBranch}
                             onRemoveWorktree={onRemoveWorktree}
                             onSelectBranch={onSelectBranch}
                             onToggleProject={onToggleProject}

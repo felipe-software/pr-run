@@ -11,6 +11,7 @@ export function Sidebar({
     groups,
     isCreatingScript,
     pendingProjectUpdateId,
+    pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     selectedBranchName,
     selectedProjectId,
@@ -18,6 +19,7 @@ export function Sidebar({
     theme,
     onAddProject,
     onBeginResize,
+    onCheckoutBranch,
     onCreateScript,
     onOpenSshPassphrase,
     onRemoveWorktree,
@@ -46,9 +48,11 @@ export function Sidebar({
                         isExpanded={expandedGroups.has(group.id)}
                         key={group.id}
                         pendingProjectUpdateId={pendingProjectUpdateId}
+                        pendingWorktreeCheckoutKey={pendingWorktreeCheckoutKey}
                         pendingWorktreeRemovalKey={pendingWorktreeRemovalKey}
                         selectedBranchName={selectedBranchName}
                         selectedProjectId={selectedProjectId}
+                        onCheckoutBranch={onCheckoutBranch}
                         onRemoveWorktree={onRemoveWorktree}
                         onSelectBranch={onSelectBranch}
                         onToggleGroup={onToggleGroup}

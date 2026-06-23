@@ -306,6 +306,9 @@ export function usePrRunAppState() {
         pendingProjectUpdateId: updateProjectWorktreesMutation.isPending
             ? updateProjectWorktreesMutation.variables
             : undefined,
+        pendingWorktreeCheckoutKey: checkoutBranchMutation.isPending
+            ? `${checkoutBranchMutation.variables?.projectId}:${checkoutBranchMutation.variables?.branchName}`
+            : undefined,
         pendingWorktreeRemovalKey: removeWorktreeMutation.isPending
             ? `${removeWorktreeMutation.variables?.projectId}:${removeWorktreeMutation.variables?.branchName}`
             : undefined,

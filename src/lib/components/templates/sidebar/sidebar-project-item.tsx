@@ -17,9 +17,11 @@ type SidebarProjectItemProps = {
     isExpanded: boolean;
     isSelected: boolean;
     isUpdatingProject: boolean;
+    pendingWorktreeCheckoutKey?: string;
     pendingWorktreeRemovalKey?: string;
     project: ProjectConfig;
     selectedBranchName?: string;
+    onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
     onSelectBranch: (projectId: string, branchName: string) => void;
     onToggleProject: (projectId: string) => void;
@@ -32,9 +34,11 @@ export function SidebarProjectItem({
     isExpanded,
     isSelected,
     isUpdatingProject,
+    pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     project,
     selectedBranchName,
+    onCheckoutBranch,
     onRemoveWorktree,
     onSelectBranch,
     onToggleProject,
@@ -84,6 +88,7 @@ export function SidebarProjectItem({
                 branchesQuery.refetch().then(() => undefined),
             );
     }, [branchesQuery, isAwaitingSshPassphrase]);
+    const isActionVisible = isUpdatingProject;
 
     return (
         <div className="group/menu-item relative">
@@ -131,20 +136,30 @@ export function SidebarProjectItem({
                             {project.name}
                         </span>
                         <span
-                            className="text-muted-foreground/65 block truncate
-                                text-[10px] leading-4"
+                            className={cn(
+                                `text-muted-foreground/65 pointer-events-none
+                                block truncate text-[10px] leading-4
+                                transition-opacity duration-150
+                                group-focus-within/menu-item:opacity-0
+                                group-hover/menu-item:opacity-0`,
+                                isActionVisible && "opacity-0",
+                            )}
                         >
                             {shortenPath(project.path)}
                         </span>
                     </div>
                 </button>
                 <div
-                    className="bg-sidebar/80 pointer-events-none absolute
-                        inset-y-0 right-0 flex items-center rounded-r-md px-1
-                        opacity-0 backdrop-blur-md transition-opacity
+                    className={cn(
+                        `pointer-events-none absolute inset-y-0 right-0 flex
+                        items-center px-1 opacity-0 transition-opacity
                         duration-150
-                        group-[&:is(:hover,:focus-within)]/menu-item:pointer-events-auto
-                        group-[&:is(:hover,:focus-within)]/menu-item:opacity-100"
+                        group-focus-within/menu-item:pointer-events-auto
+                        group-focus-within/menu-item:opacity-100
+                        group-hover/menu-item:pointer-events-auto
+                        group-hover/menu-item:opacity-100`,
+                        isActionVisible && "pointer-events-auto opacity-100",
+                    )}
                 >
                     <Button
                         aria-label={`Reload ${project.name} worktrees`}
@@ -219,12 +234,19 @@ export function SidebarProjectItem({
                     {visibleBranches.map((branch) => (
                         <SidebarBranchItem
                             branch={branch}
+                            isCheckingOutWorktree={
+                                pendingWorktreeCheckoutKey ===
+                                `${project.id}:${branch.name}`
+                            }
                             isRemovingWorktree={
                                 pendingWorktreeRemovalKey ===
                                 `${project.id}:${branch.name}`
                             }
                             isSelected={selectedBranchName === branch.name}
                             key={branch.remoteName}
+                            onCheckoutBranch={(branchName) =>
+                                onCheckoutBranch(project.id, branchName)
+                            }
                             onRemoveWorktree={(branchName) =>
                                 onRemoveWorktree(project.id, branchName)
                             }
