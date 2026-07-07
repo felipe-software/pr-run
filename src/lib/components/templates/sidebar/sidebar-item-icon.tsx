@@ -1,5 +1,6 @@
 import { GitBranch, GitPullRequest } from "lucide-react";
 
+import { getSidebarItemStatus } from "@/lib/components/templates/sidebar/sidebar-item-status";
 import type { BranchInfo } from "@/types/pr-run";
 
 type SidebarItemIconProps = {
@@ -7,15 +8,13 @@ type SidebarItemIconProps = {
 };
 
 export function SidebarItemIcon({ branch }: SidebarItemIconProps) {
+    const status = getSidebarItemStatus(branch);
+
     return (
         <span
             className={[
                 "grid h-5 w-5 flex-none place-items-center rounded-md",
-                branch.hasWorktree
-                    ? "bg-success/15 text-success"
-                    : branch.source === "pull-request"
-                      ? "bg-blue-500/20 text-blue-600 dark:text-blue-300"
-                      : "bg-muted/45 text-muted-foreground/75",
+                status.iconClassName,
             ].join(" ")}
         >
             {branch.source === "pull-request" ? (

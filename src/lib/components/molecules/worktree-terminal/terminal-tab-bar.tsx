@@ -1,6 +1,7 @@
 import { Plus, X } from "lucide-react";
 import type { MouseEvent } from "react";
 
+import { BusyIcon } from "@/lib/components/atoms/busy-icon";
 import { Button } from "@/lib/components/atoms/button";
 import { TabShell } from "@/lib/components/atoms/tab-shell";
 import { cn } from "@/lib/utils/cn";
@@ -62,10 +63,7 @@ export function TerminalTabBar({
                                     onClick={() => onSelectTab(tab.id)}
                                 >
                                     {tab.busyState === "busy" ? (
-                                        <span
-                                            className="h-1.5 w-1.5 shrink-0
-                                                rounded-full bg-emerald-400"
-                                        />
+                                        <BusyIcon size="sm" />
                                     ) : tab.status === "exited" ? (
                                         <span
                                             className="bg-danger h-1.5 w-1.5

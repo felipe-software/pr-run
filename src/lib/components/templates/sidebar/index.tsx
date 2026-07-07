@@ -6,11 +6,14 @@ import { SidebarShell } from "@/lib/components/templates/sidebar/sidebar-shell";
 import type { SidebarProps } from "@/lib/components/templates/sidebar/types";
 
 export function Sidebar({
+    busyOwnerKeys,
+    busyProjectIds,
     collapsedProjects,
     expandedGroups,
     groups,
     isCreatingScript,
     pendingProjectUpdateId,
+    pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     selectedBranchName,
     selectedProjectId,
@@ -18,6 +21,7 @@ export function Sidebar({
     theme,
     onAddProject,
     onBeginResize,
+    onCheckoutBranch,
     onCreateScript,
     onOpenSshPassphrase,
     onRemoveWorktree,
@@ -41,14 +45,18 @@ export function Sidebar({
             <SidebarContent>
                 {groups.map((group) => (
                     <SidebarGroupSection
+                        busyOwnerKeys={busyOwnerKeys}
+                        busyProjectIds={busyProjectIds}
                         collapsedProjects={collapsedProjects}
                         group={group}
                         isExpanded={expandedGroups.has(group.id)}
                         key={group.id}
                         pendingProjectUpdateId={pendingProjectUpdateId}
+                        pendingWorktreeCheckoutKey={pendingWorktreeCheckoutKey}
                         pendingWorktreeRemovalKey={pendingWorktreeRemovalKey}
                         selectedBranchName={selectedBranchName}
                         selectedProjectId={selectedProjectId}
+                        onCheckoutBranch={onCheckoutBranch}
                         onRemoveWorktree={onRemoveWorktree}
                         onSelectBranch={onSelectBranch}
                         onToggleGroup={onToggleGroup}

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils/cn";
 type StatusPillTone =
     | "branch"
     | "busy"
+    | "custom"
     | "error"
     | "idle"
     | "pull-request"
@@ -18,6 +19,7 @@ type StatusPillProps = ComponentPropsWithoutRef<"span"> & {
 const statusPillClassName: Record<StatusPillTone, string> = {
     branch: "border-border bg-muted/35 text-muted-foreground",
     busy: "border-success/25 bg-success/12 text-success-foreground",
+    custom: "",
     error: "border-danger/25 bg-danger/12 text-danger-foreground",
     idle: "border-border bg-muted/25 text-muted-foreground",
     "pull-request":

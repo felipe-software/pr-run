@@ -2,24 +2,34 @@ import { ChevronDown, ChevronRight, Folder, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
+import { BusyIcon } from "@/lib/components/atoms/busy-icon";
 import { Button } from "@/lib/components/atoms/button";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
 import { SidebarBranchItem } from "@/lib/components/templates/sidebar/sidebar-branch-item";
+import {
+    getVisibleSidebarBranches,
+    sortBranchesByLastCommit,
+} from "@/lib/components/templates/sidebar/sidebar-sort";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
+import { getWorktreeOwnerKey } from "@/lib/hooks/store/use-worktree-terminal-store";
 import { shortenPath } from "@/lib/format";
 import { cn } from "@/lib/utils/cn";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { ProjectConfig } from "@/types/pr-run";
 
 type SidebarProjectItemProps = {
+    busyOwnerKeys: Set<string>;
     isExpanded: boolean;
+    isBusy: boolean;
     isSelected: boolean;
     isUpdatingProject: boolean;
+    pendingWorktreeCheckoutKey?: string;
     pendingWorktreeRemovalKey?: string;
     project: ProjectConfig;
     selectedBranchName?: string;
+    onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
     onSelectBranch: (projectId: string, branchName: string) => void;
     onToggleProject: (projectId: string) => void;
@@ -29,12 +39,16 @@ type SidebarProjectItemProps = {
 const INITIAL_VISIBLE_BRANCH_COUNT = 5;
 
 export function SidebarProjectItem({
+    busyOwnerKeys,
     isExpanded,
+    isBusy,
     isSelected,
     isUpdatingProject,
+    pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     project,
     selectedBranchName,
+    onCheckoutBranch,
     onRemoveWorktree,
     onSelectBranch,
     onToggleProject,
@@ -44,7 +58,10 @@ export function SidebarProjectItem({
         useState(false);
     const [areStaleBranchesVisible, setAreStaleBranchesVisible] =
         useState(false);
-    const branchesQuery = useProjectBranchesQuery(project.id, isExpanded);
+    const branchesQuery = useProjectBranchesQuery(
+        project.id,
+        isExpanded || isBusy,
+    );
     const isAwaitingSshPassphrase = isHandledSshPromptError(
         branchesQuery.error,
     );
@@ -52,26 +69,27 @@ export function SidebarProjectItem({
         ? getErrorMessage(branchesQuery.error)
         : undefined;
     const sortedBranches = useMemo(
-        () =>
-            [...(branchesQuery.data ?? [])].sort(
-                (left, right) =>
-                    (right.lastCommitTimestamp ?? 0) -
-                    (left.lastCommitTimestamp ?? 0),
-            ),
+        () => sortBranchesByLastCommit(branchesQuery.data ?? []),
         [branchesQuery.data],
     );
-    const recentBranches = sortedBranches.filter((branch) => !branch.isStale);
-    const staleBranches = sortedBranches.filter((branch) => branch.isStale);
-    const hiddenRecentBranchCount = Math.max(
-        recentBranches.length - INITIAL_VISIBLE_BRANCH_COUNT,
-        0,
+    const { hiddenRecentBranchCount, staleBranches, visibleBranches } = useMemo(
+        () =>
+            getVisibleSidebarBranches({
+                areAllRecentBranchesVisible,
+                areStaleBranchesVisible,
+                branches: sortedBranches,
+                busyOwnerKeys,
+                initialVisibleBranchCount: INITIAL_VISIBLE_BRANCH_COUNT,
+                projectId: project.id,
+            }),
+        [
+            areAllRecentBranchesVisible,
+            areStaleBranchesVisible,
+            busyOwnerKeys,
+            project.id,
+            sortedBranches,
+        ],
     );
-    const visibleBranches = [
-        ...(areAllRecentBranchesVisible
-            ? recentBranches
-            : recentBranches.slice(0, INITIAL_VISIBLE_BRANCH_COUNT)),
-        ...(areStaleBranchesVisible ? staleBranches : []),
-    ];
 
     useEffect(() => {
         if (!isAwaitingSshPassphrase) {
@@ -84,6 +102,7 @@ export function SidebarProjectItem({
                 branchesQuery.refetch().then(() => undefined),
             );
     }, [branchesQuery, isAwaitingSshPassphrase]);
+    const isActionVisible = isUpdatingProject;
 
     return (
         <div className="group/menu-item relative">
@@ -119,10 +138,19 @@ export function SidebarProjectItem({
                                 shrink-0"
                         />
                     )}
-                    <Folder
-                        className="text-muted-foreground/70 ml-0.5 h-3.5 w-3.5
-                            shrink-0"
-                    />
+                    <span
+                        className="bg-muted/45 text-muted-foreground/75 relative
+                            grid h-5 w-5 flex-none place-items-center
+                            rounded-md"
+                    >
+                        <Folder className="h-3.5 w-3.5" />
+                        {isBusy ? (
+                            <BusyIcon
+                                className="absolute -right-1 -bottom-1"
+                                size="sm"
+                            />
+                        ) : null}
+                    </span>
                     <div className="ml-2 flex min-w-0 flex-1 justify-between">
                         <span
                             className="block truncate text-xs leading-4
@@ -131,20 +159,30 @@ export function SidebarProjectItem({
                             {project.name}
                         </span>
                         <span
-                            className="text-muted-foreground/65 block truncate
-                                text-[10px] leading-4"
+                            className={cn(
+                                `text-muted-foreground/65 pointer-events-none
+                                block truncate text-[10px] leading-4
+                                transition-opacity duration-150
+                                group-focus-within/menu-item:opacity-0
+                                group-hover/menu-item:opacity-0`,
+                                isActionVisible && "opacity-0",
+                            )}
                         >
                             {shortenPath(project.path)}
                         </span>
                     </div>
                 </button>
                 <div
-                    className="bg-sidebar/80 pointer-events-none absolute
-                        inset-y-0 right-0 flex items-center rounded-r-md px-1
-                        opacity-0 backdrop-blur-md transition-opacity
+                    className={cn(
+                        `pointer-events-none absolute inset-y-0 right-0 flex
+                        items-center px-1 opacity-0 transition-opacity
                         duration-150
-                        group-[&:is(:hover,:focus-within)]/menu-item:pointer-events-auto
-                        group-[&:is(:hover,:focus-within)]/menu-item:opacity-100"
+                        group-focus-within/menu-item:pointer-events-auto
+                        group-focus-within/menu-item:opacity-100
+                        group-hover/menu-item:pointer-events-auto
+                        group-hover/menu-item:opacity-100`,
+                        isActionVisible && "pointer-events-auto opacity-100",
+                    )}
                 >
                     <Button
                         aria-label={`Reload ${project.name} worktrees`}
@@ -170,12 +208,15 @@ export function SidebarProjectItem({
                 </div>
             </div>
 
-            {isExpanded ? (
+            {isExpanded || isBusy ? (
                 <div
-                    className="border-sidebar-border/80 relative mt-0.5 ml-2
-                        flex min-w-0 flex-col gap-0.5 border-l py-0.5 pl-1"
+                    className={cn(
+                        `border-sidebar-border/80 relative mt-0.5 ml-2 flex
+                            min-w-0 flex-col gap-0.5 border-l py-0.5 pl-1`,
+                        !isExpanded && "opacity-90",
+                    )}
                 >
-                    {branchesQuery.isPending ? (
+                    {branchesQuery.isPending && isExpanded ? (
                         <div className="grid gap-1 px-1.5 py-1">
                             <Skeleton className="h-5 w-11/12" />
                             <Skeleton className="h-5 w-9/12" />
@@ -183,7 +224,9 @@ export function SidebarProjectItem({
                         </div>
                     ) : null}
 
-                    {!branchesQuery.isPending && isAwaitingSshPassphrase ? (
+                    {!branchesQuery.isPending &&
+                    isExpanded &&
+                    isAwaitingSshPassphrase ? (
                         <Surface
                             className="text-muted-foreground/70 border-0
                                 bg-transparent px-2 py-1.5 text-[11px]
@@ -195,6 +238,7 @@ export function SidebarProjectItem({
                     ) : null}
 
                     {!branchesQuery.isPending &&
+                    isExpanded &&
                     !isAwaitingSshPassphrase &&
                     branchError ? (
                         <Surface
@@ -206,6 +250,7 @@ export function SidebarProjectItem({
                     ) : null}
 
                     {!branchesQuery.isPending &&
+                    isExpanded &&
                     !branchError &&
                     (branchesQuery.data?.length ?? 0) === 0 ? (
                         <div
@@ -216,25 +261,48 @@ export function SidebarProjectItem({
                         </div>
                     ) : null}
 
-                    {visibleBranches.map((branch) => (
-                        <SidebarBranchItem
-                            branch={branch}
-                            isRemovingWorktree={
-                                pendingWorktreeRemovalKey ===
-                                `${project.id}:${branch.name}`
-                            }
-                            isSelected={selectedBranchName === branch.name}
-                            key={branch.remoteName}
-                            onRemoveWorktree={(branchName) =>
-                                onRemoveWorktree(project.id, branchName)
-                            }
-                            onSelectBranch={(branchName) =>
-                                onSelectBranch(project.id, branchName)
-                            }
-                        />
-                    ))}
+                    {(isExpanded
+                        ? visibleBranches
+                        : visibleBranches.filter((branch) =>
+                              busyOwnerKeys.has(
+                                  getWorktreeOwnerKey(project.id, branch.name),
+                              ),
+                          )
+                    ).map((branch) => {
+                        const isBranchBusy = busyOwnerKeys.has(
+                            getWorktreeOwnerKey(project.id, branch.name),
+                        );
 
-                    {!areAllRecentBranchesVisible &&
+                        return (
+                            <SidebarBranchItem
+                                branch={branch}
+                                isBusy={isBranchBusy}
+                                isCollapsedPreview={!isExpanded}
+                                isCheckingOutWorktree={
+                                    pendingWorktreeCheckoutKey ===
+                                    `${project.id}:${branch.name}`
+                                }
+                                isRemovingWorktree={
+                                    pendingWorktreeRemovalKey ===
+                                    `${project.id}:${branch.name}`
+                                }
+                                isSelected={selectedBranchName === branch.name}
+                                key={branch.remoteName}
+                                onCheckoutBranch={(branchName) =>
+                                    onCheckoutBranch(project.id, branchName)
+                                }
+                                onRemoveWorktree={(branchName) =>
+                                    onRemoveWorktree(project.id, branchName)
+                                }
+                                onSelectBranch={(branchName) =>
+                                    onSelectBranch(project.id, branchName)
+                                }
+                            />
+                        );
+                    })}
+
+                    {isExpanded &&
+                    !areAllRecentBranchesVisible &&
                     hiddenRecentBranchCount > 0 ? (
                         <Button
                             className="text-muted-foreground
@@ -248,7 +316,8 @@ export function SidebarProjectItem({
                         </Button>
                     ) : null}
 
-                    {(areAllRecentBranchesVisible ||
+                    {isExpanded &&
+                    (areAllRecentBranchesVisible ||
                         hiddenRecentBranchCount === 0) &&
                     !areStaleBranchesVisible &&
                     staleBranches.length > 0 ? (
