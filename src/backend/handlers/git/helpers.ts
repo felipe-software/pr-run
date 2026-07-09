@@ -95,17 +95,29 @@ export async function ensureRemoteRefs(
         return;
     }
 
-    const existingRemoteRefs = await Promise.all(
-        uniqueRemoteNames.map((remoteName) =>
-            hasRemoteRef(projectPath, remoteName),
+    const [refError, existingRemoteRefs] = await tryPromise(
+        Promise.all(
+            uniqueRemoteNames.map((remoteName) =>
+                hasRemoteRef(projectPath, remoteName),
+            ),
         ),
     );
+
+    if (refError) {
+        throw gitError("Failed to inspect remote branches.", refError);
+    }
 
     if (existingRemoteRefs.every(Boolean)) {
         return;
     }
 
-    await gitQuiet(projectPath, ["fetch", "origin"]);
+    const [fetchError] = await tryPromise(
+        gitQuiet(projectPath, ["fetch", "origin"]),
+    );
+
+    if (fetchError) {
+        throw gitError("Failed to refresh remote branches.", fetchError);
+    }
 }
 
 export async function exists(targetPath: string) {
