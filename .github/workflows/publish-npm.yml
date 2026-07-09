@@ -55,5 +55,8 @@ jobs:
             - name: Build npm package
               run: bun run build:npm
 
+            - name: Update npm
+              run: npm install -g npm@latest
+
             - name: Publish
               run: npm publish --provenance --access public

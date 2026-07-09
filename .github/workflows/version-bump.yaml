@@ -1,0 +1,164 @@
+name: "Version Bump"
+
+on:
+    workflow_call:
+        inputs:
+            dry_run:
+                description: Run semantic-release without publishing
+                required: false
+                default: false
+                type: boolean
+            bootstrap_current_version:
+                description: Create a baseline tag from the current package.json version and stop
+                required: false
+                default: false
+                type: boolean
+        secrets:
+            SEMANTIC_RELEASE_GH_TOKEN:
+                required: true
+        outputs:
+            released:
+                description: Whether a new release was created
+                value: ${{ jobs.bump.outputs.released }}
+            version:
+                description: The package version after the workflow finishes
+                value: ${{ jobs.bump.outputs.version }}
+    workflow_dispatch:
+        inputs:
+            dry_run:
+                description: Run semantic-release without publishing
+                required: false
+                default: false
+                type: boolean
+            bootstrap_current_version:
+                description: Create a baseline tag from the current package.json version and stop
+                required: false
+                default: false
+                type: boolean
+
+permissions:
+    contents: write
+
+concurrency:
+    group: bump-version-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    bump:
+        runs-on: ubuntu-latest
+        outputs:
+            released: ${{ steps.outputs.outputs.released }}
+            version: ${{ steps.outputs.outputs.version }}
+
+        env:
+            RELEASE_TOKEN: ${{ secrets.SEMANTIC_RELEASE_GH_TOKEN }}
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ env.RELEASE_TOKEN }}
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: 1.3.14
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Read current package version
+              id: current-version
+              run: |
+                  version=$(node -p "require('./package.json').version")
+                  echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+            - name: Bootstrap current version tag
+              id: bootstrap
+              if: inputs.bootstrap_current_version
+              env:
+                  CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
+              run: |
+                  set -euo pipefail
+
+                  tag="v${CURRENT_VERSION}"
+
+                  git fetch --tags origin
+
+                  if git rev-parse "${tag}" >/dev/null 2>&1; then
+                    echo "created=false" >> "$GITHUB_OUTPUT"
+                    exit 0
+                  fi
+
+                  if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+                    git fetch --tags origin
+                    echo "created=false" >> "$GITHUB_OUTPUT"
+                    exit 0
+                  fi
+
+                  git tag "${tag}"
+                  git push origin "refs/tags/${tag}"
+                  echo "created=true" >> "$GITHUB_OUTPUT"
+
+            - name: Guard missing baseline tag
+              if: ${{ !inputs.bootstrap_current_version }}
+              env:
+                  CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
+              run: |
+                  set -euo pipefail
+
+                  baseline_tag="v${CURRENT_VERSION}"
+
+                  git fetch --tags origin
+
+                  if git rev-parse "${baseline_tag}" >/dev/null 2>&1; then
+                    exit 0
+                  fi
+
+                  if git ls-remote --exit-code --tags origin "refs/tags/${baseline_tag}" >/dev/null 2>&1; then
+                    exit 0
+                  fi
+
+                  echo "::error::Missing baseline tag ${baseline_tag}. Run this workflow once with bootstrap_current_version=true before enabling normal releases."
+                  exit 1
+
+            - name: Run semantic-release
+              if: ${{ !inputs.bootstrap_current_version }}
+              env:
+                  GITHUB_TOKEN: ${{ env.RELEASE_TOKEN }}
+                  GH_TOKEN: ${{ env.RELEASE_TOKEN }}
+              run: |
+                  if [ "${{ inputs.dry_run }}" = "true" ]; then
+                    bun run release:dry-run
+                  else
+                    bun run release
+                  fi
+
+            - name: Read final package version
+              id: final-version
+              run: |
+                  version=$(node -p "require('./package.json').version")
+                  echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+            - name: Publish workflow outputs
+              id: outputs
+              env:
+                  INITIAL_VERSION: ${{ steps.current-version.outputs.version }}
+                  FINAL_VERSION: ${{ steps.final-version.outputs.version }}
+              run: |
+                  if [ "${{ steps.bootstrap.outputs.created || 'false' }}" = "true" ]; then
+                    released=false
+                  elif [ "${INITIAL_VERSION}" != "${FINAL_VERSION}" ]; then
+                    released=true
+                  else
+                    released=false
+                  fi
+
+                  echo "released=${released}" >> "$GITHUB_OUTPUT"
+                  echo "version=${FINAL_VERSION}" >> "$GITHUB_OUTPUT"
