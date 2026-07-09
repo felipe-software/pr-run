@@ -3,6 +3,7 @@ import type { MouseEvent } from "react";
 
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
 import { Button } from "@/lib/components/ui/button";
+import { ScrollArea } from "@/lib/components/ui/scroll-area";
 import { TabShell } from "@/lib/components/atoms/tab-shell";
 import { cn } from "@/lib/utils/cn";
 import type { WorktreeTerminalTab } from "@/lib/hooks/store/use-worktree-terminal-store";
@@ -37,86 +38,90 @@ export function TerminalTabBar({
 
     return (
         <div className="flex min-w-0 items-center gap-2">
-            <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-                <div className="flex min-w-0 items-end gap-0">
-                    {tabs.map((tab) => {
-                        const isActive = tab.id === activeTabId;
+            <ScrollArea className="min-w-0 flex-1" hideScrollbars scrollFade>
+                <div className="flex w-max min-w-full items-center gap-2">
+                    <div className="flex min-w-0 items-end gap-0">
+                        {tabs.map((tab) => {
+                            const isActive = tab.id === activeTabId;
 
-                        return (
-                            <TabShell
-                                className="group max-w-56 items-center gap-1
-                                    py-0.5 pr-1 pl-2.5 text-xs font-semibold"
-                                isActive={isActive}
-                                key={tab.id}
-                                size="sm"
-                                onAuxClick={(event) =>
-                                    handleMiddleClick(event, tab.id)
-                                }
-                                onMouseDown={(event) =>
-                                    handleMiddleClick(event, tab.id)
-                                }
-                            >
-                                <button
-                                    className="flex min-w-0 flex-1 items-center
-                                        gap-2 text-left"
-                                    type="button"
-                                    onClick={() => onSelectTab(tab.id)}
+                            return (
+                                <TabShell
+                                    className="group max-w-56 items-center gap-1
+                                        py-0.5 pr-1 pl-2.5 text-xs
+                                        font-semibold"
+                                    isActive={isActive}
+                                    key={tab.id}
+                                    size="sm"
+                                    onAuxClick={(event) =>
+                                        handleMiddleClick(event, tab.id)
+                                    }
+                                    onMouseDown={(event) =>
+                                        handleMiddleClick(event, tab.id)
+                                    }
                                 >
-                                    {tab.busyState === "busy" ? (
-                                        <BusyIcon size="sm" />
-                                    ) : tab.status === "exited" ? (
-                                        <span
-                                            className="bg-danger h-1.5 w-1.5
-                                                shrink-0 rounded-full"
-                                        />
-                                    ) : null}
-                                    <span className="truncate">
-                                        {tab.label}
-                                    </span>
-                                    <span className="sr-only">
-                                        {tab.status === "exited"
-                                            ? "shell exited"
-                                            : tab.busyState === "busy"
-                                              ? "busy shell"
-                                              : "idle shell"}
-                                    </span>
-                                </button>
-                                <button
-                                    aria-label={`Close ${tab.label}`}
-                                    className={cn(
-                                        `text-muted-foreground hover:bg-muted/20
-                                        hover:text-foreground flex h-4 w-4
-                                        shrink-0 items-center justify-center
-                                        rounded transition`,
-                                        isActive
-                                            ? "opacity-100"
-                                            : `opacity-0
-                                                group-hover:opacity-100`,
-                                    )}
-                                    type="button"
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        onCloseTab(tab.id);
-                                    }}
-                                >
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </TabShell>
-                        );
-                    })}
+                                    <button
+                                        className="flex min-w-0 flex-1
+                                            items-center gap-2 text-left"
+                                        type="button"
+                                        onClick={() => onSelectTab(tab.id)}
+                                    >
+                                        {tab.busyState === "busy" ? (
+                                            <BusyIcon size="sm" />
+                                        ) : tab.status === "exited" ? (
+                                            <span
+                                                className="bg-danger h-1.5 w-1.5
+                                                    shrink-0 rounded-full"
+                                            />
+                                        ) : null}
+                                        <span className="truncate">
+                                            {tab.label}
+                                        </span>
+                                        <span className="sr-only">
+                                            {tab.status === "exited"
+                                                ? "shell exited"
+                                                : tab.busyState === "busy"
+                                                  ? "busy shell"
+                                                  : "idle shell"}
+                                        </span>
+                                    </button>
+                                    <button
+                                        aria-label={`Close ${tab.label}`}
+                                        className={cn(
+                                            `text-muted-foreground
+                                            hover:bg-muted/20
+                                            hover:text-foreground flex h-4 w-4
+                                            shrink-0 items-center justify-center
+                                            rounded transition`,
+                                            isActive
+                                                ? "opacity-100"
+                                                : `opacity-0
+                                                    group-hover:opacity-100`,
+                                        )}
+                                        type="button"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            onCloseTab(tab.id);
+                                        }}
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </TabShell>
+                            );
+                        })}
+                    </div>
+                    <Button
+                        aria-label="Create terminal"
+                        className="border-border/80 bg-background/90
+                            text-muted-foreground mb-1 shrink-0 shadow-sm/5"
+                        size="icon-xs"
+                        type="button"
+                        variant="ghost"
+                        onClick={onCreateTerminal}
+                    >
+                        <Plus className="h-3.5 w-3.5" />
+                    </Button>
                 </div>
-                <Button
-                    aria-label="Create terminal"
-                    className="border-border/80 bg-background/90
-                        text-muted-foreground mb-1 shrink-0 shadow-sm/5"
-                    size="icon-xs"
-                    type="button"
-                    variant="ghost"
-                    onClick={onCreateTerminal}
-                >
-                    <Plus className="h-3.5 w-3.5" />
-                </Button>
-            </div>
+            </ScrollArea>
         </div>
     );
 }

@@ -2,6 +2,7 @@ import { GitBranch, GitPullRequest, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { AppStatusSummary } from "@/lib/components/templates/pr-run-app/use-app-status-summary";
+import { ScrollArea } from "@/lib/components/ui/scroll-area";
 import {
     Tooltip,
     TooltipPopup,
@@ -16,64 +17,69 @@ type StatusBarProps = {
 
 export function StatusBar({ summary, onOpenBusyTerminals }: StatusBarProps) {
     return (
-        <footer
+        <ScrollArea
             className={cn(
                 `border-sidebar-border bg-sidebar text-sidebar-foreground
-                relative flex h-7 shrink-0 [scrollbar-width:none] items-center
-                gap-1 overflow-x-auto border-t px-2 text-[11px] leading-none
-                whitespace-nowrap [&::-webkit-scrollbar]:hidden`,
+                relative h-7 shrink-0 border-t text-[11px] leading-none`,
                 summary.isLoadingBranchCounts && "text-muted-foreground",
             )}
+            hideScrollbars
+            scrollFade
         >
-            <StatusBarItem
-                icon={
-                    <StatusBarIcon className="text-warning">
-                        <GitBranch className="h-3.5 w-3.5" />
-                    </StatusBarIcon>
-                }
-                label="stale"
-                value={summary.staleWorktreeCount}
-            />
-            <StatusBarItem
-                icon={
-                    <StatusBarIcon className="text-success">
-                        <Terminal className="h-3.5 w-3.5" />
-                    </StatusBarIcon>
-                }
-                label="busy terminals"
-                value={summary.busyTerminalCount}
-                onClick={onOpenBusyTerminals}
-            />
-            <StatusBarItem
-                icon={
-                    <StatusBarIcon className="text-muted-foreground">
-                        <GitPullRequest className="h-3.5 w-3.5" />
-                    </StatusBarIcon>
-                }
-                label="PRs"
-                value={summary.openPullRequestCount}
-            />
-            <StatusBarItem
-                icon={
-                    <StatusBarIcon className="text-muted-foreground">
-                        <GitBranch className="h-3.5 w-3.5" />
-                    </StatusBarIcon>
-                }
-                label="worktrees"
-                value={summary.worktreeCount}
-            />
-            <StatusBarItem
-                icon={
-                    <StatusBarIcon
-                        className="bg-muted/45 text-muted-foreground/75"
-                    >
-                        <GitBranch className="h-3.5 w-3.5" />
-                    </StatusBarIcon>
-                }
-                label="branches"
-                value={summary.branchCount}
-            />
-        </footer>
+            <footer
+                className="flex h-full w-max min-w-full items-center gap-1 px-2
+                    whitespace-nowrap"
+            >
+                <StatusBarItem
+                    icon={
+                        <StatusBarIcon className="text-warning">
+                            <GitBranch className="h-3.5 w-3.5" />
+                        </StatusBarIcon>
+                    }
+                    label="stale"
+                    value={summary.staleWorktreeCount}
+                />
+                <StatusBarItem
+                    icon={
+                        <StatusBarIcon className="text-success">
+                            <Terminal className="h-3.5 w-3.5" />
+                        </StatusBarIcon>
+                    }
+                    label="busy terminals"
+                    value={summary.busyTerminalCount}
+                    onClick={onOpenBusyTerminals}
+                />
+                <StatusBarItem
+                    icon={
+                        <StatusBarIcon className="text-muted-foreground">
+                            <GitPullRequest className="h-3.5 w-3.5" />
+                        </StatusBarIcon>
+                    }
+                    label="PRs"
+                    value={summary.openPullRequestCount}
+                />
+                <StatusBarItem
+                    icon={
+                        <StatusBarIcon className="text-muted-foreground">
+                            <GitBranch className="h-3.5 w-3.5" />
+                        </StatusBarIcon>
+                    }
+                    label="worktrees"
+                    value={summary.worktreeCount}
+                />
+                <StatusBarItem
+                    icon={
+                        <StatusBarIcon
+                            className="bg-muted/45 text-muted-foreground/75"
+                        >
+                            <GitBranch className="h-3.5 w-3.5" />
+                        </StatusBarIcon>
+                    }
+                    label="branches"
+                    value={summary.branchCount}
+                />
+            </footer>
+        </ScrollArea>
     );
 }
 

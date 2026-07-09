@@ -13,14 +13,14 @@ export function SidebarFooter({
     onOpenSettings,
 }: SidebarFooterProps) {
     return (
-        <footer className="border-sidebar-border shrink-0 border-t p-1.5">
+        <footer className="shrink-0 px-1.5 pb-1.5">
             <Button
                 aria-current={isSettingsActive ? "page" : undefined}
                 className={cn(
-                    "w-full justify-start px-2 text-xs",
+                    "h-7 w-full justify-start rounded-md px-2 text-xs",
                     isSettingsActive
                         ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : `text-muted-foreground
+                        : `text-muted-foreground hover:bg-sidebar-accent
                             hover:text-sidebar-accent-foreground`,
                 )}
                 size="sm"

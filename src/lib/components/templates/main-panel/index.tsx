@@ -16,6 +16,7 @@ import {
     MainPanelState,
 } from "@/lib/components/templates/main-panel/main-panel-state";
 import { CommitHistory } from "@/lib/components/molecules/commit-history";
+import { ScrollArea } from "@/lib/components/ui/scroll-area";
 import { useCommitHistoryQuery } from "@/lib/hooks/query/use-commit-history-query";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
@@ -256,7 +257,11 @@ export function MainPanel({
                 <div className="flex min-h-0 flex-1 flex-col">
                     {activeTab === "general" ? (
                         <section className="flex min-h-0 flex-1 flex-col">
-                            <div className="min-h-0 flex-1 overflow-auto">
+                            <ScrollArea
+                                className="min-h-0 flex-1"
+                                hideScrollbars
+                                scrollFade
+                            >
                                 <CommitHistory
                                     commits={commitsQuery.data ?? []}
                                     error={
@@ -266,7 +271,7 @@ export function MainPanel({
                                     }
                                     isLoading={commitsQuery.isPending}
                                 />
-                            </div>
+                            </ScrollArea>
                         </section>
                     ) : activeTab === "run" ? (
                         selectedBranch.hasWorktree ? (

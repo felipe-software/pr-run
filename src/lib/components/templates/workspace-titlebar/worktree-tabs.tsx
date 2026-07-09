@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { WorktreeTab } from "@/lib/components/templates/workspace-titlebar/worktree-tab";
+import { ScrollArea } from "@/lib/components/ui/scroll-area";
 import { useWorkspaceTabsStore } from "@/lib/hooks/store/use-workspace-tabs-store";
 import type { ProjectAvatarUris } from "@/lib/project-avatar";
 
@@ -28,13 +29,13 @@ export function WorktreeTabs({
     }, [activeTabId]);
 
     return (
-        <nav
-            aria-label="Open worktrees"
-            className="flex min-w-0 flex-1 [scrollbar-width:none] items-center
-                overflow-x-auto px-2 py-1 [&::-webkit-scrollbar]:hidden"
-            role="tablist"
-        >
-            <div className="flex min-w-max items-center gap-1">
+        <ScrollArea className="h-full min-w-0 flex-1" hideScrollbars scrollFade>
+            <nav
+                aria-label="Open worktrees"
+                className="flex h-full w-max min-w-full items-center gap-1 px-2
+                    py-1"
+                role="tablist"
+            >
                 {tabs.map((tab) => (
                     <div
                         key={tab.id}
@@ -56,7 +57,7 @@ export function WorktreeTabs({
                         Open a worktree to add it here
                     </span>
                 ) : null}
-            </div>
-        </nav>
+            </nav>
+        </ScrollArea>
     );
 }
