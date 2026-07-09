@@ -296,7 +296,6 @@ export function PrRunApp() {
                 <Sidebar
                     busyOwnerKeys={state.statusSummary.busyOwnerKeys}
                     busyProjectIds={state.statusSummary.busyProjectIds}
-                    expandedGroups={state.expandedGroups}
                     collapsedProjects={state.collapsedProjects}
                     groups={state.groups}
                     isDesktopHidden={
@@ -304,6 +303,7 @@ export function PrRunApp() {
                     }
                     isMobileOpen={isMobileSidebarOpen}
                     isOverviewActive={state.isOverviewOpen}
+                    isSettingsActive={state.workspaceView.type === "settings"}
                     pendingProjectUpdateId={state.pendingProjectUpdateId}
                     pendingWorktreeCheckoutKey={
                         state.pendingWorktreeCheckoutKey
@@ -316,10 +316,11 @@ export function PrRunApp() {
                     sidebarWidth={state.sidebarWidth}
                     onBeginResize={state.beginResize}
                     onCheckoutBranch={state.checkoutBranch}
+                    onOpenAddProject={state.openAddProject}
                     onOpenOverview={state.openOverview}
+                    onOpenSettings={state.openSettings}
                     onRemoveWorktree={state.removeWorktree}
                     onSelectBranch={state.selectBranch}
-                    onToggleGroup={state.toggleGroup}
                     onToggleProject={state.toggleProject}
                     onUpdateProject={state.updateProject}
                 />

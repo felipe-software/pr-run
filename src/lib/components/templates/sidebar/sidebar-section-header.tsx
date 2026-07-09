@@ -1,39 +1,39 @@
+import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+
+import { Button } from "@/lib/components/ui/button";
 
 type SidebarSectionHeaderProps = {
     children: ReactNode;
     count: number;
-    isExpanded: boolean;
-    onToggle: () => void;
+    onCreateProject?: () => void;
 };
 
 export function SidebarSectionHeader({
     children,
     count,
-    isExpanded,
-    onToggle,
+    onCreateProject,
 }: SidebarSectionHeaderProps) {
     return (
-        <button
-            aria-expanded={isExpanded}
-            className="text-muted-foreground/60 hover:bg-sidebar-accent
-                hover:text-sidebar-accent-foreground focus-visible:ring-ring
-                flex w-full items-center justify-between gap-2 rounded-md px-2
-                py-1.5 text-left text-[10px] font-medium tracking-wider
-                uppercase transition-colors outline-none focus-visible:ring-2"
-            type="button"
-            onClick={onToggle}
+        <div
+            className="group/section-header text-muted-foreground relative flex
+                h-7 items-center justify-between gap-2 rounded-md px-2 text-xs
+                font-medium tracking-tight"
         >
-            <span className="flex min-w-0 items-center gap-1.5">
-                {isExpanded ? (
-                    <ChevronDown className="h-3 w-3 shrink-0" />
-                ) : (
-                    <ChevronRight className="h-3 w-3 shrink-0" />
-                )}
-                <span className="min-w-0 truncate">{children}</span>
-            </span>
-            <span className="tabular-nums">{count}</span>
-        </button>
+            <span className="min-w-0 truncate">{children}</span>
+            <div className="flex shrink-0 items-center gap-1">
+                <span className="tabular-nums">{count}</span>
+                {onCreateProject ? (
+                    <Button
+                        aria-label="Add project"
+                        size="icon-xs"
+                        variant="ghost"
+                        onClick={onCreateProject}
+                    >
+                        <Plus className="size-3.5" />
+                    </Button>
+                ) : null}
+            </div>
+        </div>
     );
 }

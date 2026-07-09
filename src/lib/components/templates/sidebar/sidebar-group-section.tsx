@@ -16,14 +16,13 @@ type SidebarGroupSectionProps = Pick<
     | "selectedBranchName"
     | "selectedProjectId"
     | "onCheckoutBranch"
+    | "onOpenAddProject"
     | "onRemoveWorktree"
     | "onSelectBranch"
-    | "onToggleGroup"
     | "onToggleProject"
     | "onUpdateProject"
 > & {
     group: ProjectGroup;
-    isExpanded: boolean;
 };
 
 export function SidebarGroupSection({
@@ -31,16 +30,15 @@ export function SidebarGroupSection({
     busyProjectIds,
     collapsedProjects,
     group,
-    isExpanded,
     pendingProjectUpdateId,
     pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     selectedBranchName,
     selectedProjectId,
     onCheckoutBranch,
+    onOpenAddProject,
     onRemoveWorktree,
     onSelectBranch,
-    onToggleGroup,
     onToggleProject,
     onUpdateProject,
 }: SidebarGroupSectionProps) {
@@ -50,54 +48,47 @@ export function SidebarGroupSection({
     );
 
     return (
-        <section className="py-0.5">
+        <section className="pb-0.5">
             <SidebarSectionHeader
                 count={group.projects.length}
-                isExpanded={isExpanded}
-                onToggle={() => onToggleGroup(group.id)}
+                onCreateProject={
+                    group.id === "default" ? onOpenAddProject : undefined
+                }
             >
                 {group.id === "default" ? "Projects" : group.name}
             </SidebarSectionHeader>
 
-            {isExpanded ? (
-                <div className="relative mt-1 flex min-w-0 flex-col gap-0.5">
-                    {group.projects.length === 0 ? (
-                        <SidebarEmptyState>
-                            No projects added.
-                        </SidebarEmptyState>
-                    ) : null}
+            <div className="relative flex min-w-0 flex-col gap-0.5">
+                {group.projects.length === 0 ? (
+                    <SidebarEmptyState>No projects added.</SidebarEmptyState>
+                ) : null}
 
-                    {sortedProjects.map((project) => (
-                        <SidebarProjectItem
-                            busyOwnerKeys={busyOwnerKeys}
-                            isExpanded={!collapsedProjects.has(project.id)}
-                            isBusy={busyProjectIds.has(project.id)}
-                            isSelected={selectedProjectId === project.id}
-                            isUpdatingProject={
-                                pendingProjectUpdateId === project.id
-                            }
-                            key={project.id}
-                            pendingWorktreeRemovalKey={
-                                pendingWorktreeRemovalKey
-                            }
-                            pendingWorktreeCheckoutKey={
-                                pendingWorktreeCheckoutKey
-                            }
-                            project={project}
-                            selectedBranchName={
-                                selectedProjectId === project.id
-                                    ? selectedBranchName
-                                    : undefined
-                            }
-                            onCheckoutBranch={onCheckoutBranch}
-                            onRemoveWorktree={onRemoveWorktree}
-                            onSelectBranch={onSelectBranch}
-                            onToggleProject={onToggleProject}
-                            onUpdateProject={onUpdateProject}
-                        />
-                    ))}
-                </div>
-            ) : null}
+                {sortedProjects.map((project) => (
+                    <SidebarProjectItem
+                        busyOwnerKeys={busyOwnerKeys}
+                        isExpanded={!collapsedProjects.has(project.id)}
+                        isBusy={busyProjectIds.has(project.id)}
+                        isSelected={selectedProjectId === project.id}
+                        isUpdatingProject={
+                            pendingProjectUpdateId === project.id
+                        }
+                        key={project.id}
+                        pendingWorktreeRemovalKey={pendingWorktreeRemovalKey}
+                        pendingWorktreeCheckoutKey={pendingWorktreeCheckoutKey}
+                        project={project}
+                        selectedBranchName={
+                            selectedProjectId === project.id
+                                ? selectedBranchName
+                                : undefined
+                        }
+                        onCheckoutBranch={onCheckoutBranch}
+                        onRemoveWorktree={onRemoveWorktree}
+                        onSelectBranch={onSelectBranch}
+                        onToggleProject={onToggleProject}
+                        onUpdateProject={onUpdateProject}
+                    />
+                ))}
+            </div>
         </section>
     );
 }

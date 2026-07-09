@@ -57,9 +57,9 @@ export function SidebarBranchItem({
                 className={cn(
                     `text-sidebar-foreground hover:bg-sidebar-accent
                     hover:text-sidebar-accent-foreground focus-visible:ring-ring
-                    active:bg-sidebar-accent flex min-w-0 flex-1 grow
+                    active:bg-sidebar-accent flex h-7 min-w-0 flex-1 grow
                     cursor-pointer items-center gap-2 overflow-hidden rounded-md
-                    bg-transparent px-1.5 py-1.5 text-left transition-colors
+                    bg-transparent px-1.5 text-left transition-colors
                     outline-none focus-visible:ring-2`,
                     isSelected && "text-sidebar-accent-foreground",
                     branch.isStale && !isSelected && "text-muted-foreground",

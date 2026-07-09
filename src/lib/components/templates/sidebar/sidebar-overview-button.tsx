@@ -15,7 +15,7 @@ export function SidebarOverviewButton({
         <button
             aria-current={isActive ? "page" : undefined}
             className={cn(
-                `focus-visible:ring-ring flex h-8 w-full items-center gap-2
+                `focus-visible:ring-ring flex h-7 w-full items-center gap-2
                 rounded-md px-2 text-left text-xs font-medium transition-colors
                 outline-none focus-visible:ring-2`,
                 isActive

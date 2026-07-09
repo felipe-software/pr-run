@@ -30,9 +30,6 @@ const MAIN_CONTENT_MIN_WIDTH = 640;
 export function usePrRunAppState() {
     const settingsState = useSettingsState();
     const [actionError, setActionError] = useState<string>();
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-        () => new Set(["default"]),
-    );
     const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(
         () => new Set(),
     );
@@ -142,20 +139,6 @@ export function usePrRunAppState() {
     useEffect(() => {
         localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
     }, [sidebarWidth]);
-
-    function toggleGroup(groupId: string) {
-        setExpandedGroups((current) => {
-            const next = new Set(current);
-
-            if (next.has(groupId)) {
-                next.delete(groupId);
-            } else {
-                next.add(groupId);
-            }
-
-            return next;
-        });
-    }
 
     function toggleProject(projectId: string) {
         setCollapsedProjects((current) => {
@@ -288,7 +271,6 @@ export function usePrRunAppState() {
             ? getErrorMessage(createScriptMutation.error)
             : undefined,
         configError,
-        expandedGroups,
         collapsedProjects,
         groups,
         isAddProjectOpen,
@@ -332,7 +314,6 @@ export function usePrRunAppState() {
         removeWorktree,
         setTheme,
         submitAddProject,
-        toggleGroup,
         toggleProject,
         updateProject,
         checkoutBranch,

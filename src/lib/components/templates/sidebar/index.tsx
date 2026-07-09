@@ -1,4 +1,5 @@
 import { SidebarContent } from "@/lib/components/templates/sidebar/sidebar-content";
+import { SidebarFooter } from "@/lib/components/templates/sidebar/sidebar-footer";
 import { SidebarGroupSection } from "@/lib/components/templates/sidebar/sidebar-group-section";
 import { SidebarOverviewButton } from "@/lib/components/templates/sidebar/sidebar-overview-button";
 import { SidebarRail } from "@/lib/components/templates/sidebar/sidebar-rail";
@@ -9,11 +10,11 @@ export function Sidebar({
     busyOwnerKeys,
     busyProjectIds,
     collapsedProjects,
-    expandedGroups,
     groups,
     isDesktopHidden,
     isMobileOpen,
     isOverviewActive,
+    isSettingsActive,
     pendingProjectUpdateId,
     pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
@@ -22,10 +23,11 @@ export function Sidebar({
     sidebarWidth,
     onBeginResize,
     onCheckoutBranch,
+    onOpenAddProject,
     onOpenOverview,
+    onOpenSettings,
     onRemoveWorktree,
     onSelectBranch,
-    onToggleGroup,
     onToggleProject,
     onUpdateProject,
 }: SidebarProps) {
@@ -36,19 +38,16 @@ export function Sidebar({
             sidebarWidth={sidebarWidth}
         >
             <SidebarContent>
-                <div className="px-0.5 pt-1.5 pb-1">
-                    <SidebarOverviewButton
-                        isActive={isOverviewActive}
-                        onClick={onOpenOverview}
-                    />
-                </div>
+                <SidebarOverviewButton
+                    isActive={isOverviewActive}
+                    onClick={onOpenOverview}
+                />
                 {groups.map((group) => (
                     <SidebarGroupSection
                         busyOwnerKeys={busyOwnerKeys}
                         busyProjectIds={busyProjectIds}
                         collapsedProjects={collapsedProjects}
                         group={group}
-                        isExpanded={expandedGroups.has(group.id)}
                         key={group.id}
                         pendingProjectUpdateId={pendingProjectUpdateId}
                         pendingWorktreeCheckoutKey={pendingWorktreeCheckoutKey}
@@ -56,14 +55,18 @@ export function Sidebar({
                         selectedBranchName={selectedBranchName}
                         selectedProjectId={selectedProjectId}
                         onCheckoutBranch={onCheckoutBranch}
+                        onOpenAddProject={onOpenAddProject}
                         onRemoveWorktree={onRemoveWorktree}
                         onSelectBranch={onSelectBranch}
-                        onToggleGroup={onToggleGroup}
                         onToggleProject={onToggleProject}
                         onUpdateProject={onUpdateProject}
                     />
                 ))}
             </SidebarContent>
+            <SidebarFooter
+                isSettingsActive={isSettingsActive}
+                onOpenSettings={onOpenSettings}
+            />
 
             <SidebarRail onBeginResize={onBeginResize} />
         </SidebarShell>

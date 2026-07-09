@@ -47,9 +47,7 @@ export function WorktreeTab({
                 aria-label={`Close ${tab.branchName}`}
                 className="text-muted-foreground hover:text-foreground
                     focus-visible:ring-ring grid size-5 shrink-0 cursor-pointer
-                    place-items-center bg-transparent opacity-0 transition-all
-                    outline-none group-focus-within/tab:opacity-100
-                    group-hover/tab:opacity-100 focus-visible:opacity-100
+                    place-items-center bg-transparent outline-none
                     focus-visible:ring-2"
                 type="button"
                 onClick={(event) => {

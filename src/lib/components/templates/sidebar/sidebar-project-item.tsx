@@ -108,7 +108,8 @@ export function SidebarProjectItem({
         <div className="group/menu-item relative">
             <div
                 className={cn(
-                    "group relative isolate flex items-stretch rounded-md",
+                    `group hover:bg-sidebar-accent relative isolate flex h-7
+                    items-stretch rounded-md transition-colors`,
                     isSelected &&
                         "bg-sidebar-accent text-sidebar-accent-foreground",
                 )}
@@ -116,25 +117,22 @@ export function SidebarProjectItem({
                 <button
                     aria-expanded={isExpanded}
                     data-active={isSelected}
-                    className="peer/menu-button text-sidebar-foreground
-                        hover:bg-sidebar-accent
+                    className="text-sidebar-foreground
                         hover:text-sidebar-accent-foreground
-                        focus-visible:ring-ring active:bg-sidebar-accent flex
-                        min-w-0 flex-1 cursor-pointer items-center
-                        overflow-hidden rounded-md bg-transparent px-2 py-1.5
-                        text-left text-sm transition-colors outline-none
-                        focus-visible:ring-2"
+                        focus-visible:ring-ring flex min-w-0 flex-1
+                        cursor-pointer items-center overflow-hidden rounded-md
+                        px-2 text-left outline-none focus-visible:ring-2"
                     type="button"
                     onClick={() => onToggleProject(project.id)}
                 >
                     {isExpanded ? (
                         <ChevronDown
-                            className="text-muted-foreground/70 h-3.5 w-3.5
+                            className="text-muted-foreground/70 mr-1 size-3
                                 shrink-0"
                         />
                     ) : (
                         <ChevronRight
-                            className="text-muted-foreground/70 h-3.5 w-3.5
+                            className="text-muted-foreground/70 mr-1 size-3
                                 shrink-0"
                         />
                     )}
