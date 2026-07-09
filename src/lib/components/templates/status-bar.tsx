@@ -2,6 +2,11 @@ import { GitBranch, GitPullRequest, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { AppStatusSummary } from "@/lib/components/templates/pr-run-app/use-app-status-summary";
+import {
+    Tooltip,
+    TooltipPopup,
+    TooltipTrigger,
+} from "@/lib/components/ui/tooltip";
 import { cn } from "@/lib/utils/cn";
 
 type StatusBarProps = {
@@ -22,9 +27,7 @@ export function StatusBar({ summary, onOpenBusyTerminals }: StatusBarProps) {
         >
             <StatusBarItem
                 icon={
-                    <StatusBarIcon
-                        className="bg-warning/15 text-warning-foreground"
-                    >
+                    <StatusBarIcon className="text-warning">
                         <GitBranch className="h-3.5 w-3.5" />
                     </StatusBarIcon>
                 }
@@ -33,20 +36,17 @@ export function StatusBar({ summary, onOpenBusyTerminals }: StatusBarProps) {
             />
             <StatusBarItem
                 icon={
-                    <StatusBarIcon className="bg-success/15 text-success">
+                    <StatusBarIcon className="text-success">
                         <Terminal className="h-3.5 w-3.5" />
                     </StatusBarIcon>
                 }
                 label="busy terminals"
                 value={summary.busyTerminalCount}
-                onPress={onOpenBusyTerminals}
+                onClick={onOpenBusyTerminals}
             />
             <StatusBarItem
                 icon={
-                    <StatusBarIcon
-                        className="bg-blue-500/20 text-blue-600
-                            dark:text-blue-300"
-                    >
+                    <StatusBarIcon className="text-muted-foreground">
                         <GitPullRequest className="h-3.5 w-3.5" />
                     </StatusBarIcon>
                 }
@@ -55,7 +55,7 @@ export function StatusBar({ summary, onOpenBusyTerminals }: StatusBarProps) {
             />
             <StatusBarItem
                 icon={
-                    <StatusBarIcon className="bg-success/15 text-success">
+                    <StatusBarIcon className="text-muted-foreground">
                         <GitBranch className="h-3.5 w-3.5" />
                     </StatusBarIcon>
                 }
@@ -80,29 +80,55 @@ export function StatusBar({ summary, onOpenBusyTerminals }: StatusBarProps) {
 type StatusBarItemProps = {
     icon: ReactNode;
     label: string;
-    onPress?: () => void;
+    onClick?: () => void;
     value: number;
 };
 
-function StatusBarItem({ icon, label, onPress, value }: StatusBarItemProps) {
-    return (
-        <button
-            className={cn(
-                `hover:bg-sidebar-accent focus-visible:ring-ring inline-flex h-6
-                min-w-0 cursor-pointer items-center gap-1 rounded bg-transparent
-                px-1.5 font-medium transition-colors outline-none
-                focus-visible:ring-2`,
-            )}
-            type="button"
-            onPointerDown={(event) => {
-                event.stopPropagation();
-            }}
-            onClick={onPress}
-        >
+function StatusBarItem({ icon, label, onClick, value }: StatusBarItemProps) {
+    const content = (
+        <>
             {icon}
             <span className="tabular-nums">{value}</span>
             <span>{label}</span>
-        </button>
+        </>
+    );
+
+    if (!onClick) {
+        return (
+            <span
+                className="text-muted-foreground inline-flex h-6 items-center
+                    gap-1 px-1.5"
+            >
+                {content}
+            </span>
+        );
+    }
+
+    return (
+        <Tooltip>
+            <TooltipTrigger
+                render={
+                    <button
+                        className={cn(
+                            `hover:bg-sidebar-accent focus-visible:ring-ring
+                            inline-flex h-6 min-w-0 cursor-pointer items-center
+                            gap-1 rounded bg-transparent px-1.5 font-medium
+                            transition-colors outline-none focus-visible:ring-2`,
+                        )}
+                        type="button"
+                        onPointerDown={(event) => {
+                            event.stopPropagation();
+                        }}
+                        onClick={onClick}
+                    >
+                        {content}
+                    </button>
+                }
+            >
+                {content}
+            </TooltipTrigger>
+            <TooltipPopup>Open busy terminals</TooltipPopup>
+        </Tooltip>
     );
 }
 
@@ -116,7 +142,7 @@ function StatusBarIcon({
     return (
         <span
             className={cn(
-                "grid h-5 w-5 flex-none place-items-center rounded-md",
+                "grid h-4 w-4 flex-none place-items-center",
                 className,
             )}
         >

@@ -1,9 +1,19 @@
-import { Input, Label } from "@heroui/react";
 import { FolderPlus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { Button } from "@/lib/components/atoms/button";
-import { Surface } from "@/lib/components/atoms/surface";
+import { Alert } from "@/lib/components/ui/alert";
+import {
+    Dialog,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogPanel,
+    DialogPopup,
+    DialogTitle,
+} from "@/lib/components/ui/dialog";
+import { Input } from "@/lib/components/ui/input";
+import { Label } from "@/lib/components/ui/label";
+import { Button } from "@/lib/components/ui/button";
 
 type AddProjectDialogProps = {
     error?: string;
@@ -28,84 +38,74 @@ export function AddProjectDialog({
         }
     }, [isOpen]);
 
-    if (!isOpen) {
-        return null;
-    }
-
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         await onSubmit(projectPath.trim());
     }
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center
-                bg-black/35 px-4"
-        >
-            <Surface className="w-full max-w-lg shadow-xl">
-                <form className="p-4" onSubmit={handleSubmit}>
-                    <div className="mb-4 flex items-start gap-3">
-                        <div
-                            className="border-border bg-muted/20 text-primary
-                                flex size-8 shrink-0 items-center justify-center
-                                rounded-md border"
-                        >
-                            <FolderPlus className="h-4 w-4" />
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogPopup showCloseButton={!isSubmitting}>
+                <form onSubmit={handleSubmit}>
+                    <DialogHeader>
+                        <div className="flex items-start gap-3">
+                            <div
+                                className="border-border bg-muted/20
+                                    text-primary flex size-8 shrink-0
+                                    items-center justify-center rounded-md
+                                    border"
+                            >
+                                <FolderPlus className="h-4 w-4" />
+                            </div>
+                            <div>
+                                <DialogTitle>Add project</DialogTitle>
+                                <DialogDescription>
+                                    Enter the local path of a Git repository.
+                                </DialogDescription>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-base font-semibold">
-                                Add project
-                            </h2>
-                            <p className="text-muted-foreground mt-0.5 text-sm">
-                                Enter the local path of a Git repository.
-                            </p>
+                    </DialogHeader>
+
+                    <DialogPanel className="grid gap-3">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="project-path">Folder path</Label>
+                            <Input
+                                autoFocus
+                                id="project-path"
+                                placeholder="/home/user/my-super-app"
+                                value={projectPath}
+                                onChange={(event) =>
+                                    setProjectPath(event.target.value)
+                                }
+                            />
                         </div>
-                    </div>
 
-                    <div className="flex flex-col gap-2">
-                        <Label htmlFor="project-path">Folder path</Label>
-                        <Input
-                            autoFocus
-                            fullWidth
-                            id="project-path"
-                            placeholder="/home/user/my-super-app"
-                            value={projectPath}
-                            onChange={(event) =>
-                                setProjectPath(event.target.value)
-                            }
-                        />
-                    </div>
+                        {error ? (
+                            <Alert variant="destructive">{error}</Alert>
+                        ) : null}
+                    </DialogPanel>
 
-                    {error ? (
-                        <Surface
-                            className="mt-3 px-3 py-2 text-sm"
-                            variant="danger"
-                        >
-                            {error}
-                        </Surface>
-                    ) : null}
-
-                    <div className="mt-5 flex justify-end gap-2">
+                    <DialogFooter>
                         <Button
-                            isDisabled={isSubmitting}
+                            disabled={isSubmitting}
                             type="button"
                             variant="ghost"
-                            onPress={onClose}
+                            onClick={onClose}
                         >
                             <X className="h-4 w-4" />
                             Cancel
                         </Button>
                         <Button
-                            isDisabled={isSubmitting || !projectPath.trim()}
+                            disabled={isSubmitting || !projectPath.trim()}
                             type="submit"
-                            variant="primary"
+                            variant="default"
                         >
                             <FolderPlus className="h-4 w-4" />
                             {isSubmitting ? "Adding..." : "Add"}
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </form>
-            </Surface>
-        </div>
+            </DialogPopup>
+        </Dialog>
     );
 }

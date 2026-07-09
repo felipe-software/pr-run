@@ -1,4 +1,4 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, PanelLeft } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -16,6 +16,13 @@ import type { RunTerminalContext } from "@/lib/components/templates/main-panel";
 import { Sidebar } from "@/lib/components/templates/sidebar";
 import { SshPassphraseDialog } from "@/lib/components/templates/ssh-passphrase-dialog";
 import { StatusBar } from "@/lib/components/templates/status-bar";
+import { SettingsPage } from "@/lib/components/templates/settings-page";
+import { Button } from "@/lib/components/ui/button";
+import {
+    Tooltip,
+    TooltipPopup,
+    TooltipTrigger,
+} from "@/lib/components/ui/tooltip";
 import { usePrRunAppState } from "@/lib/components/templates/pr-run-app/use-pr-run-app-state";
 import { useWorktreeTerminalStore } from "@/lib/hooks/store/use-worktree-terminal-store";
 
@@ -30,15 +37,23 @@ export function PrRunApp() {
     const state = usePrRunAppState();
     const terminalOwners = useWorktreeTerminalStore((store) => store.owners);
     const [isTerminalPanelOpen, setIsTerminalPanelOpen] = useState(false);
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const [isTerminalPanelAutoHeight, setIsTerminalPanelAutoHeight] =
         useState(false);
     const [isTerminalPanelResizing, setIsTerminalPanelResizing] =
         useState(false);
-    const [terminalPanelHeight, setTerminalPanelHeight] = useState(
-        TERMINAL_PANEL_DEFAULT_HEIGHT,
+    const [terminalPanelHeight, setTerminalPanelHeight] = useState(() =>
+        readPersistedSize(
+            "pr-run:terminal-panel-height",
+            TERMINAL_PANEL_DEFAULT_HEIGHT,
+        ),
     );
     const [terminalPanelSidebarWidth, setTerminalPanelSidebarWidth] = useState(
-        TERMINAL_PANEL_SIDEBAR_DEFAULT_WIDTH,
+        () =>
+            readPersistedSize(
+                "pr-run:terminal-list-width",
+                TERMINAL_PANEL_SIDEBAR_DEFAULT_WIDTH,
+            ),
     );
     const [selectedGlobalTerminalKey, setSelectedGlobalTerminalKey] = useState<
         string | null
@@ -94,6 +109,20 @@ export function PrRunApp() {
             }
         };
     }, []);
+
+    useEffect(() => {
+        localStorage.setItem(
+            "pr-run:terminal-panel-height",
+            String(terminalPanelHeight),
+        );
+    }, [terminalPanelHeight]);
+
+    useEffect(() => {
+        localStorage.setItem(
+            "pr-run:terminal-list-width",
+            String(terminalPanelSidebarWidth),
+        );
+    }, [terminalPanelSidebarWidth]);
 
     function beginTerminalUiResize() {
         if (resizeSettleTimeoutRef.current !== null) {
@@ -240,6 +269,7 @@ export function PrRunApp() {
                 collapsedProjects={state.collapsedProjects}
                 groups={state.groups}
                 isCreatingScript={state.isCreatingScript}
+                isMobileOpen={isMobileSidebarOpen}
                 pendingProjectUpdateId={state.pendingProjectUpdateId}
                 pendingWorktreeCheckoutKey={state.pendingWorktreeCheckoutKey}
                 pendingWorktreeRemovalKey={state.pendingWorktreeRemovalKey}
@@ -248,52 +278,99 @@ export function PrRunApp() {
                 }
                 selectedProjectId={state.selectedBranchView.project?.id}
                 sidebarWidth={state.sidebarWidth}
-                theme={state.theme}
                 onAddProject={state.openAddProject}
                 onBeginResize={state.beginResize}
                 onCheckoutBranch={state.checkoutBranch}
                 onCreateScript={state.openCreateScript}
                 onOpenSshPassphrase={state.openSshPassphrase}
+                onOpenSettings={state.openSettings}
                 onRemoveWorktree={state.removeWorktree}
                 onSelectBranch={state.selectBranch}
                 onToggleGroup={state.toggleGroup}
                 onToggleProject={state.toggleProject}
-                onToggleTheme={() =>
-                    state.setTheme((current) =>
-                        current === "dark" ? "light" : "dark",
-                    )
-                }
                 onUpdateProject={state.updateProject}
             />
             <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                <MainPanel
-                    actionError={state.actionError}
-                    branchName={state.selectedBranchView.branchName}
-                    isRunTerminalDocked={Boolean(
-                        runTerminalContext &&
-                        isTerminalPanelOpen &&
-                        isTerminalPanelAutoHeight,
-                    )}
-                    isTerminalStateSyncPaused={isTerminalPanelResizing}
-                    isCheckingOutWorktree={state.isCheckingOutWorktree}
-                    project={state.selectedBranchView.project}
-                    onCheckoutBranch={state.checkoutBranch}
-                    onCreateScript={state.openCreateScript}
-                    onRunTerminalContextChange={handleRunTerminalContextChange}
-                />
-                <GlobalTerminalPanel
-                    groups={state.groups}
-                    height={terminalPanelHeight}
-                    isAutoHeight={isTerminalPanelAutoHeight}
-                    isOpen={isTerminalPanelOpen}
-                    preferredOwnerKey={runTerminalContext?.ownerKey ?? null}
-                    sidebarWidth={terminalPanelSidebarWidth}
-                    selectedTerminalKey={selectedGlobalTerminalKey}
-                    onBeginSidebarResize={beginTerminalPanelSidebarResize}
-                    onBeginResize={beginTerminalPanelResize}
-                    onClose={() => setIsTerminalPanelOpen(false)}
-                    onSelectTerminal={setSelectedGlobalTerminalKey}
-                />
+                <div
+                    className="flex h-10 shrink-0 items-center border-b px-2
+                        lg:hidden"
+                >
+                    <Tooltip>
+                        <TooltipTrigger
+                            render={
+                                <Button
+                                    aria-label={
+                                        isMobileSidebarOpen
+                                            ? "Close sidebar"
+                                            : "Open sidebar"
+                                    }
+                                    className="bg-popover shadow-sm/5"
+                                    size="icon-sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                        setIsMobileSidebarOpen((open) => !open)
+                                    }
+                                />
+                            }
+                        >
+                            <PanelLeft className="size-4" />
+                        </TooltipTrigger>
+                        <TooltipPopup>
+                            {isMobileSidebarOpen
+                                ? "Close projects"
+                                : "Open projects"}
+                        </TooltipPopup>
+                    </Tooltip>
+                </div>
+                {state.workspaceView.type === "settings" ? (
+                    <SettingsPage
+                        groups={state.groups}
+                        section={state.workspaceView.section}
+                        summary={state.statusSummary}
+                        onClose={state.closeSettings}
+                        onCreateScript={state.openCreateScript}
+                        onOpenSshPassphrase={state.openSshPassphrase}
+                        onRefreshProject={state.updateProject}
+                        onSelectSection={state.setSettingsSection}
+                    />
+                ) : (
+                    <>
+                        <MainPanel
+                            actionError={state.actionError}
+                            branchName={state.selectedBranchView.branchName}
+                            isRunTerminalDocked={Boolean(
+                                runTerminalContext &&
+                                isTerminalPanelOpen &&
+                                isTerminalPanelAutoHeight,
+                            )}
+                            isTerminalStateSyncPaused={isTerminalPanelResizing}
+                            isCheckingOutWorktree={state.isCheckingOutWorktree}
+                            project={state.selectedBranchView.project}
+                            onCheckoutBranch={state.checkoutBranch}
+                            onCreateScript={state.openCreateScript}
+                            onRunTerminalContextChange={
+                                handleRunTerminalContextChange
+                            }
+                        />
+                        <GlobalTerminalPanel
+                            groups={state.groups}
+                            height={terminalPanelHeight}
+                            isAutoHeight={isTerminalPanelAutoHeight}
+                            isOpen={isTerminalPanelOpen}
+                            preferredOwnerKey={
+                                runTerminalContext?.ownerKey ?? null
+                            }
+                            sidebarWidth={terminalPanelSidebarWidth}
+                            selectedTerminalKey={selectedGlobalTerminalKey}
+                            onBeginSidebarResize={
+                                beginTerminalPanelSidebarResize
+                            }
+                            onBeginResize={beginTerminalPanelResize}
+                            onClose={() => setIsTerminalPanelOpen(false)}
+                            onSelectTerminal={setSelectedGlobalTerminalKey}
+                        />
+                    </>
+                )}
                 <StatusBar
                     summary={state.statusSummary}
                     onOpenBusyTerminals={openGlobalTerminalPanel}
@@ -368,4 +445,9 @@ function getActiveOwnerTerminalKey(
 
 function clamp(value: number, min: number, max: number) {
     return Math.min(Math.max(value, min), max);
+}
+
+function readPersistedSize(key: string, fallback: number) {
+    const value = Number(localStorage.getItem(key));
+    return Number.isFinite(value) ? value : fallback;
 }

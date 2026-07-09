@@ -1,7 +1,7 @@
-import { toast } from "@heroui/react";
 import { RefreshCw } from "lucide-react";
 
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
+import { toast } from "@/lib/components/ui/toast";
 import { EmptyState } from "@/lib/components/atoms/empty-state";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { StatusPill } from "@/lib/components/atoms/status-pill";
@@ -54,7 +54,7 @@ export function BranchDockerPanel({
         );
 
         if (prepareError) {
-            toast.danger(getErrorMessage(prepareError), { timeout: 3200 });
+            toast.error(getErrorMessage(prepareError), { timeout: 3200 });
             return;
         }
 
@@ -67,7 +67,7 @@ export function BranchDockerPanel({
         );
 
         if (runError) {
-            toast.danger(getErrorMessage(runError), { timeout: 3200 });
+            toast.error(getErrorMessage(runError), { timeout: 3200 });
             return;
         }
 
@@ -112,7 +112,7 @@ export function BranchDockerPanel({
                         size="xs"
                         type="button"
                         variant="outline"
-                        onPress={() => {
+                        onClick={() => {
                             dockerOverviewQuery.refetch();
                         }}
                     >
@@ -132,7 +132,7 @@ export function BranchDockerPanel({
                             size="sm"
                             type="button"
                             variant="outline"
-                            onPress={() => {
+                            onClick={() => {
                                 dockerOverviewQuery.refetch();
                             }}
                         >
@@ -170,11 +170,11 @@ export function BranchDockerPanel({
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
-                            isDisabled={prepareDockerCommandMutation.isPending}
+                            disabled={prepareDockerCommandMutation.isPending}
                             size="xs"
                             type="button"
                             variant="outline"
-                            onPress={() => {
+                            onClick={() => {
                                 dockerOverviewQuery.refetch();
                             }}
                         >
@@ -182,44 +182,44 @@ export function BranchDockerPanel({
                             Refresh
                         </Button>
                         <Button
-                            isDisabled={prepareDockerCommandMutation.isPending}
+                            disabled={prepareDockerCommandMutation.isPending}
                             size="xs"
                             type="button"
                             variant="outline"
-                            onPress={() => {
+                            onClick={() => {
                                 queueDockerCommand("up");
                             }}
                         >
                             Up
                         </Button>
                         <Button
-                            isDisabled={prepareDockerCommandMutation.isPending}
+                            disabled={prepareDockerCommandMutation.isPending}
                             size="xs"
                             type="button"
                             variant="outline"
-                            onPress={() => {
+                            onClick={() => {
                                 queueDockerCommand("restart");
                             }}
                         >
                             Restart
                         </Button>
                         <Button
-                            isDisabled={prepareDockerCommandMutation.isPending}
+                            disabled={prepareDockerCommandMutation.isPending}
                             size="xs"
                             type="button"
                             variant="outline"
-                            onPress={() => {
+                            onClick={() => {
                                 queueDockerCommand("logs");
                             }}
                         >
                             Logs
                         </Button>
                         <Button
-                            isDisabled={prepareDockerCommandMutation.isPending}
+                            disabled={prepareDockerCommandMutation.isPending}
                             size="xs"
                             type="button"
-                            variant="danger"
-                            onPress={() => {
+                            variant="destructive-outline"
+                            onClick={() => {
                                 queueDockerCommand("down");
                             }}
                         >
@@ -295,11 +295,11 @@ export function BranchDockerPanel({
                                         justify-end"
                                 >
                                     <Button
-                                        isDisabled={isPending}
+                                        disabled={isPending}
                                         size="xs"
                                         type="button"
                                         variant="outline"
-                                        onPress={() => {
+                                        onClick={() => {
                                             queueDockerCommand(
                                                 "logs",
                                                 service.name,

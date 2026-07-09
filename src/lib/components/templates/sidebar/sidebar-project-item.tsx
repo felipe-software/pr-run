@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
 import { SidebarBranchItem } from "@/lib/components/templates/sidebar/sidebar-branch-item";
@@ -186,15 +186,12 @@ export function SidebarProjectItem({
                 >
                     <Button
                         aria-label={`Reload ${project.name} worktrees`}
-                        className="text-muted-foreground/65
-                            data-[hover=true]:bg-sidebar-accent
-                            data-[hover=true]:text-sidebar-accent-foreground
-                            border-transparent bg-transparent shadow-none"
-                        isDisabled={isUpdatingProject}
-                        isIconOnly
+                        className="text-muted-foreground/65"
+                        disabled={isUpdatingProject}
                         size="icon-xs"
                         type="button"
-                        onPress={() => {
+                        variant="ghost"
+                        onClick={() => {
                             onUpdateProject(project);
                         }}
                     >
@@ -310,7 +307,8 @@ export function SidebarProjectItem({
                                 justify-start rounded-md px-2 text-[11px]"
                             size="xs"
                             type="button"
-                            onPress={() => setAreAllRecentBranchesVisible(true)}
+                            variant="ghost"
+                            onClick={() => setAreAllRecentBranchesVisible(true)}
                         >
                             Show more ({hiddenRecentBranchCount})
                         </Button>
@@ -327,7 +325,8 @@ export function SidebarProjectItem({
                                 justify-start rounded-md px-2 text-[11px]"
                             size="xs"
                             type="button"
-                            onPress={() => setAreStaleBranchesVisible(true)}
+                            variant="ghost"
+                            onClick={() => setAreStaleBranchesVisible(true)}
                         >
                             Show stale ({staleBranches.length})
                         </Button>

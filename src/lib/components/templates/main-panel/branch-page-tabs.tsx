@@ -1,5 +1,5 @@
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
-import { TabShell } from "@/lib/components/atoms/tab-shell";
+import { cn } from "@/lib/utils/cn";
 
 type BranchPageTab = "general" | "run" | "diff" | "docker" | "env";
 
@@ -10,7 +10,7 @@ type BranchPageTabsProps = {
 };
 
 const tabs: { label: string; value: BranchPageTab }[] = [
-    { label: "General", value: "general" },
+    { label: "Overview", value: "general" },
     { label: "Run", value: "run" },
     { label: "Diff", value: "diff" },
     { label: "Docker", value: "docker" },
@@ -24,30 +24,29 @@ export function BranchPageTabs({
 }: BranchPageTabsProps) {
     return (
         <div
-            className="relative z-10 mb-[-1px] flex w-fit items-end pr-1 pl-1"
+            className="bg-muted/35 inline-flex rounded-lg border p-0.5"
             role="tablist"
         >
             {tabs.map((tab) => (
-                <TabShell
-                    className="min-w-[84px]"
-                    isActive={activeTab === tab.value}
+                <button
+                    aria-selected={activeTab === tab.value}
+                    className={cn(
+                        `text-muted-foreground flex h-7 items-center
+                        justify-center gap-1 rounded-md px-2.5 text-xs
+                        font-medium transition-colors`,
+                        activeTab === tab.value &&
+                            "bg-card text-foreground shadow-sm/5",
+                    )}
                     key={tab.value}
+                    role="tab"
+                    type="button"
+                    onClick={() => onSelectTab(tab.value)}
                 >
-                    <button
-                        aria-selected={activeTab === tab.value}
-                        className="flex h-full w-full items-center
-                            justify-center gap-1.5 px-3 font-[inherit] text-xs
-                            leading-none"
-                        role="tab"
-                        type="button"
-                        onClick={() => onSelectTab(tab.value)}
-                    >
-                        {tab.value === "run" && isRunTabBusy ? (
-                            <BusyIcon size="sm" />
-                        ) : null}
-                        {tab.label}
-                    </button>
-                </TabShell>
+                    {tab.value === "run" && isRunTabBusy ? (
+                        <BusyIcon size="sm" />
+                    ) : null}
+                    {tab.label}
+                </button>
             ))}
         </div>
     );

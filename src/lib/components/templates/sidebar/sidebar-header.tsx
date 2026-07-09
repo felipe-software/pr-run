@@ -1,23 +1,27 @@
-import { FilePlus2, KeyRound, Moon, Plus, SunMedium } from "lucide-react";
+import { FilePlus2, KeyRound, Plus, Settings } from "lucide-react";
+import type { ReactNode } from "react";
 
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
+import {
+    Tooltip,
+    TooltipPopup,
+    TooltipTrigger,
+} from "@/lib/components/ui/tooltip";
 
 type SidebarHeaderProps = {
     isCreatingScript: boolean;
-    theme: "dark" | "light";
     onAddProject: () => void;
     onCreateScript: () => void;
     onOpenSshPassphrase: () => void;
-    onToggleTheme: () => void;
+    onOpenSettings: () => void;
 };
 
 export function SidebarHeader({
     isCreatingScript,
-    theme,
     onAddProject,
     onCreateScript,
     onOpenSshPassphrase,
-    onToggleTheme,
+    onOpenSettings,
 }: SidebarHeaderProps) {
     return (
         <header
@@ -39,64 +43,58 @@ export function SidebarHeader({
                 </div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-                <Button
-                    aria-label="Toggle theme"
-                    className="text-muted-foreground/75
-                        data-[hover=true]:bg-sidebar-accent
-                        data-[hover=true]:text-sidebar-accent-foreground
-                        border-transparent"
-                    isIconOnly
-                    size="icon-xs"
-                    type="button"
-                    onPress={onToggleTheme}
+                <HeaderAction
+                    disabled={isCreatingScript}
+                    label="Create script"
+                    onClick={onCreateScript}
                 >
-                    {theme === "dark" ? (
-                        <SunMedium className="h-4 w-4" />
-                    ) : (
-                        <Moon className="h-4 w-4" />
-                    )}
-                </Button>
-                <Button
-                    aria-label="Create script"
-                    className="text-muted-foreground/75
-                        data-[hover=true]:bg-sidebar-accent
-                        data-[hover=true]:text-sidebar-accent-foreground
-                        border-transparent"
-                    isDisabled={isCreatingScript}
-                    isIconOnly
-                    size="icon-xs"
-                    type="button"
-                    onPress={onCreateScript}
+                    <FilePlus2 className="size-4" />
+                </HeaderAction>
+                <HeaderAction
+                    label="SSH passphrase"
+                    onClick={onOpenSshPassphrase}
                 >
-                    <FilePlus2 className="h-4 w-4" />
-                </Button>
-                <Button
-                    aria-label="SSH passphrase"
-                    className="text-muted-foreground/75
-                        data-[hover=true]:bg-sidebar-accent
-                        data-[hover=true]:text-sidebar-accent-foreground
-                        border-transparent"
-                    isIconOnly
-                    size="icon-xs"
-                    type="button"
-                    onPress={onOpenSshPassphrase}
-                >
-                    <KeyRound className="h-4 w-4" />
-                </Button>
-                <Button
-                    aria-label="Add project"
-                    className="text-muted-foreground/75
-                        data-[hover=true]:bg-sidebar-accent
-                        data-[hover=true]:text-sidebar-accent-foreground
-                        border-transparent"
-                    isIconOnly
-                    size="icon-xs"
-                    type="button"
-                    onPress={onAddProject}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
+                    <KeyRound className="size-4" />
+                </HeaderAction>
+                <HeaderAction label="Settings" onClick={() => onOpenSettings()}>
+                    <Settings className="size-4" />
+                </HeaderAction>
+                <HeaderAction label="Add project" onClick={onAddProject}>
+                    <Plus className="size-4" />
+                </HeaderAction>
             </div>
         </header>
+    );
+}
+
+function HeaderAction({
+    children,
+    disabled,
+    label,
+    onClick,
+}: {
+    children: ReactNode;
+    disabled?: boolean;
+    label: string;
+    onClick: () => void;
+}) {
+    return (
+        <Tooltip>
+            <TooltipTrigger
+                render={
+                    <Button
+                        aria-label={label}
+                        className="text-muted-foreground/75"
+                        disabled={disabled}
+                        size="icon-xs"
+                        variant="ghost"
+                        onClick={onClick}
+                    />
+                }
+            >
+                {children}
+            </TooltipTrigger>
+            <TooltipPopup>{label}</TooltipPopup>
+        </Tooltip>
     );
 }

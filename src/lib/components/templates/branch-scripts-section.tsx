@@ -1,8 +1,16 @@
-import { toast } from "@heroui/react";
 import { Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
+import {
+    Dialog,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogPopup,
+    DialogTitle,
+} from "@/lib/components/ui/dialog";
+import { toast } from "@/lib/components/ui/toast";
 import { Chip } from "@/lib/components/atoms/chip";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
@@ -44,7 +52,7 @@ export function BranchScriptsSection({
         );
 
         if (error) {
-            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            toast.error(getErrorMessage(error), { timeout: 3200 });
         }
     }
 
@@ -58,7 +66,7 @@ export function BranchScriptsSection({
         );
 
         if (error) {
-            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            toast.error(getErrorMessage(error), { timeout: 3200 });
             return;
         }
 
@@ -70,7 +78,7 @@ export function BranchScriptsSection({
         );
 
         if (commandError) {
-            toast.danger(getErrorMessage(commandError), { timeout: 3200 });
+            toast.error(getErrorMessage(commandError), { timeout: 3200 });
         }
     }
 
@@ -80,7 +88,7 @@ export function BranchScriptsSection({
         );
 
         if (error) {
-            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            toast.error(getErrorMessage(error), { timeout: 3200 });
             return;
         }
 
@@ -101,7 +109,7 @@ export function BranchScriptsSection({
                             size="xs"
                             type="button"
                             variant="outline"
-                            onPress={onCreateScript}
+                            onClick={onCreateScript}
                         >
                             <Plus className="h-3.5 w-3.5" />
                             Create script
@@ -198,11 +206,10 @@ export function BranchScriptsSection({
                                     >
                                         <Button
                                             aria-label={`Edit ${script.title}`}
-                                            isIconOnly
                                             size="icon-xs"
                                             type="button"
                                             variant="outline"
-                                            onPress={() => {
+                                            onClick={() => {
                                                 editScript(script);
                                             }}
                                         >
@@ -210,12 +217,11 @@ export function BranchScriptsSection({
                                         </Button>
                                         <Button
                                             aria-label={`Delete ${script.title}`}
-                                            isDisabled={isDeleting}
-                                            isIconOnly
+                                            disabled={isDeleting}
                                             size="icon-xs"
                                             type="button"
-                                            variant="danger"
-                                            onPress={() =>
+                                            variant="destructive-outline"
+                                            onClick={() =>
                                                 setScriptPendingDelete(script)
                                             }
                                         >
@@ -232,43 +238,43 @@ export function BranchScriptsSection({
                     </Surface>
                 )}
             </Surface>
-            {scriptPendingDelete ? (
-                <div
-                    className="fixed inset-0 z-50 flex items-center
-                        justify-center bg-black/35 px-4"
-                >
-                    <Surface className="w-full max-w-sm px-4 py-4">
-                        <h3 className="text-sm font-semibold">Delete script</h3>
-                        <p className="text-muted-foreground mt-2 text-sm">
-                            Delete "{scriptPendingDelete.title}" from the global
-                            script list.
-                        </p>
-                        <div className="mt-4 flex justify-end gap-2">
-                            <Button
-                                isDisabled={deleteScriptMutation.isPending}
-                                type="button"
-                                variant="ghost"
-                                onPress={() => setScriptPendingDelete(null)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                isDisabled={deleteScriptMutation.isPending}
-                                type="button"
-                                variant="danger"
-                                onPress={() => {
-                                    deleteScript(scriptPendingDelete);
-                                }}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                                {deleteScriptMutation.isPending
-                                    ? "Deleting..."
-                                    : "Delete"}
-                            </Button>
-                        </div>
-                    </Surface>
-                </div>
-            ) : null}
+            <Dialog
+                open={Boolean(scriptPendingDelete)}
+                onOpenChange={(open) => !open && setScriptPendingDelete(null)}
+            >
+                <DialogPopup showCloseButton={!deleteScriptMutation.isPending}>
+                    <DialogHeader>
+                        <DialogTitle>Delete script</DialogTitle>
+                        <DialogDescription>
+                            Delete "
+                            {scriptPendingDelete?.title ?? "this script"}" from
+                            the global script list.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            disabled={deleteScriptMutation.isPending}
+                            variant="ghost"
+                            onClick={() => setScriptPendingDelete(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            disabled={deleteScriptMutation.isPending}
+                            variant="destructive"
+                            onClick={() =>
+                                scriptPendingDelete &&
+                                deleteScript(scriptPendingDelete)
+                            }
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            {deleteScriptMutation.isPending
+                                ? "Deleting..."
+                                : "Delete"}
+                        </Button>
+                    </DialogFooter>
+                </DialogPopup>
+            </Dialog>
         </section>
     );
 }

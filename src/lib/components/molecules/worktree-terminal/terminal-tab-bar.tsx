@@ -2,7 +2,7 @@ import { Plus, X } from "lucide-react";
 import type { MouseEvent } from "react";
 
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
 import { TabShell } from "@/lib/components/atoms/tab-shell";
 import { cn } from "@/lib/utils/cn";
 import type { WorktreeTerminalTab } from "@/lib/hooks/store/use-worktree-terminal-store";
@@ -108,14 +108,11 @@ export function TerminalTabBar({
                 <Button
                     aria-label="Create terminal"
                     className="border-border/80 bg-background/90
-                        text-muted-foreground data-[hover=true]:bg-muted/20
-                        data-[hover=true]:text-foreground mb-1 shrink-0
-                        shadow-sm/5"
-                    isIconOnly
+                        text-muted-foreground mb-1 shrink-0 shadow-sm/5"
                     size="icon-xs"
                     type="button"
                     variant="ghost"
-                    onPress={onCreateTerminal}
+                    onClick={onCreateTerminal}
                 >
                     <Plus className="h-3.5 w-3.5" />
                 </Button>

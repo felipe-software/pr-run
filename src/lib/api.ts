@@ -31,6 +31,7 @@ import {
     type PendingRequest,
     useSshPassphraseStore,
 } from "@/lib/hooks/store/use-ssh-passphrase-store";
+import { tryPromise } from "@/lib/error";
 
 type ApiError = Error & {
     action?: string;
@@ -222,13 +223,17 @@ async function requestMany<T>(pathOrUrl: string, options?: Options) {
 }
 
 async function clearSshPassphraseCache() {
-    try {
-        await requestOneRaw<SshPassphraseResult>("/ssh-passphrase/clear", {
-            method: "POST",
-        });
-    } catch {
-        // Clearing a stale passphrase is best-effort only.
+    const [error] = await tryPromise(clearSshPassphrase());
+
+    if (error) {
+        return;
     }
+}
+
+async function clearSshPassphrase() {
+    return requestOneRaw<SshPassphraseResult>("/ssh-passphrase/clear", {
+        method: "POST",
+    });
 }
 
 async function requestOneRaw<T>(pathOrUrl: string, options?: Options) {
@@ -342,7 +347,7 @@ export const prRunApi = {
             },
         );
     },
-    clearSshPassphrase: clearSshPassphraseCache,
+    clearSshPassphrase,
     async createTerminalEventSource(sessionId: string) {
         return new EventSource(
             await toApiUrl(

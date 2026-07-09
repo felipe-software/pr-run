@@ -12,34 +12,33 @@ export function Sidebar({
     expandedGroups,
     groups,
     isCreatingScript,
+    isMobileOpen,
     pendingProjectUpdateId,
     pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     selectedBranchName,
     selectedProjectId,
     sidebarWidth,
-    theme,
     onAddProject,
     onBeginResize,
     onCheckoutBranch,
     onCreateScript,
     onOpenSshPassphrase,
+    onOpenSettings,
     onRemoveWorktree,
     onSelectBranch,
     onToggleGroup,
     onToggleProject,
-    onToggleTheme,
     onUpdateProject,
 }: SidebarProps) {
     return (
-        <SidebarShell sidebarWidth={sidebarWidth}>
+        <SidebarShell isMobileOpen={isMobileOpen} sidebarWidth={sidebarWidth}>
             <SidebarHeader
                 isCreatingScript={isCreatingScript}
-                theme={theme}
                 onAddProject={onAddProject}
                 onCreateScript={onCreateScript}
                 onOpenSshPassphrase={onOpenSshPassphrase}
-                onToggleTheme={onToggleTheme}
+                onOpenSettings={onOpenSettings}
             />
 
             <SidebarContent>

@@ -1,6 +1,6 @@
 import { TerminalSquare } from "lucide-react";
 
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
 import { EmptyState } from "@/lib/components/atoms/empty-state";
 import { Surface } from "@/lib/components/atoms/surface";
 import { TerminalPane } from "@/lib/components/molecules/worktree-terminal/terminal-pane";
@@ -54,7 +54,7 @@ export function WorktreeTerminal({
                             <Button
                                 type="button"
                                 variant="outline"
-                                onPress={() => {
+                                onClick={() => {
                                     createManualTerminal();
                                 }}
                             >

@@ -1,8 +1,13 @@
 import { FolderPlus, Globe, RefreshCw } from "lucide-react";
 
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
+import { Alert } from "@/lib/components/ui/alert";
+import {
+    Tooltip,
+    TooltipPopup,
+    TooltipTrigger,
+} from "@/lib/components/ui/tooltip";
 import { StatusPill } from "@/lib/components/atoms/status-pill";
-import { Surface } from "@/lib/components/atoms/surface";
 import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 
 type BranchPageHeaderProps = {
@@ -28,7 +33,7 @@ export function BranchPageHeader({
 
     return (
         <header>
-            <Surface className="rounded-t-none px-3 py-2.5">
+            <div className="surface-subheader h-auto min-h-[52px] px-4 py-2">
                 <div
                     className="flex flex-col gap-3 lg:flex-row lg:items-center
                         lg:justify-between"
@@ -41,7 +46,7 @@ export function BranchPageHeader({
                             {branch.name}
                         </h1>
                         <div
-                            className="text-muted-foreground mt-2 flex flex-wrap
+                            className="text-muted-foreground mt-1 flex flex-wrap
                                 items-center gap-1.5 text-xs"
                         >
                             <StatusPill
@@ -100,16 +105,13 @@ export function BranchPageHeader({
                     <div className="flex shrink-0 flex-wrap justify-end gap-2">
                         {branch.hasWorktree ? null : (
                             <Button
-                                isDisabled={isCheckingOutWorktree}
+                                disabled={isCheckingOutWorktree}
                                 size="sm"
-                                variant="primary"
+                                variant="default"
                                 type="button"
-                                onPress={() =>
-                                    void onCheckoutBranch(
-                                        project.id,
-                                        branch.name,
-                                    )
-                                }
+                                onClick={() => {
+                                    onCheckoutBranch(project.id, branch.name);
+                                }}
                             >
                                 {isCheckingOutWorktree ? (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -119,34 +121,38 @@ export function BranchPageHeader({
                                 Create worktree
                             </Button>
                         )}
-                        <Button
-                            aria-label="Reload commits"
-                            isDisabled={isRefreshingCommits}
-                            isIconOnly
-                            size="icon-sm"
-                            type="button"
-                            variant="outline"
-                            onPress={onReloadCommits}
-                        >
-                            <RefreshCw
-                                className={[
-                                    "h-4 w-4",
-                                    isRefreshingCommits ? "animate-spin" : "",
-                                ].join(" ")}
-                            />
-                        </Button>
+                        <Tooltip>
+                            <TooltipTrigger
+                                render={
+                                    <Button
+                                        aria-label="Reload commits"
+                                        disabled={isRefreshingCommits}
+                                        size="icon-sm"
+                                        variant="outline"
+                                        onClick={onReloadCommits}
+                                    />
+                                }
+                            >
+                                <RefreshCw
+                                    className={[
+                                        "h-4 w-4",
+                                        isRefreshingCommits
+                                            ? "animate-spin"
+                                            : "",
+                                    ].join(" ")}
+                                />
+                            </TooltipTrigger>
+                            <TooltipPopup>Reload commits</TooltipPopup>
+                        </Tooltip>
                     </div>
                 </div>
 
                 {actionError ? (
-                    <Surface
-                        className="mt-3 px-3 py-2 text-sm"
-                        variant="danger"
-                    >
+                    <Alert className="mt-3" variant="destructive">
                         {actionError}
-                    </Surface>
+                    </Alert>
                 ) : null}
-            </Surface>
+            </div>
         </header>
     );
 }

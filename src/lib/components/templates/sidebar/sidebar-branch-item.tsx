@@ -1,7 +1,16 @@
 import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
+import {
+    Dialog,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogPopup,
+    DialogTitle,
+} from "@/lib/components/ui/dialog";
 import { StatusPill } from "@/lib/components/atoms/status-pill";
 import { formatBranchAge } from "@/lib/format";
 import { SidebarItemIcon } from "@/lib/components/templates/sidebar/sidebar-item-icon";
@@ -32,6 +41,7 @@ export function SidebarBranchItem({
     onRemoveWorktree,
     onSelectBranch,
 }: SidebarBranchItemProps) {
+    const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false);
     const status = getSidebarItemStatus(branch);
     const isActionPending = isCheckingOutWorktree || isRemovingWorktree;
 
@@ -109,17 +119,12 @@ export function SidebarBranchItem({
                 {branch.hasWorktree ? (
                     <Button
                         aria-label={`Remove ${branch.name} worktree`}
-                        className="text-danger-foreground
-                            data-[hover=true]:bg-sidebar-accent
-                            border-transparent bg-transparent shadow-none"
-                        isDisabled={isRemovingWorktree}
-                        isIconOnly
+                        className="text-danger-foreground"
+                        disabled={isRemovingWorktree}
                         size="icon-xs"
                         type="button"
                         variant="ghost"
-                        onPress={() => {
-                            onRemoveWorktree(branch.name);
-                        }}
+                        onClick={() => setIsRemoveConfirmOpen(true)}
                     >
                         {isRemovingWorktree ? (
                             <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -130,15 +135,12 @@ export function SidebarBranchItem({
                 ) : (
                     <Button
                         aria-label={`Create ${branch.name} worktree`}
-                        className="text-danger-foreground
-                            data-[hover=true]:bg-sidebar-accent
-                            border-transparent bg-transparent shadow-none"
-                        isDisabled={isCheckingOutWorktree}
-                        isIconOnly
+                        className="text-danger-foreground"
+                        disabled={isCheckingOutWorktree}
                         size="icon-xs"
                         type="button"
                         variant="ghost"
-                        onPress={() => {
+                        onClick={() => {
                             onCheckoutBranch(branch.name);
                         }}
                     >
@@ -150,6 +152,38 @@ export function SidebarBranchItem({
                     </Button>
                 )}
             </div>
+            <Dialog
+                open={isRemoveConfirmOpen}
+                onOpenChange={setIsRemoveConfirmOpen}
+            >
+                <DialogPopup showCloseButton={!isRemovingWorktree}>
+                    <DialogHeader>
+                        <DialogTitle>Remove worktree</DialogTitle>
+                        <DialogDescription>
+                            Remove the local worktree for {branch.name}. The
+                            remote branch remains available.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            disabled={isRemovingWorktree}
+                            variant="ghost"
+                            onClick={() => setIsRemoveConfirmOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            disabled={isRemovingWorktree}
+                            variant="destructive"
+                            onClick={() => onRemoveWorktree(branch.name)}
+                        >
+                            {isRemovingWorktree
+                                ? "Removing..."
+                                : "Remove worktree"}
+                        </Button>
+                    </DialogFooter>
+                </DialogPopup>
+            </Dialog>
         </div>
     );
 }

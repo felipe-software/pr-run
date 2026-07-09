@@ -1,10 +1,10 @@
-import { toast } from "@heroui/react";
 import { ChevronDown, ChevronRight, Terminal, X } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
+import { toast } from "@/lib/components/ui/toast";
 import { EmptyState } from "@/lib/components/atoms/empty-state";
 import { Surface } from "@/lib/components/atoms/surface";
 import { TerminalPane } from "@/lib/components/molecules/worktree-terminal/terminal-pane";
@@ -82,20 +82,14 @@ export function GlobalTerminalPanel({
               (terminal) => terminal.ownerKey === preferredOwnerKey,
           ) ?? null)
         : null;
-    const selectedTerminal = preferredOwnerKey
-        ? (terminals.find(
-              (terminal) =>
-                  terminal.ownerKey === preferredOwnerKey &&
-                  terminal.terminalKey === selectedTerminalKey,
-          ) ??
-          preferredTerminal ??
-          null)
-        : (terminals.find(
-              (terminal) => terminal.terminalKey === selectedTerminalKey,
-          ) ??
-          terminals[0] ??
-          null);
-    const selectedOwnerKey = preferredOwnerKey ?? selectedTerminal?.ownerKey;
+    const selectedTerminal =
+        terminals.find(
+            (terminal) => terminal.terminalKey === selectedTerminalKey,
+        ) ??
+        preferredTerminal ??
+        terminals[0] ??
+        null;
+    const selectedOwnerKey = selectedTerminal?.ownerKey ?? preferredOwnerKey;
     const selectedOwner = selectedOwnerKey ? owners[selectedOwnerKey] : null;
     const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(
         () => new Set(),
@@ -136,7 +130,7 @@ export function GlobalTerminalPanel({
         );
 
         if (error) {
-            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            toast.error(getErrorMessage(error), { timeout: 3200 });
             return;
         }
 
@@ -151,7 +145,7 @@ export function GlobalTerminalPanel({
         const [error] = await tryPromise(closeTab(selectedOwnerKey, tabId));
 
         if (error) {
-            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            toast.error(getErrorMessage(error), { timeout: 3200 });
         }
     }
 
@@ -345,11 +339,10 @@ export function GlobalTerminalPanel({
                             aria-label="Close terminals panel"
                             className="text-muted-foreground border-transparent
                                 bg-transparent shadow-none"
-                            isIconOnly
                             size="icon-xs"
                             type="button"
                             variant="ghost"
-                            onPress={onClose}
+                            onClick={onClose}
                         >
                             <X className="h-3.5 w-3.5" />
                         </Button>

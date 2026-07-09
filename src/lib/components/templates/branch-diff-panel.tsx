@@ -3,7 +3,7 @@ import { FileDiff, type FileDiffMetadata } from "@pierre/diffs/react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
 import { EmptyState } from "@/lib/components/atoms/empty-state";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
@@ -273,7 +273,7 @@ export function BranchDiffPanel({
                         size="xs"
                         type="button"
                         variant={shouldWrapLines ? "outline" : "ghost"}
-                        onPress={() => setShouldWrapLines((value) => !value)}
+                        onClick={() => setShouldWrapLines((value) => !value)}
                     >
                         Wrap
                     </Button>

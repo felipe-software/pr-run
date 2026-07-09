@@ -1,6 +1,6 @@
 import { RefreshCw } from "lucide-react";
 
-import { Button } from "@/lib/components/atoms/button";
+import { Button } from "@/lib/components/ui/button";
 import { EmptyState } from "@/lib/components/atoms/empty-state";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { StatusPill } from "@/lib/components/atoms/status-pill";
@@ -49,7 +49,7 @@ export function BranchEnvPanel({ branchName, projectId }: BranchEnvPanelProps) {
                         size="xs"
                         type="button"
                         variant="outline"
-                        onPress={() => {
+                        onClick={() => {
                             envFilesQuery.refetch();
                         }}
                     >
@@ -69,7 +69,7 @@ export function BranchEnvPanel({ branchName, projectId }: BranchEnvPanelProps) {
                             size="sm"
                             type="button"
                             variant="outline"
-                            onPress={() => {
+                            onClick={() => {
                                 envFilesQuery.refetch();
                             }}
                         >
@@ -101,7 +101,7 @@ export function BranchEnvPanel({ branchName, projectId }: BranchEnvPanelProps) {
                         size="xs"
                         type="button"
                         variant="outline"
-                        onPress={() => {
+                        onClick={() => {
                             envFilesQuery.refetch();
                         }}
                     >

@@ -1,7 +1,7 @@
-import { toast } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
+import { toast } from "@/lib/components/ui/toast";
 import { useAddProjectMutation } from "@/lib/hooks/query/use-add-project-mutation";
 import { useCheckoutBranchMutation } from "@/lib/hooks/query/use-checkout-branch-mutation";
 import { useConfigQuery } from "@/lib/hooks/query/use-config-query";
@@ -10,6 +10,7 @@ import { usePreloadProjects } from "@/lib/hooks/query/use-preload-projects";
 import { useRemoveWorktreeMutation } from "@/lib/hooks/query/use-remove-worktree-mutation";
 import { useUpdateProjectWorktreesMutation } from "@/lib/hooks/query/use-update-project-worktrees-mutation";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
+import { useUiPreferencesStore } from "@/lib/hooks/store/use-ui-preferences-store";
 import {
     getWorktreeOwnerKey,
     useWorktreeTerminalStore,
@@ -23,13 +24,15 @@ import type {
     SelectedBranchView,
 } from "@/lib/components/templates/pr-run-app/types";
 import { useAppStatusSummary } from "@/lib/components/templates/pr-run-app/use-app-status-summary";
+import { useSettingsState } from "@/lib/components/templates/pr-run-app/settings-state";
 
-const SIDEBAR_WIDTH_STORAGE_KEY = "pr-run.sidebar.width";
+const SIDEBAR_WIDTH_STORAGE_KEY = "pr-run:sidebar-width";
 const SIDEBAR_MIN_WIDTH = 256;
 const SIDEBAR_MAX_WIDTH = 560;
 const MAIN_CONTENT_MIN_WIDTH = 640;
 
 export function usePrRunAppState() {
+    const settingsState = useSettingsState();
     const [selectedBranch, setSelectedBranch] =
         useState<SelectedBranchState | null>(null);
     const [actionError, setActionError] = useState<string>();
@@ -41,13 +44,13 @@ export function usePrRunAppState() {
     );
     const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
     const [isCreateScriptOpen, setIsCreateScriptOpen] = useState(false);
-    const [theme, setTheme] = useState<"dark" | "light">(() => {
-        return localStorage.getItem("pr-run-theme") === "light"
-            ? "light"
-            : "dark";
-    });
+    const theme = useUiPreferencesStore((store) => store.theme);
+    const setTheme = useUiPreferencesStore((store) => store.setTheme);
     const [sidebarWidth, setSidebarWidth] = useState(() => {
-        const stored = Number(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
+        const stored = Number(
+            localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY) ??
+                localStorage.getItem("pr-run.sidebar.width"),
+        );
 
         return Number.isFinite(stored)
             ? clamp(stored, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
@@ -83,10 +86,27 @@ export function usePrRunAppState() {
         : undefined;
 
     useEffect(() => {
-        document.documentElement.dataset.theme = theme;
-        document.documentElement.classList.toggle("dark", theme === "dark");
-        document.documentElement.style.colorScheme = theme;
-        localStorage.setItem("pr-run-theme", theme);
+        const media = window.matchMedia("(prefers-color-scheme: dark)");
+        const applyTheme = () => {
+            const resolved =
+                theme === "system" ? (media.matches ? "dark" : "light") : theme;
+            document.documentElement.classList.add("no-transitions");
+            document.documentElement.dataset.theme = resolved;
+            document.documentElement.classList.toggle(
+                "dark",
+                resolved === "dark",
+            );
+            document.documentElement.style.colorScheme = resolved;
+            window.setTimeout(
+                () =>
+                    document.documentElement.classList.remove("no-transitions"),
+                0,
+            );
+        };
+
+        applyTheme();
+        media.addEventListener("change", applyTheme);
+        return () => media.removeEventListener("change", applyTheme);
     }, [theme]);
 
     useEffect(() => {
@@ -223,7 +243,7 @@ export function usePrRunAppState() {
 
         if (error) {
             setActionError(getErrorMessage(error));
-            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            toast.error(getErrorMessage(error), { timeout: 3200 });
             return;
         }
 
@@ -331,6 +351,7 @@ export function usePrRunAppState() {
             setIsCreateScriptOpen(true);
         },
         openSshPassphrase: () => useSshPassphraseStore.getState().open(null),
+        ...settingsState,
         removeWorktree,
         selectBranch,
         setTheme,
