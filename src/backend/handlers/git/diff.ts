@@ -1,6 +1,7 @@
 import { gitText } from "@/backend/handlers/git/command";
 import { tryPromise } from "@/backend/handlers/error";
 import {
+    ensureRemoteRefs,
     getDefaultRemoteBranch,
     numberOrZero,
     remoteBranch,
@@ -69,12 +70,14 @@ export async function getBranchDiff(
 
     const [error, branchDiff] = await tryPromise(
         (async () => {
+            await ensureRemoteRefs(project.path, [remoteName]);
             const defaultRemoteName = await getDefaultRemoteBranch(
                 project.path,
             );
             const baseRemoteName = baseBranch
                 ? remoteBranch(baseBranch).remoteName
                 : defaultRemoteName;
+            await ensureRemoteRefs(project.path, [baseRemoteName, remoteName]);
             const [files, patch] = await Promise.all([
                 getBranchDiffFiles(project.path, baseRemoteName, remoteName),
                 getBranchDiffPatch(project.path, baseRemoteName, remoteName),
