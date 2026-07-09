@@ -9,9 +9,10 @@ type SidebarContentProps = {
 export function SidebarContent({ children }: SidebarContentProps) {
     return (
         <ScrollArea
-            className="min-h-0 flex-1 px-1.5 pb-1"
+            className="min-h-0 flex-1 px-1.5 pb-1
+                [--scroll-fade-color:var(--sidebar)]"
             hideScrollbars
-            scrollFade
+            scrollFade="overlay"
         >
             <div className="flex min-w-0 flex-col py-1">{children}</div>
         </ScrollArea>
