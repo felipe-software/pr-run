@@ -287,6 +287,7 @@ export function PrRunApp() {
         >
             <WorkspaceTitlebar
                 isSidebarOpen={isSidebarOpen}
+                projectAvatarUris={state.projectAvatarUris}
                 sidebarWidth={state.sidebarWidth}
                 onCloseTab={state.closeWorktreeTab}
                 onSelectTab={state.selectWorktreeTab}
@@ -309,6 +310,7 @@ export function PrRunApp() {
                         state.pendingWorktreeCheckoutKey
                     }
                     pendingWorktreeRemovalKey={state.pendingWorktreeRemovalKey}
+                    projectAvatarUris={state.projectAvatarUris}
                     selectedBranchName={
                         state.selectedBranchView.branchName ?? undefined
                     }

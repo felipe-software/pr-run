@@ -14,9 +14,11 @@ import {
     TooltipTrigger,
 } from "@/lib/components/ui/tooltip";
 import { cn } from "@/lib/utils/cn";
+import type { ProjectAvatarUris } from "@/lib/project-avatar";
 
 type WorkspaceTitlebarProps = {
     isSidebarOpen: boolean;
+    projectAvatarUris: ProjectAvatarUris;
     sidebarWidth: number;
     onCloseTab: (tabId: string) => void;
     onSelectTab: (tabId: string) => void;
@@ -25,6 +27,7 @@ type WorkspaceTitlebarProps = {
 
 export function WorkspaceTitlebar({
     isSidebarOpen,
+    projectAvatarUris,
     sidebarWidth,
     onCloseTab,
     onSelectTab,
@@ -115,6 +118,7 @@ export function WorkspaceTitlebar({
             </div>
             <div className="flex min-w-0 flex-1 items-center">
                 <WorktreeTabs
+                    projectAvatarUris={projectAvatarUris}
                     onCloseTab={onCloseTab}
                     onSelectTab={onSelectTab}
                 />

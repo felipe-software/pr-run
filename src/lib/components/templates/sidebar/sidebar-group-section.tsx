@@ -13,6 +13,7 @@ type SidebarGroupSectionProps = Pick<
     | "pendingProjectUpdateId"
     | "pendingWorktreeCheckoutKey"
     | "pendingWorktreeRemovalKey"
+    | "projectAvatarUris"
     | "selectedBranchName"
     | "selectedProjectId"
     | "onCheckoutBranch"
@@ -33,6 +34,7 @@ export function SidebarGroupSection({
     pendingProjectUpdateId,
     pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
+    projectAvatarUris,
     selectedBranchName,
     selectedProjectId,
     onCheckoutBranch,
@@ -75,6 +77,7 @@ export function SidebarGroupSection({
                         key={project.id}
                         pendingWorktreeRemovalKey={pendingWorktreeRemovalKey}
                         pendingWorktreeCheckoutKey={pendingWorktreeCheckoutKey}
+                        projectAvatarUri={projectAvatarUris.get(project.id)}
                         project={project}
                         selectedBranchName={
                             selectedProjectId === project.id

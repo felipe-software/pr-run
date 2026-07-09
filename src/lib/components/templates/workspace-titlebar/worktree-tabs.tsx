@@ -2,13 +2,19 @@ import { useEffect, useRef } from "react";
 
 import { WorktreeTab } from "@/lib/components/templates/workspace-titlebar/worktree-tab";
 import { useWorkspaceTabsStore } from "@/lib/hooks/store/use-workspace-tabs-store";
+import type { ProjectAvatarUris } from "@/lib/project-avatar";
 
 type WorktreeTabsProps = {
     onCloseTab: (tabId: string) => void;
     onSelectTab: (tabId: string) => void;
+    projectAvatarUris: ProjectAvatarUris;
 };
 
-export function WorktreeTabs({ onCloseTab, onSelectTab }: WorktreeTabsProps) {
+export function WorktreeTabs({
+    onCloseTab,
+    onSelectTab,
+    projectAvatarUris,
+}: WorktreeTabsProps) {
     const activeTabId = useWorkspaceTabsStore((store) => store.activeTabId);
     const tabs = useWorkspaceTabsStore((store) => store.tabs);
     const activeTabRef = useRef<HTMLDivElement | null>(null);
@@ -37,6 +43,9 @@ export function WorktreeTabs({ onCloseTab, onSelectTab }: WorktreeTabsProps) {
                         <WorktreeTab
                             isActive={tab.id === activeTabId}
                             tab={tab}
+                            projectAvatarUri={projectAvatarUris.get(
+                                tab.projectId,
+                            )}
                             onClose={() => onCloseTab(tab.id)}
                             onSelect={() => onSelectTab(tab.id)}
                         />

@@ -1,8 +1,9 @@
-import { ChevronDown, ChevronRight, Folder, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
+import { ProjectAvatar } from "@/lib/components/atoms/project-avatar";
 import { Button } from "@/lib/components/ui/button";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
@@ -28,6 +29,7 @@ type SidebarProjectItemProps = {
     pendingWorktreeCheckoutKey?: string;
     pendingWorktreeRemovalKey?: string;
     project: ProjectConfig;
+    projectAvatarUri?: string;
     selectedBranchName?: string;
     onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
@@ -47,6 +49,7 @@ export function SidebarProjectItem({
     pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     project,
+    projectAvatarUri,
     selectedBranchName,
     onCheckoutBranch,
     onRemoveWorktree,
@@ -121,7 +124,7 @@ export function SidebarProjectItem({
                         hover:text-sidebar-accent-foreground
                         focus-visible:ring-ring flex min-w-0 flex-1
                         cursor-pointer items-center overflow-hidden rounded-md
-                        px-2 text-left outline-none focus-visible:ring-2"
+                        px-1.5 text-left outline-none focus-visible:ring-2"
                     type="button"
                     onClick={() => onToggleProject(project.id)}
                 >
@@ -137,11 +140,15 @@ export function SidebarProjectItem({
                         />
                     )}
                     <span
-                        className="bg-muted/45 text-muted-foreground/75 relative
-                            grid h-5 w-5 flex-none place-items-center
-                            rounded-md"
+                        className="relative grid h-5 w-5 flex-none
+                            place-items-center"
                     >
-                        <Folder className="h-3.5 w-3.5" />
+                        {projectAvatarUri ? (
+                            <ProjectAvatar
+                                className="size-5"
+                                src={projectAvatarUri}
+                            />
+                        ) : null}
                         {isBusy ? (
                             <BusyIcon
                                 className="absolute -right-1 -bottom-1"

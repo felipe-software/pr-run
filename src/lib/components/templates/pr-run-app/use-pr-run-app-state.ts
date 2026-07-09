@@ -15,6 +15,7 @@ import {
     useWorktreeTerminalStore,
 } from "@/lib/hooks/store/use-worktree-terminal-store";
 import { tryPromise } from "@/lib/error";
+import { assignProjectAvatars } from "@/lib/project-avatar";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 
@@ -58,6 +59,10 @@ export function usePrRunAppState() {
     const projects = useMemo(
         () => groups.flatMap((group) => group.projects),
         [groups],
+    );
+    const projectAvatarUris = useMemo(
+        () => assignProjectAvatars(projects),
+        [projects],
     );
     const workspaceState = useWorkspaceState({
         onLeaveSettings: settingsState.closeSettings,
@@ -287,6 +292,7 @@ export function usePrRunAppState() {
         pendingProjectUpdateId: updateProjectWorktreesMutation.isPending
             ? updateProjectWorktreesMutation.variables
             : undefined,
+        projectAvatarUris,
         pendingWorktreeCheckoutKey: checkoutBranchMutation.isPending
             ? `${checkoutBranchMutation.variables?.projectId}:${checkoutBranchMutation.variables?.branchName}`
             : undefined,

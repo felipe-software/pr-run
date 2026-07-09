@@ -1,4 +1,5 @@
 import type { BranchInfo, ProjectConfig, ProjectGroup } from "@/types/pr-run";
+import type { ProjectAvatarUris } from "@/lib/project-avatar";
 
 export type SidebarProps = {
     busyOwnerKeys: Set<string>;
@@ -12,6 +13,7 @@ export type SidebarProps = {
     pendingProjectUpdateId?: string;
     pendingWorktreeCheckoutKey?: string;
     pendingWorktreeRemovalKey?: string;
+    projectAvatarUris: ProjectAvatarUris;
     selectedBranchName?: string;
     selectedProjectId?: string;
     sidebarWidth: number;

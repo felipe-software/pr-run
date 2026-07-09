@@ -18,6 +18,7 @@ export function Sidebar({
     pendingProjectUpdateId,
     pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
+    projectAvatarUris,
     selectedBranchName,
     selectedProjectId,
     sidebarWidth,
@@ -51,6 +52,7 @@ export function Sidebar({
                         key={group.id}
                         pendingProjectUpdateId={pendingProjectUpdateId}
                         pendingWorktreeCheckoutKey={pendingWorktreeCheckoutKey}
+                        projectAvatarUris={projectAvatarUris}
                         pendingWorktreeRemovalKey={pendingWorktreeRemovalKey}
                         selectedBranchName={selectedBranchName}
                         selectedProjectId={selectedProjectId}

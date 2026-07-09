@@ -1,11 +1,13 @@
 import { X } from "lucide-react";
 
+import { ProjectAvatar } from "@/lib/components/atoms/project-avatar";
 import { cn } from "@/lib/utils/cn";
 import type { WorktreeTab as WorktreeTabData } from "@/lib/hooks/store/use-workspace-tabs-store";
 
 type WorktreeTabProps = {
     isActive: boolean;
     tab: WorktreeTabData;
+    projectAvatarUri?: string;
     onClose: () => void;
     onSelect: () => void;
 };
@@ -13,6 +15,7 @@ type WorktreeTabProps = {
 export function WorktreeTab({
     isActive,
     tab,
+    projectAvatarUri,
     onClose,
     onSelect,
 }: WorktreeTabProps) {
@@ -30,12 +33,18 @@ export function WorktreeTab({
         >
             <button
                 aria-selected={isActive}
-                className="min-w-0 flex-1 cursor-pointer text-left outline-none
-                    focus-visible:ring-2"
+                className="flex min-w-0 flex-1 cursor-pointer items-center
+                    text-left outline-none focus-visible:ring-2"
                 role="tab"
                 type="button"
                 onClick={onSelect}
             >
+                {projectAvatarUri ? (
+                    <ProjectAvatar
+                        className="mr-1.5 size-4 shrink-0"
+                        src={projectAvatarUri}
+                    />
+                ) : null}
                 <span
                     className="block truncate text-xs font-medium
                         tracking-tight"
