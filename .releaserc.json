@@ -1,0 +1,46 @@
+{
+    "branches": ["main"],
+    "tagFormat": "v${version}",
+    "plugins": [
+        [
+            "@semantic-release/commit-analyzer",
+            {
+                "preset": "conventionalcommits",
+                "releaseRules": [
+                    { "type": "feat", "release": "patch" },
+                    { "type": "fix", "release": "patch" },
+                    { "type": "perf", "release": "patch" },
+                    { "type": "refactor", "release": "patch" },
+                    { "type": "revert", "release": "patch" }
+                ]
+            }
+        ],
+        [
+            "@semantic-release/release-notes-generator",
+            {
+                "preset": "conventionalcommits"
+            }
+        ],
+        [
+            "@semantic-release/exec",
+            {
+                "prepareCmd": "node ./scripts/set-expo-version.mjs ${nextRelease.version}"
+            }
+        ],
+        [
+            "@semantic-release/git",
+            {
+                "assets": ["app.config.js"],
+                "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+            }
+        ],
+        [
+            "@semantic-release/github",
+            {
+                "successComment": false,
+                "failComment": false,
+                "releasedLabels": false
+            }
+        ]
+    ]
+}
