@@ -1,6 +1,12 @@
 name: Publish npm package
 
 on:
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: Tag to publish, for example v0.1.3
+                required: true
+                type: string
     push:
         tags:
             - "v*"
@@ -16,6 +22,8 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
             - name: Setup Bun
               uses: oven-sh/setup-bun@v2
@@ -32,9 +40,11 @@ jobs:
               run: bun install --frozen-lockfile
 
             - name: Verify tag version
+              env:
+                  PUBLISH_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
               run: |
                   PACKAGE_VERSION="$(node -p "require('./package.json').version")"
-                  TAG_VERSION="${GITHUB_REF_NAME#v}"
+                  TAG_VERSION="${PUBLISH_TAG#v}"
                   if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
                     echo "Tag v$TAG_VERSION does not match package.json version $PACKAGE_VERSION."
                     exit 1
@@ -55,8 +65,5 @@ jobs:
             - name: Build npm package
               run: bun run build:npm
 
-            - name: Update npm
-              run: npm install -g npm@latest
-
             - name: Publish
-              run: npm publish --provenance --access public
+              run: npx --yes npm@11.5.1 publish --provenance --access public
