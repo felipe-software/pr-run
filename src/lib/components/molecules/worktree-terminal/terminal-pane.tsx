@@ -50,8 +50,8 @@ export function TerminalPane({
 
     return (
         <div
-            className="border-border min-h-0 flex-1 overflow-hidden rounded-b-lg
-                border bg-[#050505] text-white shadow-sm/10"
+            className="border-border h-full min-h-0 flex-1 overflow-hidden
+                rounded-b-lg border bg-[#050505] text-white shadow-sm/10"
             ref={mountRef}
         />
     );

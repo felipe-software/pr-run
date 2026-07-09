@@ -1,22 +1,15 @@
 import { GitBranch, GitPullRequest, Terminal } from "lucide-react";
-import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import type { AppStatusSummary } from "@/lib/components/templates/pr-run-app/use-app-status-summary";
 import { cn } from "@/lib/utils/cn";
 
 type StatusBarProps = {
     summary: AppStatusSummary;
-    onBeginTerminalPanelResize: (
-        event: ReactPointerEvent<HTMLDivElement>,
-    ) => void;
     onOpenBusyTerminals: () => void;
 };
 
-export function StatusBar({
-    summary,
-    onBeginTerminalPanelResize,
-    onOpenBusyTerminals,
-}: StatusBarProps) {
+export function StatusBar({ summary, onOpenBusyTerminals }: StatusBarProps) {
     return (
         <footer
             className={cn(
@@ -26,7 +19,6 @@ export function StatusBar({
                 whitespace-nowrap [&::-webkit-scrollbar]:hidden`,
                 summary.isLoadingBranchCounts && "text-muted-foreground",
             )}
-            onPointerDown={onBeginTerminalPanelResize}
         >
             <StatusBarItem
                 icon={

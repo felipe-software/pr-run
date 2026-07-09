@@ -81,7 +81,41 @@ export function useTerminalPane({
 
         terminal.loadAddon(fitAddon);
         terminal.open(mount);
-        fitTerminal(fitAddon);
+        let fitFrameId: number | null = null;
+        let fitTimeoutId: number | null = null;
+
+        function fitAndResizeTerminal() {
+            fitTerminal(fitAddon).then(() => {
+                if (!lifecycle.disposed) {
+                    prRunApi.resizeTerminal(
+                        sessionId,
+                        terminal.cols,
+                        terminal.rows,
+                    );
+                }
+            });
+        }
+
+        function scheduleTerminalFit() {
+            if (fitFrameId !== null) {
+                window.cancelAnimationFrame(fitFrameId);
+            }
+
+            if (fitTimeoutId !== null) {
+                window.clearTimeout(fitTimeoutId);
+            }
+
+            fitFrameId = window.requestAnimationFrame(() => {
+                fitFrameId = null;
+                fitAndResizeTerminal();
+                fitTimeoutId = window.setTimeout(() => {
+                    fitTimeoutId = null;
+                    fitAndResizeTerminal();
+                }, 50);
+            });
+        }
+
+        scheduleTerminalFit();
         terminal.focus();
 
         const dataDisposable = terminal.onData((data) => {
@@ -107,19 +141,10 @@ export function useTerminalPane({
             terminal,
             getLastSequence: () => lastSequence,
         });
-        const resizeObserver = new ResizeObserver(() => {
-            fitTerminal(fitAddon).then(() => {
-                if (!lifecycle.disposed) {
-                    prRunApi.resizeTerminal(
-                        sessionId,
-                        terminal.cols,
-                        terminal.rows,
-                    );
-                }
-            });
-        });
+        const resizeObserver = new ResizeObserver(scheduleTerminalFit);
 
         resizeObserver.observe(mount);
+        window.addEventListener("resize", scheduleTerminalFit);
 
         hydrateTerminal({
             lifecycle,
@@ -135,7 +160,14 @@ export function useTerminalPane({
 
         return () => {
             lifecycle.disposed = true;
+            if (fitFrameId !== null) {
+                window.cancelAnimationFrame(fitFrameId);
+            }
+            if (fitTimeoutId !== null) {
+                window.clearTimeout(fitTimeoutId);
+            }
             resizeObserver.disconnect();
+            window.removeEventListener("resize", scheduleTerminalFit);
             eventSource?.close();
             dataDisposable.dispose();
             terminal.dispose();

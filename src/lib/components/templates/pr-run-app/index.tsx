@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EmptyState } from "@/lib/components/atoms/empty-state";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
@@ -12,6 +12,7 @@ import {
     GlobalTerminalPanel,
 } from "@/lib/components/templates/global-terminal-panel";
 import { MainPanel } from "@/lib/components/templates/main-panel";
+import type { RunTerminalContext } from "@/lib/components/templates/main-panel";
 import { Sidebar } from "@/lib/components/templates/sidebar";
 import { SshPassphraseDialog } from "@/lib/components/templates/ssh-passphrase-dialog";
 import { StatusBar } from "@/lib/components/templates/status-bar";
@@ -20,15 +21,19 @@ import { useWorktreeTerminalStore } from "@/lib/hooks/store/use-worktree-termina
 
 const TERMINAL_PANEL_DEFAULT_HEIGHT = 320;
 const TERMINAL_PANEL_MIN_HEIGHT = 180;
-const TERMINAL_PANEL_MAX_HEIGHT = 640;
 const TERMINAL_PANEL_SIDEBAR_DEFAULT_WIDTH = 180;
 const TERMINAL_PANEL_SIDEBAR_MIN_WIDTH = 132;
 const TERMINAL_PANEL_SIDEBAR_MAX_WIDTH = 360;
+const TERMINAL_RESIZE_BUSY_SYNC_DELAY_MS = 800;
 
 export function PrRunApp() {
     const state = usePrRunAppState();
     const terminalOwners = useWorktreeTerminalStore((store) => store.owners);
     const [isTerminalPanelOpen, setIsTerminalPanelOpen] = useState(false);
+    const [isTerminalPanelAutoHeight, setIsTerminalPanelAutoHeight] =
+        useState(false);
+    const [isTerminalPanelResizing, setIsTerminalPanelResizing] =
+        useState(false);
     const [terminalPanelHeight, setTerminalPanelHeight] = useState(
         TERMINAL_PANEL_DEFAULT_HEIGHT,
     );
@@ -38,12 +43,80 @@ export function PrRunApp() {
     const [selectedGlobalTerminalKey, setSelectedGlobalTerminalKey] = useState<
         string | null
     >(null);
+    const [runTerminalContext, setRunTerminalContext] =
+        useState<RunTerminalContext | null>(null);
+    const resizeSettleTimeoutRef = useRef<number | null>(null);
     const preferredGlobalTerminalKey = useMemo(
         () => getPreferredGlobalTerminalKey(terminalOwners),
         [terminalOwners],
     );
+    const runTerminalKey = useMemo(
+        () =>
+            runTerminalContext
+                ? getActiveOwnerTerminalKey(
+                      terminalOwners,
+                      runTerminalContext.ownerKey,
+                  )
+                : null,
+        [runTerminalContext, terminalOwners],
+    );
+
+    useEffect(() => {
+        if (!runTerminalContext) {
+            setIsTerminalPanelAutoHeight(false);
+            setIsTerminalPanelOpen(false);
+            return;
+        }
+
+        setIsTerminalPanelAutoHeight(true);
+        setIsTerminalPanelOpen(true);
+    }, [runTerminalContext]);
+
+    useEffect(() => {
+        if (!runTerminalContext || !runTerminalKey) {
+            return;
+        }
+
+        setSelectedGlobalTerminalKey(runTerminalKey);
+    }, [runTerminalContext, runTerminalKey]);
+
+    const handleRunTerminalContextChange = useCallback(
+        (context: RunTerminalContext | null) => {
+            setRunTerminalContext(context);
+        },
+        [],
+    );
+
+    useEffect(() => {
+        return () => {
+            if (resizeSettleTimeoutRef.current !== null) {
+                window.clearTimeout(resizeSettleTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    function beginTerminalUiResize() {
+        if (resizeSettleTimeoutRef.current !== null) {
+            window.clearTimeout(resizeSettleTimeoutRef.current);
+            resizeSettleTimeoutRef.current = null;
+        }
+
+        setIsTerminalPanelResizing(true);
+    }
+
+    function finishTerminalUiResize() {
+        if (resizeSettleTimeoutRef.current !== null) {
+            window.clearTimeout(resizeSettleTimeoutRef.current);
+        }
+
+        resizeSettleTimeoutRef.current = window.setTimeout(() => {
+            resizeSettleTimeoutRef.current = null;
+            setIsTerminalPanelResizing(false);
+        }, TERMINAL_RESIZE_BUSY_SYNC_DELAY_MS);
+    }
 
     function openGlobalTerminalPanel() {
+        setIsTerminalPanelAutoHeight(false);
         setSelectedGlobalTerminalKey(
             (current) => current ?? preferredGlobalTerminalKey,
         );
@@ -55,25 +128,29 @@ export function PrRunApp() {
         startHeightOverride?: number,
     ) {
         event.preventDefault();
+        beginTerminalUiResize();
 
         const startY = event.clientY;
-        const startHeight = startHeightOverride ?? terminalPanelHeight;
-        const maxHeight = Math.min(
-            TERMINAL_PANEL_MAX_HEIGHT,
-            Math.floor(window.innerHeight * 0.78),
-        );
+        const startHeight =
+            startHeightOverride ??
+            event.currentTarget.parentElement?.getBoundingClientRect().height ??
+            terminalPanelHeight;
+        const initialHeight = Math.max(startHeight, TERMINAL_PANEL_MIN_HEIGHT);
+
+        setTerminalPanelHeight(initialHeight);
+        setIsTerminalPanelAutoHeight(false);
 
         function handlePointerMove(moveEvent: PointerEvent) {
             setTerminalPanelHeight(
-                clamp(
-                    startHeight + startY - moveEvent.clientY,
+                Math.max(
+                    initialHeight + startY - moveEvent.clientY,
                     TERMINAL_PANEL_MIN_HEIGHT,
-                    maxHeight,
                 ),
             );
         }
 
         function handlePointerUp() {
+            finishTerminalUiResize();
             window.removeEventListener("pointermove", handlePointerMove);
             window.removeEventListener("pointerup", handlePointerUp);
             window.removeEventListener("pointercancel", handlePointerUp);
@@ -84,22 +161,11 @@ export function PrRunApp() {
         window.addEventListener("pointercancel", handlePointerUp);
     }
 
-    function openAndBeginTerminalPanelResize(
-        event: ReactPointerEvent<HTMLDivElement>,
-    ) {
-        openGlobalTerminalPanel();
-        beginTerminalPanelResize(
-            event,
-            isTerminalPanelOpen
-                ? terminalPanelHeight
-                : TERMINAL_PANEL_MIN_HEIGHT,
-        );
-    }
-
     function beginTerminalPanelSidebarResize(
         event: ReactPointerEvent<HTMLDivElement>,
     ) {
         event.preventDefault();
+        beginTerminalUiResize();
 
         const startX = event.clientX;
         const startWidth = terminalPanelSidebarWidth;
@@ -107,7 +173,7 @@ export function PrRunApp() {
         function handlePointerMove(moveEvent: PointerEvent) {
             setTerminalPanelSidebarWidth(
                 clamp(
-                    startWidth + moveEvent.clientX - startX,
+                    startWidth + startX - moveEvent.clientX,
                     TERMINAL_PANEL_SIDEBAR_MIN_WIDTH,
                     TERMINAL_PANEL_SIDEBAR_MAX_WIDTH,
                 ),
@@ -115,6 +181,7 @@ export function PrRunApp() {
         }
 
         function handlePointerUp() {
+            finishTerminalUiResize();
             window.removeEventListener("pointermove", handlePointerMove);
             window.removeEventListener("pointerup", handlePointerUp);
             window.removeEventListener("pointercancel", handlePointerUp);
@@ -202,15 +269,24 @@ export function PrRunApp() {
                 <MainPanel
                     actionError={state.actionError}
                     branchName={state.selectedBranchView.branchName}
+                    isRunTerminalDocked={Boolean(
+                        runTerminalContext &&
+                        isTerminalPanelOpen &&
+                        isTerminalPanelAutoHeight,
+                    )}
+                    isTerminalStateSyncPaused={isTerminalPanelResizing}
                     isCheckingOutWorktree={state.isCheckingOutWorktree}
                     project={state.selectedBranchView.project}
                     onCheckoutBranch={state.checkoutBranch}
                     onCreateScript={state.openCreateScript}
+                    onRunTerminalContextChange={handleRunTerminalContextChange}
                 />
                 <GlobalTerminalPanel
                     groups={state.groups}
                     height={terminalPanelHeight}
+                    isAutoHeight={isTerminalPanelAutoHeight}
                     isOpen={isTerminalPanelOpen}
+                    preferredOwnerKey={runTerminalContext?.ownerKey ?? null}
                     sidebarWidth={terminalPanelSidebarWidth}
                     selectedTerminalKey={selectedGlobalTerminalKey}
                     onBeginSidebarResize={beginTerminalPanelSidebarResize}
@@ -220,7 +296,6 @@ export function PrRunApp() {
                 />
                 <StatusBar
                     summary={state.statusSummary}
-                    onBeginTerminalPanelResize={openAndBeginTerminalPanelResize}
                     onOpenBusyTerminals={openGlobalTerminalPanel}
                 />
             </div>
@@ -273,6 +348,22 @@ function getFirstTerminalKey(
     }
 
     return null;
+}
+
+function getActiveOwnerTerminalKey(
+    owners: ReturnType<typeof useWorktreeTerminalStore.getState>["owners"],
+    ownerKey: string,
+) {
+    const owner = owners[ownerKey];
+
+    if (!owner) {
+        return null;
+    }
+
+    const activeTab =
+        owner.tabs.find((tab) => tab.id === owner.activeTabId) ?? owner.tabs[0];
+
+    return activeTab ? getTerminalKey(ownerKey, activeTab.id) : null;
 }
 
 function clamp(value: number, min: number, max: number) {

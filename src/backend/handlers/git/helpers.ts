@@ -62,6 +62,64 @@ export function remoteBranch(branch: string) {
     };
 }
 
+function remoteRefName(remoteName: string) {
+    return `refs/remotes/${remoteName.replace(/^refs\/remotes\//, "")}`;
+}
+
+async function hasRemoteRef(projectPath: string, remoteName: string) {
+    const refName = remoteRefName(remoteName);
+    const [error, output] = await tryPromise(
+        gitText(projectPath, ["for-each-ref", "--format=%(refname)", refName]),
+    );
+
+    if (error) {
+        throw error;
+    }
+
+    return output.split("\n").some((line) => line.trim() === refName);
+}
+
+export async function ensureRemoteRefs(
+    projectPath: string,
+    remoteNames: Array<string | undefined>,
+) {
+    const uniqueRemoteNames = Array.from(
+        new Set(
+            remoteNames.filter((remoteName): remoteName is string =>
+                Boolean(remoteName),
+            ),
+        ),
+    );
+
+    if (uniqueRemoteNames.length === 0) {
+        return;
+    }
+
+    const [refError, existingRemoteRefs] = await tryPromise(
+        Promise.all(
+            uniqueRemoteNames.map((remoteName) =>
+                hasRemoteRef(projectPath, remoteName),
+            ),
+        ),
+    );
+
+    if (refError) {
+        throw gitError("Failed to inspect remote branches.", refError);
+    }
+
+    if (existingRemoteRefs.every(Boolean)) {
+        return;
+    }
+
+    const [fetchError] = await tryPromise(
+        gitQuiet(projectPath, ["fetch", "origin"]),
+    );
+
+    if (fetchError) {
+        throw gitError("Failed to refresh remote branches.", fetchError);
+    }
+}
+
 export async function exists(targetPath: string) {
     const [error] = await tryPromise(access(targetPath));
     return !error;

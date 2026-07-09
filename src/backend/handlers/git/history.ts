@@ -1,6 +1,7 @@
 import { gitText } from "@/backend/handlers/git/command";
 import { tryPromise } from "@/backend/handlers/error";
 import {
+    ensureRemoteRefs,
     getDefaultRemoteBranch,
     remoteBranch,
 } from "@/backend/handlers/git/helpers";
@@ -89,12 +90,14 @@ export async function getCommitHistory(
 
     const [error] = await tryPromise(
         (async () => {
+            await ensureRemoteRefs(project.path, [remoteName]);
             const defaultRemoteName = await getDefaultRemoteBranch(
                 project.path,
             );
             const baseRemoteName = baseBranch
                 ? remoteBranch(baseBranch).remoteName
                 : defaultRemoteName;
+            await ensureRemoteRefs(project.path, [baseRemoteName, remoteName]);
             marksAllCommitsAsSelectedBranch = baseRemoteName
                 ? baseRemoteName === remoteName
                 : true;

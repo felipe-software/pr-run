@@ -1,3 +1,4 @@
+import { toast } from "@heroui/react";
 import { ChevronDown, ChevronRight, Terminal, X } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -7,14 +8,19 @@ import { Button } from "@/lib/components/atoms/button";
 import { EmptyState } from "@/lib/components/atoms/empty-state";
 import { Surface } from "@/lib/components/atoms/surface";
 import { TerminalPane } from "@/lib/components/molecules/worktree-terminal/terminal-pane";
+import { TerminalTabBar } from "@/lib/components/molecules/worktree-terminal/terminal-tab-bar";
+import { tryPromise } from "@/lib/error";
 import { useWorktreeTerminalStore } from "@/lib/hooks/store/use-worktree-terminal-store";
 import { cn } from "@/lib/utils/cn";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { ProjectGroup } from "@/types/pr-run";
 
 type GlobalTerminalPanelProps = {
     groups: ProjectGroup[];
     height: number;
+    isAutoHeight: boolean;
     isOpen: boolean;
+    preferredOwnerKey: string | null;
     sidebarWidth: number;
     selectedTerminalKey: string | null;
     onBeginSidebarResize: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -48,7 +54,9 @@ type TerminalTreeTab = {
 export function GlobalTerminalPanel({
     groups,
     height,
+    isAutoHeight,
     isOpen,
+    preferredOwnerKey,
     sidebarWidth,
     selectedTerminalKey,
     onBeginSidebarResize,
@@ -57,6 +65,10 @@ export function GlobalTerminalPanel({
     onSelectTerminal,
 }: GlobalTerminalPanelProps) {
     const owners = useWorktreeTerminalStore((state) => state.owners);
+    const createTerminal = useWorktreeTerminalStore(
+        (state) => state.createTerminal,
+    );
+    const closeTab = useWorktreeTerminalStore((state) => state.closeTab);
     const setActiveTab = useWorktreeTerminalStore(
         (state) => state.setActiveTab,
     );
@@ -65,12 +77,26 @@ export function GlobalTerminalPanel({
         [groups, owners],
     );
     const terminals = useMemo(() => flattenTerminalTree(tree), [tree]);
-    const selectedTerminal =
-        terminals.find(
-            (terminal) => terminal.terminalKey === selectedTerminalKey,
-        ) ??
-        terminals[0] ??
-        null;
+    const preferredTerminal = preferredOwnerKey
+        ? (terminals.find(
+              (terminal) => terminal.ownerKey === preferredOwnerKey,
+          ) ?? null)
+        : null;
+    const selectedTerminal = preferredOwnerKey
+        ? (terminals.find(
+              (terminal) =>
+                  terminal.ownerKey === preferredOwnerKey &&
+                  terminal.terminalKey === selectedTerminalKey,
+          ) ??
+          preferredTerminal ??
+          null)
+        : (terminals.find(
+              (terminal) => terminal.terminalKey === selectedTerminalKey,
+          ) ??
+          terminals[0] ??
+          null);
+    const selectedOwnerKey = preferredOwnerKey ?? selectedTerminal?.ownerKey;
+    const selectedOwner = selectedOwnerKey ? owners[selectedOwnerKey] : null;
     const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(
         () => new Set(),
     );
@@ -98,60 +124,114 @@ export function GlobalTerminalPanel({
         onSelectTerminal(terminal.terminalKey);
     }
 
+    async function createManualTerminal() {
+        if (!selectedOwner || !selectedOwnerKey) {
+            return;
+        }
+
+        const [error, tab] = await tryPromise(
+            createTerminal(selectedOwnerKey, selectedOwner.worktreePath, {
+                type: "manual",
+            }),
+        );
+
+        if (error) {
+            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            return;
+        }
+
+        onSelectTerminal(getTerminalKey(selectedOwnerKey, tab.id));
+    }
+
+    async function closeTerminalTab(tabId: string) {
+        if (!selectedOwnerKey) {
+            return;
+        }
+
+        const [error] = await tryPromise(closeTab(selectedOwnerKey, tabId));
+
+        if (error) {
+            toast.danger(getErrorMessage(error), { timeout: 3200 });
+        }
+    }
+
     return (
         <section
-            className="border-sidebar-border bg-sidebar text-sidebar-foreground
-                flex min-h-48 shrink-0 flex-col border-t"
-            style={{ height }}
+            className={cn(
+                `border-sidebar-border bg-sidebar text-sidebar-foreground
+                relative flex min-h-48 flex-col border-t`,
+                isAutoHeight ? "min-h-0 flex-1" : "shrink-0",
+            )}
+            style={isAutoHeight ? undefined : { height }}
         >
             <div
                 aria-label="Resize terminal panel"
-                className="hover:bg-sidebar-accent/70 h-1.5 shrink-0
-                    cursor-row-resize transition-colors"
+                className="hover:bg-sidebar-accent/70 absolute top-0 right-0
+                    left-0 z-20 h-2 -translate-y-1/2 cursor-row-resize
+                    transition-colors"
                 role="separator"
                 onPointerDown={onBeginResize}
             />
 
             <div className="flex min-h-0 flex-1">
-                <div className="flex min-h-0 min-w-0 flex-1 p-0.5 pr-0">
-                    {selectedTerminal ? (
-                        <TerminalPane
-                            ownerKey={selectedTerminal.ownerKey}
-                            sessionId={selectedTerminal.sessionId}
-                            tabId={selectedTerminal.id}
-                        />
-                    ) : (
-                        <Surface
-                            className="grid h-full place-items-center"
-                            variant="muted"
-                        >
-                            <EmptyState
-                                description="Open a worktree terminal to show it here."
-                                icon={<Terminal className="h-4 w-4" />}
-                                title="No terminals"
-                            />
-                        </Surface>
-                    )}
-                </div>
-
                 <div
-                    aria-label="Resize terminal list"
-                    className="group flex w-2 shrink-0 cursor-col-resize
-                        items-center justify-center"
-                    role="separator"
-                    onPointerDown={onBeginSidebarResize}
+                    className="flex min-h-0 min-w-0 flex-1 flex-col pr-0 pl-0.5"
                 >
-                    <div
-                        className="bg-sidebar-border group-hover:bg-primary h-10
-                            w-px rounded-full transition-colors"
-                    />
+                    {selectedOwner && selectedOwnerKey ? (
+                        <div className="shrink-0 px-1 pb-0.5">
+                            <TerminalTabBar
+                                activeTabId={selectedOwner.activeTabId}
+                                tabs={selectedOwner.tabs}
+                                onCloseTab={(tabId) => {
+                                    closeTerminalTab(tabId);
+                                }}
+                                onCreateTerminal={() => {
+                                    createManualTerminal();
+                                }}
+                                onSelectTab={(tabId) => {
+                                    setActiveTab(selectedOwnerKey, tabId);
+                                    onSelectTerminal(
+                                        getTerminalKey(selectedOwnerKey, tabId),
+                                    );
+                                }}
+                            />
+                        </div>
+                    ) : null}
+                    <div className="flex min-h-0 flex-1">
+                        {selectedTerminal ? (
+                            <TerminalPane
+                                ownerKey={selectedTerminal.ownerKey}
+                                sessionId={selectedTerminal.sessionId}
+                                tabId={selectedTerminal.id}
+                            />
+                        ) : (
+                            <Surface
+                                className="grid h-full place-items-center"
+                                variant="muted"
+                            >
+                                <EmptyState
+                                    description="Open a worktree terminal to show it here."
+                                    icon={<Terminal className="h-4 w-4" />}
+                                    title="No terminals"
+                                />
+                            </Surface>
+                        )}
+                    </div>
                 </div>
 
                 <aside
                     className="border-sidebar-border bg-sidebar
-                        text-sidebar-foreground flex shrink-0 border-l"
+                        text-sidebar-foreground relative flex shrink-0 border-l"
                     style={{ width: sidebarWidth }}
                 >
+                    <div
+                        aria-label="Resize terminal list"
+                        className="hover:bg-sidebar-accent/70 absolute top-0
+                            bottom-0 left-0 z-20 w-2 -translate-x-1/2
+                            cursor-col-resize transition-colors"
+                        role="separator"
+                        onPointerDown={onBeginSidebarResize}
+                    />
                     <div className="min-h-0 flex-1 overflow-auto px-1 py-0.5">
                         {tree.length === 0 ? (
                             <div

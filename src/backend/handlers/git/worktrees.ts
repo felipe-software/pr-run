@@ -8,6 +8,7 @@ import {
     gitText,
 } from "@/backend/handlers/git/command";
 import {
+    ensureRemoteRefs,
     gitError,
     hasLocalBranch,
     linkSharedEnv,
@@ -172,6 +173,14 @@ export async function checkoutBranch(
     const { name, remoteName } = remoteBranch(branch);
     const targetPath = worktreePathFor(project.path, name);
     const registeredPath = await requireWorktreePath(project, name);
+
+    const [remoteError] = await tryPromise(
+        ensureRemoteRefs(project.path, [remoteName]),
+    );
+
+    if (remoteError) {
+        throw gitError("Failed to refresh remote branches.", remoteError);
+    }
 
     const [branchError] = await tryPromise(
         gitQuiet(project.path, [
