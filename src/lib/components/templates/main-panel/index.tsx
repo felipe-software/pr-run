@@ -4,6 +4,7 @@ import { isHandledSshPromptError } from "@/lib/api";
 import { EmptyState } from "@/lib/components/atoms/empty-state";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
+import { useWorktreeTerminalOwner } from "@/lib/components/molecules/worktree-terminal/use-worktree-terminal-owner";
 import { BranchPageHeader } from "@/lib/components/templates/main-panel/branch-page-header";
 import {
     BranchPageTabs,
@@ -22,14 +23,9 @@ import {
     getWorktreeOwnerKey,
     useWorktreeTerminalStore,
 } from "@/lib/hooks/store/use-worktree-terminal-store";
+import { cn } from "@/lib/utils/cn";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { ProjectConfig } from "@/types/pr-run";
-
-const WorktreeTerminal = lazy(() =>
-    import("@/lib/components/molecules/worktree-terminal").then((module) => ({
-        default: module.WorktreeTerminal,
-    })),
-);
 
 const BranchScriptsSection = lazy(() =>
     import("@/lib/components/templates/branch-scripts-section").then(
@@ -58,19 +54,30 @@ const BranchEnvPanel = lazy(() =>
 type MainPanelProps = {
     actionError?: string;
     branchName: string | null;
+    isRunTerminalDocked: boolean;
+    isTerminalStateSyncPaused: boolean;
     isCheckingOutWorktree: boolean;
     project: ProjectConfig | null;
     onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onCreateScript: () => void;
+    onRunTerminalContextChange: (context: RunTerminalContext | null) => void;
+};
+
+export type RunTerminalContext = {
+    ownerKey: string;
+    worktreePath: string;
 };
 
 export function MainPanel({
     actionError,
     branchName,
+    isRunTerminalDocked,
+    isTerminalStateSyncPaused,
     isCheckingOutWorktree,
     project,
     onCheckoutBranch,
     onCreateScript,
+    onRunTerminalContextChange,
 }: MainPanelProps) {
     const [activeTab, setActiveTab] = useState<BranchPageTab>("general");
     const selectedKey =
@@ -106,10 +113,46 @@ export function MainPanel({
             (tab) => tab.status === "alive" && tab.busyState === "busy",
         ),
     );
+    const runTerminalOwnerKey =
+        project && selectedBranch
+            ? getWorktreeOwnerKey(project.id, selectedBranch.name)
+            : "";
+    const runTerminalWorktreePath = selectedBranch?.worktreePath ?? "";
+    const isRunTerminalReady = Boolean(
+        activeTab === "run" &&
+        selectedBranch?.hasWorktree &&
+        runTerminalOwnerKey &&
+        runTerminalWorktreePath,
+    );
+    const runTerminalContext = useMemo<RunTerminalContext | null>(
+        () =>
+            isRunTerminalReady
+                ? {
+                      ownerKey: runTerminalOwnerKey,
+                      worktreePath: runTerminalWorktreePath,
+                  }
+                : null,
+        [isRunTerminalReady, runTerminalOwnerKey, runTerminalWorktreePath],
+    );
+
+    useWorktreeTerminalOwner({
+        enabled: isRunTerminalReady,
+        ownerKey: runTerminalOwnerKey,
+        syncEnabled: !isTerminalStateSyncPaused,
+        worktreePath: runTerminalWorktreePath,
+    });
 
     useEffect(() => {
         setActiveTab("general");
     }, [selectedKey]);
+
+    useEffect(() => {
+        onRunTerminalContextChange(runTerminalContext);
+    }, [onRunTerminalContextChange, runTerminalContext]);
+
+    useEffect(() => {
+        return () => onRunTerminalContextChange(null);
+    }, [onRunTerminalContextChange]);
 
     useEffect(() => {
         if (!isAwaitingBranchPassphrase) {
@@ -183,8 +226,11 @@ export function MainPanel({
 
     return (
         <main
-            className="bg-background flex h-full min-h-0 flex-1 overflow-hidden
-                px-3 py-3 max-[900px]:px-2 max-[500px]:overflow-y-auto"
+            className={cn(
+                `bg-background flex min-h-0 overflow-hidden px-3 py-3
+                max-[900px]:px-2 max-[500px]:overflow-y-auto`,
+                isRunTerminalDocked ? "shrink-0" : "h-full flex-1",
+            )}
         >
             <div
                 className="flex min-h-0 w-full flex-1 flex-col gap-3
@@ -224,7 +270,7 @@ export function MainPanel({
                         </section>
                     ) : activeTab === "run" ? (
                         selectedBranch.hasWorktree ? (
-                            <div className="flex min-h-0 flex-1 flex-col gap-4">
+                            <div className="flex min-h-0 flex-1 flex-col">
                                 <Suspense
                                     fallback={
                                         <Surface
@@ -241,29 +287,6 @@ export function MainPanel({
                                         projectId={project.id}
                                         onCreateScript={onCreateScript}
                                         onRunScriptCommand={runTerminalCommand}
-                                    />
-                                </Suspense>
-
-                                <Suspense
-                                    fallback={
-                                        <Surface
-                                            className="text-muted-foreground
-                                                grid h-[min(42vh,360px)]
-                                                min-h-60 place-items-center
-                                                overflow-hidden px-2 text-[11px]
-                                                font-bold tracking-[0.08em]
-                                                uppercase"
-                                            variant="terminal"
-                                        >
-                                            <Skeleton className="h-4 w-36" />
-                                        </Surface>
-                                    }
-                                >
-                                    <WorktreeTerminal
-                                        ownerKey={worktreeOwnerKey}
-                                        worktreePath={
-                                            currentBranch.worktreePath
-                                        }
                                     />
                                 </Suspense>
                             </div>
