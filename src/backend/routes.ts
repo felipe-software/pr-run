@@ -85,6 +85,25 @@ export function registerRoutes(app: Elysia) {
                 await projectConfigHandler.readConfig(),
             ]),
         )
+        .get("/overview", async ({ query }) => {
+            const projectId = query.projectId
+                ? String(query.projectId)
+                : undefined;
+            const config = await projectConfigHandler.readConfig();
+            const projects = config.groups.flatMap((group) => group.projects);
+            const selectedProjects = projectId
+                ? [await projectConfigHandler.findProject(projectId)]
+                : projects;
+
+            return success("Overview loaded.", [
+                await gitHandler.getOverviewSnapshot(
+                    selectedProjects,
+                    projectId
+                        ? { projectId, type: "project" }
+                        : { type: "all" },
+                ),
+            ]);
+        })
         .get("/scripts", async () =>
             success("Scripts loaded.", await scriptsHandler.listScripts()),
         )

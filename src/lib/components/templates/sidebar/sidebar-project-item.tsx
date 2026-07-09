@@ -17,7 +17,7 @@ import { getWorktreeOwnerKey } from "@/lib/hooks/store/use-worktree-terminal-sto
 import { shortenPath } from "@/lib/format";
 import { cn } from "@/lib/utils/cn";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import type { ProjectConfig } from "@/types/pr-run";
+import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 
 type SidebarProjectItemProps = {
     busyOwnerKeys: Set<string>;
@@ -31,7 +31,7 @@ type SidebarProjectItemProps = {
     selectedBranchName?: string;
     onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
-    onSelectBranch: (projectId: string, branchName: string) => void;
+    onSelectBranch: (project: ProjectConfig, branch: BranchInfo) => void;
     onToggleProject: (projectId: string) => void;
     onUpdateProject: (project: ProjectConfig) => Promise<void>;
 };
@@ -291,8 +291,8 @@ export function SidebarProjectItem({
                                 onRemoveWorktree={(branchName) =>
                                     onRemoveWorktree(project.id, branchName)
                                 }
-                                onSelectBranch={(branchName) =>
-                                    onSelectBranch(project.id, branchName)
+                                onSelectBranch={() =>
+                                    onSelectBranch(project, branch)
                                 }
                             />
                         );

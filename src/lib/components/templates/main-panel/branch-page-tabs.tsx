@@ -10,7 +10,7 @@ type BranchPageTabsProps = {
 };
 
 const tabs: { label: string; value: BranchPageTab }[] = [
-    { label: "Overview", value: "general" },
+    { label: "Activity", value: "general" },
     { label: "Run", value: "run" },
     { label: "Diff", value: "diff" },
     { label: "Docker", value: "docker" },
@@ -35,7 +35,7 @@ export function BranchPageTabs({
                         justify-center gap-1 rounded-md px-2.5 text-xs
                         font-medium transition-colors`,
                         activeTab === tab.value &&
-                            "bg-card text-foreground shadow-sm/5",
+                            "bg-sidebar-accent text-sidebar-accent-foreground",
                     )}
                     key={tab.value}
                     role="tab"

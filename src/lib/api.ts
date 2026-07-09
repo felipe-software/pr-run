@@ -27,6 +27,7 @@ import type {
     UpdateResult,
     UpdateWorktreesResult,
 } from "@/types/pr-run";
+import type { OverviewSnapshot } from "@/types/overview";
 import {
     type PendingRequest,
     useSshPassphraseStore,
@@ -408,6 +409,13 @@ export const prRunApi = {
         return requestOne<EnvFilesOverviewResult>(
             `/projects/${encodeURIComponent(projectId)}/env?${params.toString()}`,
         );
+    },
+    getOverview(projectId?: string) {
+        const query = projectId
+            ? `?${new URLSearchParams({ projectId }).toString()}`
+            : "";
+
+        return requestOne<OverviewSnapshot>(`/overview${query}`);
     },
     getConfig() {
         return requestOne<ProjectsConfig>("/config");

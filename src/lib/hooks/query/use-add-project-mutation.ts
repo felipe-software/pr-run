@@ -9,9 +9,14 @@ export function useAddProjectMutation() {
     return useMutation({
         mutationFn: (projectPath: string) => prRunApi.addProject(projectPath),
         onSuccess: async () => {
-            await queryClient.invalidateQueries({
-                queryKey: prRunQueryKeys.config,
-            });
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: prRunQueryKeys.config,
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ["pr-run", "overview"],
+                }),
+            ]);
         },
     });
 }

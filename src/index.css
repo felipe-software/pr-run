@@ -1,14 +1,30 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark, .dark *));
+@custom-variant wco (&:is(.wco, .wco *));
 
 :root {
     --app-scrollbar-width: 6px;
-    --workspace-topbar-height: 52px;
+    --workspace-topbar-height: 36px;
     --workspace-controls-top: 0px;
     --workspace-controls-left: calc(env(safe-area-inset-left) + 0.75rem);
     --workspace-controls-right: calc(env(safe-area-inset-right) + 0.75rem);
+    --workspace-native-controls-inset: 0px;
     --workspace-titlebar-control-size: 1.75rem;
+}
+
+.wco {
+    --workspace-topbar-height: env(titlebar-area-height, 36px);
+    --workspace-controls-top: env(titlebar-area-y, 0px);
+    --workspace-controls-left: calc(env(titlebar-area-x, 0px) + 0.75rem);
+    --workspace-controls-right: calc(
+        100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) +
+            0.75rem
+    );
+    --workspace-native-controls-inset: calc(
+        100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) +
+            0.75rem
+    );
 }
 
 @theme inline {
@@ -152,6 +168,30 @@
         align-items: center;
     }
 
+    .workspace-titlebar {
+        display: flex;
+        height: var(--workspace-topbar-height);
+        min-height: var(--workspace-topbar-height);
+        align-items: center;
+        background: var(--sidebar);
+    }
+
+    @media (max-width: 63.999rem) {
+        .workspace-titlebar-brand {
+            width: 3rem !important;
+            padding-inline: 0.5rem;
+        }
+
+        .workspace-titlebar-brand > :not(:first-child) {
+            display: none;
+        }
+
+        .workspace-titlebar-brand-macos {
+            width: 7rem !important;
+            padding-left: 5rem !important;
+        }
+    }
+
     .surface-subheader {
         display: flex;
         height: 2.5rem;
@@ -165,6 +205,10 @@
 
     .drag-region {
         -webkit-app-region: drag;
+    }
+
+    .no-drag {
+        -webkit-app-region: no-drag;
     }
 
     .drag-region button,

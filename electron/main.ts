@@ -1,10 +1,22 @@
-import { app, BrowserWindow, ipcMain, Menu, shell } from "electron";
+import {
+    app,
+    BrowserWindow,
+    ipcMain,
+    Menu,
+    nativeTheme,
+    shell,
+} from "electron";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import net from "node:net";
 import path from "node:path";
 
 import { TerminalSessionManager } from "./terminal-session-manager.js";
 import type { TerminalCreateOptions, TerminalInputOptions } from "./types.js";
+import {
+    getWindowChromeBackground,
+    getWindowChromeOptions,
+    type WindowTheme,
+} from "./window-chrome.js";
 
 const projectRoot = path.join(__dirname, "..");
 
@@ -192,6 +204,9 @@ async function loadRenderer(mainWindow: BrowserWindow, rendererUrl: string) {
 }
 
 async function createWindow() {
+    const initialTheme: WindowTheme = nativeTheme.shouldUseDarkColors
+        ? "dark"
+        : "light";
     const mainWindow = new BrowserWindow({
         width: 1180,
         height: 780,
@@ -199,7 +214,8 @@ async function createWindow() {
         minHeight: 620,
         title: "PR Run",
         autoHideMenuBar: true,
-        backgroundColor: "#ffffff",
+        backgroundColor: getWindowChromeBackground(initialTheme),
+        ...getWindowChromeOptions(process.platform, initialTheme),
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
             contextIsolation: true,
@@ -288,6 +304,30 @@ app.whenReady()
 
             return backendUrl;
         });
+        ipcMain.handle(
+            "window:setTitleBarTheme",
+            (event, theme: WindowTheme) => {
+                const window = BrowserWindow.fromWebContents(event.sender);
+
+                if (!window || window.isDestroyed()) {
+                    return;
+                }
+
+                const resolvedTheme = theme === "light" ? "light" : "dark";
+                window.setBackgroundColor(
+                    getWindowChromeBackground(resolvedTheme),
+                );
+
+                const { titleBarOverlay } = getWindowChromeOptions(
+                    process.platform,
+                    resolvedTheme,
+                );
+
+                if (typeof titleBarOverlay === "object") {
+                    window.setTitleBarOverlay(titleBarOverlay);
+                }
+            },
+        );
 
         ipcMain.handle(
             "terminal:create",

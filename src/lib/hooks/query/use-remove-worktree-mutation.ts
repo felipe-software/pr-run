@@ -15,9 +15,14 @@ export function useRemoveWorktreeMutation() {
         mutationFn: ({ branchName, projectId }: RemoveWorktreeVariables) =>
             prRunApi.removeWorktree(projectId, branchName),
         onSuccess: async (_result, variables) => {
-            await queryClient.invalidateQueries({
-                queryKey: prRunQueryKeys.project(variables.projectId),
-            });
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: prRunQueryKeys.project(variables.projectId),
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ["pr-run", "overview"],
+                }),
+            ]);
         },
     });
 }

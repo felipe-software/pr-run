@@ -18,6 +18,8 @@ import type {
 declare global {
     interface Window {
         prRun?: {
+            platform: string;
+            setTitleBarTheme(theme: "dark" | "light"): Promise<void>;
             getBackendUrl(): Promise<string>;
             getConfig(): Promise<ProjectsConfig>;
             addProject(path: string): Promise<ProjectConfig>;

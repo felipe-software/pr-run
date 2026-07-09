@@ -1,6 +1,6 @@
 import { SidebarContent } from "@/lib/components/templates/sidebar/sidebar-content";
 import { SidebarGroupSection } from "@/lib/components/templates/sidebar/sidebar-group-section";
-import { SidebarHeader } from "@/lib/components/templates/sidebar/sidebar-header";
+import { SidebarOverviewButton } from "@/lib/components/templates/sidebar/sidebar-overview-button";
 import { SidebarRail } from "@/lib/components/templates/sidebar/sidebar-rail";
 import { SidebarShell } from "@/lib/components/templates/sidebar/sidebar-shell";
 import type { SidebarProps } from "@/lib/components/templates/sidebar/types";
@@ -11,20 +11,18 @@ export function Sidebar({
     collapsedProjects,
     expandedGroups,
     groups,
-    isCreatingScript,
+    isDesktopHidden,
     isMobileOpen,
+    isOverviewActive,
     pendingProjectUpdateId,
     pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     selectedBranchName,
     selectedProjectId,
     sidebarWidth,
-    onAddProject,
     onBeginResize,
     onCheckoutBranch,
-    onCreateScript,
-    onOpenSshPassphrase,
-    onOpenSettings,
+    onOpenOverview,
     onRemoveWorktree,
     onSelectBranch,
     onToggleGroup,
@@ -32,16 +30,18 @@ export function Sidebar({
     onUpdateProject,
 }: SidebarProps) {
     return (
-        <SidebarShell isMobileOpen={isMobileOpen} sidebarWidth={sidebarWidth}>
-            <SidebarHeader
-                isCreatingScript={isCreatingScript}
-                onAddProject={onAddProject}
-                onCreateScript={onCreateScript}
-                onOpenSshPassphrase={onOpenSshPassphrase}
-                onOpenSettings={onOpenSettings}
-            />
-
+        <SidebarShell
+            isDesktopHidden={isDesktopHidden}
+            isMobileOpen={isMobileOpen}
+            sidebarWidth={sidebarWidth}
+        >
             <SidebarContent>
+                <div className="px-0.5 pt-1.5 pb-1">
+                    <SidebarOverviewButton
+                        isActive={isOverviewActive}
+                        onClick={onOpenOverview}
+                    />
+                </div>
                 {groups.map((group) => (
                     <SidebarGroupSection
                         busyOwnerKeys={busyOwnerKeys}

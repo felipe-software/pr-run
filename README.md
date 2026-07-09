@@ -8,6 +8,7 @@ The app made for people who review multiple Pull Requests every day.
 [![Publish npm package](https://github.com/felipe-software/pr-run/actions/workflows/publish-npm.yml/badge.svg)](https://github.com/felipe-software/pr-run/actions/workflows/publish-npm.yml)
 [![Version Bump](https://github.com/felipe-software/pr-run/actions/workflows/version-bump.yaml/badge.svg)](https://github.com/felipe-software/pr-run/actions/workflows/version-bump.yaml)
 <br>
+
 ## Run
 
 PR-run requires [Bun](https://bun.sh/docs/installation).

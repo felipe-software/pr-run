@@ -92,8 +92,8 @@ export function SidebarBranchItem({
                     </StatusPill>
                     <span
                         className={cn(
-                            `text-muted-foreground/70 pointer-events-none w-7
-                            shrink-0 text-right text-[10px] leading-4
+                            `text-muted-foreground/70 pointer-events-none
+                            w-[1.5rem] shrink-0 text-right text-[10px] leading-4
                             tabular-nums transition-opacity duration-150
                             group-focus-within/menu-sub-item:opacity-0
                             group-hover/menu-sub-item:opacity-0`,

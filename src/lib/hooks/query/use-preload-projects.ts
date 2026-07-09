@@ -5,11 +5,22 @@ import { tryPromise } from "@/lib/error";
 import { prRunApi } from "@/lib/api";
 import { prRunQueryKeys } from "@/lib/hooks/query/query-keys";
 import { projectBranchesQueryOptions } from "@/lib/hooks/query/use-project-branches-query";
-import type { ProjectConfig } from "@/types/pr-run";
+import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 
-export function usePreloadProjects(projects: ProjectConfig[]) {
+export function usePreloadProjects(
+    projects: ProjectConfig[],
+    onProjectBranchesLoaded?: (
+        projectId: string,
+        branches: BranchInfo[],
+    ) => void,
+) {
     const queryClient = useQueryClient();
     const preloadedProjectIds = useRef(new Set<string>());
+    const onProjectBranchesLoadedRef = useRef(onProjectBranchesLoaded);
+
+    useEffect(() => {
+        onProjectBranchesLoadedRef.current = onProjectBranchesLoaded;
+    }, [onProjectBranchesLoaded]);
 
     useEffect(() => {
         const pendingProjects = projects.filter(
@@ -24,8 +35,12 @@ export function usePreloadProjects(projects: ProjectConfig[]) {
             preloadedProjectIds.current.add(project.id);
 
             tryPromise(preloadProject(project.id, queryClient)).then(
-                ([error]) => {
+                ([error, branches]) => {
                     if (!error) {
+                        onProjectBranchesLoadedRef.current?.(
+                            project.id,
+                            branches,
+                        );
                         return;
                     }
 
@@ -48,5 +63,5 @@ async function preloadProject(
     await queryClient.invalidateQueries({
         queryKey: prRunQueryKeys.project(projectId),
     });
-    await queryClient.fetchQuery(projectBranchesQueryOptions(projectId));
+    return await queryClient.fetchQuery(projectBranchesQueryOptions(projectId));
 }

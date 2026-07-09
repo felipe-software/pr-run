@@ -1,5 +1,7 @@
 export const prRunQueryKeys = {
     config: ["pr-run", "config"] as const,
+    overview: (projectId?: string) =>
+        ["pr-run", "overview", projectId ?? "all"] as const,
     scripts: ["pr-run", "scripts"] as const,
     scriptSource: (scriptId: string) =>
         [...prRunQueryKeys.scripts, scriptId, "source"] as const,
