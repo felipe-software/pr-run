@@ -106,7 +106,7 @@ export function SidebarBranchItem({
                 {branch.hasWorktree ? (
                     <Tooltip>
                         <TooltipTrigger
-                            delay={100}
+                            delay={0}
                             render={
                                 <WorktreeIndicator
                                     aria-hidden="true"
@@ -119,7 +119,7 @@ export function SidebarBranchItem({
                 ) : null}
                 <Tooltip>
                     <TooltipTrigger
-                        delay={100}
+                        delay={0}
                         render={
                             <StatusPill
                                 className={status.pillClassName}

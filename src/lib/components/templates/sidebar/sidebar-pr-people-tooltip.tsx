@@ -29,7 +29,7 @@ export function SidebarPrPeopleTooltip({
 
     return (
         <Tooltip>
-            <TooltipTrigger delay={100} render={children} />
+            <TooltipTrigger delay={0} render={children} />
             <TooltipPopup
                 align="start"
                 className="w-64 max-w-[calc(100vw-1rem)] p-2"
