@@ -43,12 +43,16 @@ export type PullRequestInfo = {
     assignees: GitHubUserInfo[];
     author?: GitHubUserInfo;
     baseBranchName: string;
+    isDraft: boolean;
     latestReviews: PullRequestLatestReview[];
     number: number;
     reviewRequests: GitHubUserInfo[];
+    state: PullRequestState;
     title: string;
     url: string;
 };
+
+export type PullRequestState = "OPEN" | "CLOSED" | "MERGED";
 
 export type PullRequestLatestReview = {
     author: GitHubUserInfo;

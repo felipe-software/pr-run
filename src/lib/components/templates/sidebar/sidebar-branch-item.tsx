@@ -28,6 +28,7 @@ type SidebarBranchItemProps = {
     isCheckingOutWorktree: boolean;
     isRemovingWorktree: boolean;
     isSelected: boolean;
+    projectAvatarUri?: string;
     onCheckoutBranch: (branchName: string) => Promise<void>;
     onRemoveWorktree: (branchName: string) => Promise<void>;
     onSelectBranch: (branchName: string) => void;
@@ -40,6 +41,7 @@ export function SidebarBranchItem({
     isCheckingOutWorktree,
     isRemovingWorktree,
     isSelected,
+    projectAvatarUri,
     onCheckoutBranch,
     onRemoveWorktree,
     onSelectBranch,
@@ -48,13 +50,20 @@ export function SidebarBranchItem({
     const status = getSidebarItemStatus(branch);
     const isActionPending = isCheckingOutWorktree || isRemovingWorktree;
     const pullRequestAuthor = branch.pullRequest?.author;
+    const branchAge = formatBranchAge(branch.lastCommitTimestamp);
+    const accessibleLabel = [
+        `Select ${branch.name}`,
+        branch.pullRequest
+            ? `${status.label.toLowerCase()} PR${pullRequestAuthor ? ` by ${pullRequestAuthor.login}` : ""}`
+            : status.label.toLowerCase(),
+        branch.hasWorktree ? "worktree" : undefined,
+        isBusy ? "busy terminal" : undefined,
+    ]
+        .filter(Boolean)
+        .join(", ");
     const branchButton = (
         <button
-            aria-label={
-                pullRequestAuthor
-                    ? `Select ${branch.name}, PR by ${pullRequestAuthor.login}, ${status.label}${isBusy ? ", busy terminal" : ""}`
-                    : undefined
-            }
+            aria-label={accessibleLabel}
             aria-selected={isSelected}
             className={cn(
                 `text-sidebar-foreground hover:bg-sidebar-accent
@@ -64,7 +73,6 @@ export function SidebarBranchItem({
                 bg-transparent px-1.5 text-left transition-colors outline-none
                 focus-visible:ring-2`,
                 isSelected && "text-sidebar-accent-foreground",
-                branch.isStale && !isSelected && "text-muted-foreground",
                 isCollapsedPreview && "py-1 opacity-85 shadow-none",
             )}
             type="button"
@@ -74,8 +82,15 @@ export function SidebarBranchItem({
                 <SidebarPrAuthorAvatar user={pullRequestAuthor} />
             ) : null}
             <span
-                className="min-w-0 flex-1 grow truncate text-[13px] leading-4
-                    tracking-tight"
+                className={cn(
+                    `min-w-0 flex-1 grow truncate text-[13px] leading-4
+                    tracking-tight transition-colors`,
+                    !branch.pullRequest &&
+                        !isSelected &&
+                        `text-sidebar-foreground/60
+                        group-focus-within/menu-sub-item:text-sidebar-accent-foreground
+                        group-hover/menu-sub-item:text-sidebar-accent-foreground`,
+                )}
             >
                 {branch.name}
             </span>
@@ -84,20 +99,46 @@ export function SidebarBranchItem({
                     text-right"
             >
                 {isBusy ? <BusyIcon className="mr-1" size="sm" /> : null}
+                {branch.hasWorktree ? (
+                    <span
+                        aria-hidden="true"
+                        className="bg-sidebar-foreground/60 mr-1.5 size-2
+                            shrink-0 rounded-full bg-cover bg-center"
+                        style={
+                            projectAvatarUri
+                                ? {
+                                      backgroundImage: `url("${projectAvatarUri}")`,
+                                  }
+                                : undefined
+                        }
+                    />
+                ) : null}
                 <StatusPill className={status.pillClassName} tone="custom">
                     {status.label}
                 </StatusPill>
                 <span
                     className={cn(
-                        `text-muted-foreground/70 pointer-events-none w-[1.5rem]
-                        shrink-0 text-right text-[10px] leading-4 tabular-nums
-                        transition-opacity duration-150
-                        group-focus-within/menu-sub-item:opacity-0
+                        `text-muted-foreground/70 pointer-events-none w-[1.275rem]
+                        shrink-0 text-right text-[10px] leading-4
+                        tracking-[-0.04em] proportional-nums transition-opacity
+                        duration-150 group-focus-within/menu-sub-item:opacity-0
                         group-hover/menu-sub-item:opacity-0`,
                         isActionPending && "opacity-0",
                     )}
                 >
-                    {formatBranchAge(branch.lastCommitTimestamp)}
+                    {branchAge.endsWith("m") ? (
+                        <>
+                            {branchAge.slice(0, -1)}
+                            <span
+                                className="-ml-[0.12em] inline-block
+                                    origin-right scale-x-75"
+                            >
+                                m
+                            </span>
+                        </>
+                    ) : (
+                        branchAge
+                    )}
                 </span>
             </span>
         </button>

@@ -6,6 +6,7 @@ import type {
     ProjectConfig,
     PullRequestLatestReview,
     PullRequestReviewState,
+    PullRequestState,
 } from "@/backend/types";
 
 type GitHubRepositoryPayload = GitHubRepositoryInfo & {
@@ -25,9 +26,11 @@ type GitHubPullRequestPayload = {
     author?: GitHubAuthorPayload | null;
     baseRefName?: string | null;
     headRefName?: string | null;
+    isDraft?: boolean | null;
     latestReviews?: (GitHubLatestReviewPayload | null)[] | null;
     number?: number | null;
     reviewRequests?: (GitHubAuthorPayload | null)[] | null;
+    state?: string | null;
     title?: string | null;
     updatedAt?: string | null;
     url?: string | null;
@@ -48,9 +51,11 @@ export type GitHubPullRequest = {
     author?: GitHubUserInfo;
     baseBranchName: string;
     branchName: string;
+    isDraft: boolean;
     latestReviews: PullRequestLatestReview[];
     number: number;
     reviewRequests: GitHubUserInfo[];
+    state: PullRequestState;
     title: string;
     updatedAt: string | null;
     url: string;
@@ -60,14 +65,18 @@ type GhCommandOptions = {
     cwd?: string;
 };
 
+type GitHubPullRequestListState = "closed" | "open";
+
 const PULL_REQUEST_JSON_FIELDS = [
     "number",
     "title",
     "headRefName",
     "baseRefName",
     "author",
+    "isDraft",
     "url",
     "updatedAt",
+    "state",
     "assignees",
     "reviewRequests",
     "latestReviews",
@@ -166,17 +175,30 @@ function normalizeLatestReviews(
     });
 }
 
+function normalizePullRequestState(
+    state: string | null | undefined,
+): PullRequestState | undefined {
+    if (state === "OPEN" || state === "CLOSED" || state === "MERGED") {
+        return state;
+    }
+
+    return undefined;
+}
+
 export function normalizeGitHubPullRequests(
     pullRequests: GitHubPullRequestPayload[],
 ) {
     return pullRequests
         .map((pullRequest): GitHubPullRequest | null => {
+            const state = normalizePullRequestState(pullRequest.state);
+
             if (
                 !pullRequest.number ||
                 !pullRequest.title ||
                 !pullRequest.url ||
                 !pullRequest.headRefName ||
-                !pullRequest.baseRefName
+                !pullRequest.baseRefName ||
+                !state
             ) {
                 return null;
             }
@@ -186,11 +208,13 @@ export function normalizeGitHubPullRequests(
                 author: normalizeAuthor(pullRequest.author),
                 baseBranchName: pullRequest.baseRefName,
                 branchName: pullRequest.headRefName,
+                isDraft: Boolean(pullRequest.isDraft),
                 latestReviews: normalizeLatestReviews(
                     pullRequest.latestReviews,
                 ),
                 number: pullRequest.number,
                 reviewRequests: normalizeAuthors(pullRequest.reviewRequests),
+                state,
                 title: pullRequest.title,
                 updatedAt: pullRequest.updatedAt ?? null,
                 url: pullRequest.url,
@@ -243,13 +267,25 @@ export async function listGitHubPullRequests(
         return undefined;
     }
 
+    const [openPullRequests, historicalPullRequests] = await Promise.all([
+        listGitHubPullRequestsByState(project, "open"),
+        listGitHubPullRequestsByState(project, "closed"),
+    ]);
+
+    return [...openPullRequests, ...historicalPullRequests];
+}
+
+async function listGitHubPullRequestsByState(
+    project: ProjectConfig,
+    state: GitHubPullRequestListState,
+) {
     const [error, output] = await tryPromise(
         ghText(
             [
                 "pr",
                 "list",
                 "--state",
-                "open",
+                state,
                 "--limit",
                 "100",
                 "--json",
@@ -261,7 +297,12 @@ export async function listGitHubPullRequests(
 
     if (error) {
         logger.warn(
-            { projectId: project.id, projectPath: project.path, error },
+            {
+                projectId: project.id,
+                projectPath: project.path,
+                pullRequestState: state,
+                error,
+            },
             "failed to list github pull requests",
         );
         return [];
@@ -273,7 +314,12 @@ export async function listGitHubPullRequests(
 
     if (parseError) {
         logger.warn(
-            { projectId: project.id, projectPath: project.path, parseError },
+            {
+                projectId: project.id,
+                projectPath: project.path,
+                pullRequestState: state,
+                parseError,
+            },
             "github pull request payload was invalid",
         );
         return [];

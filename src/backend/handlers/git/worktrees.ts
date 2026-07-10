@@ -26,6 +26,7 @@ import {
     findGitHubRepository,
     listGitHubPullRequests,
 } from "@/backend/handlers/git/github";
+import { pullRequestBranchHandler } from "@/backend/handlers/git/pull-request-branches";
 import { logger } from "@/backend/logger";
 import {
     ApiError,
@@ -54,48 +55,13 @@ export async function listBranches(
         return branches;
     }
 
-    const pullRequestBranchNames = new Set(
-        pullRequests.map((pullRequest) => pullRequest.branchName),
-    );
-    const pullRequestBranches = pullRequests.map((pullRequest) => {
-        const worktree = inventory.byBranch.get(pullRequest.branchName);
-        const lastCommitTimestamp = pullRequest.updatedAt
-            ? Date.parse(pullRequest.updatedAt)
-            : null;
-
-        return {
-            name: pullRequest.branchName,
-            remoteName: `origin/${pullRequest.branchName}`,
-            worktreePath:
-                worktree?.path ??
-                worktreePathFor(project.path, pullRequest.branchName),
-            hasWorktree: Boolean(worktree),
-            lastCommitTimestamp: Number.isFinite(lastCommitTimestamp)
-                ? lastCommitTimestamp
-                : null,
-            isStale: false,
-            source: "pull-request" as const,
-            compareBranchName: pullRequest.baseBranchName,
-            repository,
-            pullRequest: {
-                assignees: pullRequest.assignees,
-                author: pullRequest.author,
-                baseBranchName: pullRequest.baseBranchName,
-                latestReviews: pullRequest.latestReviews,
-                number: pullRequest.number,
-                reviewRequests: pullRequest.reviewRequests,
-                title: pullRequest.title,
-                url: pullRequest.url,
-            },
-        };
+    return pullRequestBranchHandler.mergeWithBranches({
+        branches,
+        inventory,
+        project,
+        pullRequests,
+        repository,
     });
-
-    return [
-        ...pullRequestBranches,
-        ...branches.filter(
-            (branch) => !pullRequestBranchNames.has(branch.name),
-        ),
-    ];
 }
 
 async function listRemoteBranches(

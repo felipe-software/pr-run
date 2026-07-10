@@ -6,6 +6,7 @@ import {
     TooltipTrigger,
 } from "@/lib/components/ui/tooltip";
 import { getSidebarPullRequestPeople } from "@/lib/components/templates/sidebar/sidebar-pr-people";
+import { getPullRequestSidebarStatus } from "@/lib/components/templates/sidebar/sidebar-item-status";
 import { cn } from "@/lib/utils/cn";
 import type { GitHubUserInfo, PullRequestInfo } from "@/types/pr-run";
 
@@ -24,6 +25,7 @@ export function SidebarPrPeopleTooltip({
     pullRequest,
 }: SidebarPrPeopleTooltipProps) {
     const relatedPeople = getSidebarPullRequestPeople(pullRequest);
+    const status = getPullRequestSidebarStatus(pullRequest);
 
     return (
         <Tooltip>
@@ -39,7 +41,7 @@ export function SidebarPrPeopleTooltip({
                         className="text-muted-foreground text-[10px]
                             font-medium"
                     >
-                        PR #{pullRequest.number}
+                        PR #{pullRequest.number} · {status.label}
                     </div>
                     <div
                         className="mt-0.5 line-clamp-2 text-xs leading-4
