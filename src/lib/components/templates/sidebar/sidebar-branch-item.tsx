@@ -52,6 +52,21 @@ export function SidebarBranchItem({
                 isSelected && "bg-sidebar-accent",
             )}
         >
+            <svg
+                aria-hidden="true"
+                className="text-sidebar-border/80 pointer-events-none absolute
+                    top-0 -left-1 z-10 h-[15px] w-2.5 overflow-visible"
+                fill="none"
+                viewBox="0 0 10 15"
+            >
+                <path
+                    d="M0.5 5.5C0.5 10.5 3.5 14.5 9.5 14.5"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeWidth="1"
+                    vectorEffect="non-scaling-stroke"
+                />
+            </svg>
             <button
                 aria-selected={isSelected}
                 className={cn(

@@ -106,6 +106,11 @@ export function SidebarProjectItem({
             );
     }, [branchesQuery, isAwaitingSshPassphrase]);
     const isActionVisible = isUpdatingProject;
+    const displayedBranches = isExpanded
+        ? visibleBranches
+        : visibleBranches.filter((branch) =>
+              busyOwnerKeys.has(getWorktreeOwnerKey(project.id, branch.name)),
+          );
 
     return (
         <div className="group/menu-item relative">
@@ -230,8 +235,8 @@ export function SidebarProjectItem({
             {isExpanded || isBusy ? (
                 <div
                     className={cn(
-                        `border-sidebar-border/80 relative mt-0.5 ml-2 flex
-                            min-w-0 flex-col gap-0.5 border-l py-0.5 pl-1`,
+                        `relative mt-0.5 ml-2 flex min-w-0 flex-col gap-0.5
+                            py-0.5 pl-1`,
                         !isExpanded && "opacity-90",
                     )}
                 >
@@ -280,45 +285,59 @@ export function SidebarProjectItem({
                         </div>
                     ) : null}
 
-                    {(isExpanded
-                        ? visibleBranches
-                        : visibleBranches.filter((branch) =>
-                              busyOwnerKeys.has(
-                                  getWorktreeOwnerKey(project.id, branch.name),
-                              ),
-                          )
-                    ).map((branch) => {
-                        const isBranchBusy = busyOwnerKeys.has(
-                            getWorktreeOwnerKey(project.id, branch.name),
-                        );
+                    {displayedBranches.length > 0 ? (
+                        <div
+                            className="before:bg-sidebar-border/80 relative flex
+                                min-w-0 flex-col gap-0.5 before:absolute
+                                before:top-[-0.25rem] before:bottom-[22.5px]
+                                before:-left-1 before:w-px before:rounded-full
+                                before:content-['']"
+                        >
+                            {displayedBranches.map((branch) => {
+                                const isBranchBusy = busyOwnerKeys.has(
+                                    getWorktreeOwnerKey(
+                                        project.id,
+                                        branch.name,
+                                    ),
+                                );
 
-                        return (
-                            <SidebarBranchItem
-                                branch={branch}
-                                isBusy={isBranchBusy}
-                                isCollapsedPreview={!isExpanded}
-                                isCheckingOutWorktree={
-                                    pendingWorktreeCheckoutKey ===
-                                    `${project.id}:${branch.name}`
-                                }
-                                isRemovingWorktree={
-                                    pendingWorktreeRemovalKey ===
-                                    `${project.id}:${branch.name}`
-                                }
-                                isSelected={selectedBranchName === branch.name}
-                                key={branch.remoteName}
-                                onCheckoutBranch={(branchName) =>
-                                    onCheckoutBranch(project.id, branchName)
-                                }
-                                onRemoveWorktree={(branchName) =>
-                                    onRemoveWorktree(project.id, branchName)
-                                }
-                                onSelectBranch={() =>
-                                    onSelectBranch(project, branch)
-                                }
-                            />
-                        );
-                    })}
+                                return (
+                                    <SidebarBranchItem
+                                        branch={branch}
+                                        isBusy={isBranchBusy}
+                                        isCollapsedPreview={!isExpanded}
+                                        isCheckingOutWorktree={
+                                            pendingWorktreeCheckoutKey ===
+                                            `${project.id}:${branch.name}`
+                                        }
+                                        isRemovingWorktree={
+                                            pendingWorktreeRemovalKey ===
+                                            `${project.id}:${branch.name}`
+                                        }
+                                        isSelected={
+                                            selectedBranchName === branch.name
+                                        }
+                                        key={branch.remoteName}
+                                        onCheckoutBranch={(branchName) =>
+                                            onCheckoutBranch(
+                                                project.id,
+                                                branchName,
+                                            )
+                                        }
+                                        onRemoveWorktree={(branchName) =>
+                                            onRemoveWorktree(
+                                                project.id,
+                                                branchName,
+                                            )
+                                        }
+                                        onSelectBranch={() =>
+                                            onSelectBranch(project, branch)
+                                        }
+                                    />
+                                );
+                            })}
+                        </div>
+                    ) : null}
 
                     {isExpanded &&
                     !areAllRecentBranchesVisible &&
