@@ -1,4 +1,4 @@
-import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
+import { FolderPlus, RefreshCw, Trash2, TreeDeciduous } from "lucide-react";
 import { useState } from "react";
 
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
@@ -14,6 +14,11 @@ import {
 import { StatusPill } from "@/lib/components/atoms/status-pill";
 import { formatBranchAge } from "@/lib/format";
 import {
+    Tooltip,
+    TooltipPopup,
+    TooltipTrigger,
+} from "@/lib/components/ui/tooltip";
+import {
     SidebarPrAuthorAvatar,
     SidebarPrPeopleTooltip,
 } from "@/lib/components/templates/sidebar/sidebar-pr-people-tooltip";
@@ -28,7 +33,6 @@ type SidebarBranchItemProps = {
     isCheckingOutWorktree: boolean;
     isRemovingWorktree: boolean;
     isSelected: boolean;
-    projectAvatarUri?: string;
     onCheckoutBranch: (branchName: string) => Promise<void>;
     onRemoveWorktree: (branchName: string) => Promise<void>;
     onSelectBranch: (branchName: string) => void;
@@ -41,7 +45,6 @@ export function SidebarBranchItem({
     isCheckingOutWorktree,
     isRemovingWorktree,
     isSelected,
-    projectAvatarUri,
     onCheckoutBranch,
     onRemoveWorktree,
     onSelectBranch,
@@ -100,26 +103,44 @@ export function SidebarBranchItem({
             >
                 {isBusy ? <BusyIcon className="mr-1" size="sm" /> : null}
                 {branch.hasWorktree ? (
-                    <span
-                        aria-hidden="true"
-                        className="bg-sidebar-foreground/60 mr-1.5 size-2
-                            shrink-0 rounded-full bg-cover bg-center"
-                        style={
-                            projectAvatarUri
-                                ? {
-                                      backgroundImage: `url("${projectAvatarUri}")`,
-                                  }
-                                : undefined
+                    <Tooltip>
+                        <TooltipTrigger
+                            delay={100}
+                            render={
+                                <span
+                                    aria-hidden="true"
+                                    className="bg-success text-background mr-1.5
+                                        grid size-4 shrink-0 place-items-center
+                                        rounded-[4px]"
+                                >
+                                    <TreeDeciduous
+                                        className="size-3 fill-current/25"
+                                        strokeWidth={2.75}
+                                    />
+                                </span>
+                            }
+                        />
+                        <TooltipPopup>Git worktree is ready.</TooltipPopup>
+                    </Tooltip>
+                ) : null}
+                <Tooltip>
+                    <TooltipTrigger
+                        delay={100}
+                        render={
+                            <StatusPill
+                                className={status.pillClassName}
+                                tone="custom"
+                            >
+                                {status.label}
+                            </StatusPill>
                         }
                     />
-                ) : null}
-                <StatusPill className={status.pillClassName} tone="custom">
-                    {status.label}
-                </StatusPill>
+                    <TooltipPopup>{status.description}</TooltipPopup>
+                </Tooltip>
                 <span
                     className={cn(
-                        `text-muted-foreground/70 pointer-events-none w-[1.275rem]
-                        shrink-0 text-right text-[10px] leading-4
+                        `text-muted-foreground/70 pointer-events-none
+                        w-[1.275rem] shrink-0 text-right text-[10px] leading-4
                         tracking-[-0.04em] proportional-nums transition-opacity
                         duration-150 group-focus-within/menu-sub-item:opacity-0
                         group-hover/menu-sub-item:opacity-0`,

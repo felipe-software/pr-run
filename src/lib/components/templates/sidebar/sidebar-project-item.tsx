@@ -318,7 +318,6 @@ export function SidebarProjectItem({
                                             selectedBranchName === branch.name
                                         }
                                         key={branch.remoteName}
-                                        projectAvatarUri={projectAvatarUri}
                                         onCheckoutBranch={(branchName) =>
                                             onCheckoutBranch(
                                                 project.id,

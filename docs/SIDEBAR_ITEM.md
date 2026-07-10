@@ -58,9 +58,10 @@ The leading position answers who is responsible for a pull request:
 - Busy terminal state is shown beside the status pill instead of being attached
   to the identity area.
 
-Worktree presence is separate from the status pill. A small circle immediately
-before the status pill uses the owning project's generated gradient. The marker
-is visual-only; the row's accessible label includes the worktree state.
+Worktree presence is separate from the status pill. A compact green square with
+a filled tree icon appears immediately before the status pill. The marker is
+visual-only; the row's accessible label includes the worktree state.
+Hovering the marker or status pill shows its meaning after a short delay.
 
 The connector lands on the first meaningful content in each row: the author
 avatar for a pull request, or the branch name for every other branch.
