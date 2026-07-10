@@ -21,6 +21,10 @@ import {
     type ScriptSourceResult,
     type ScriptTerminalCommandResult,
 } from "@/backend/types";
+import {
+    getPackageScriptCatalog,
+    preparePackageScriptTerminalCommand,
+} from "@/backend/handlers/scripts/package-scripts";
 
 const SCRIPT_RUNTIME_FILE_NAME = "_runtime.ts";
 const SCRIPT_RUN_PAYLOAD_PREFIX = "_run-";
@@ -572,9 +576,11 @@ export const scriptsHandler = {
     createScript,
     deleteScript,
     getScriptSource,
+    getPackageScriptCatalog,
     listScripts,
     openScript,
     prepareTerminalCommand,
+    preparePackageScriptTerminalCommand,
     runScript,
     streamScript,
     updateScriptSource,

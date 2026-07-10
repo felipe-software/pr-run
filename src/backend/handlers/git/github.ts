@@ -54,7 +54,7 @@ function ghEnvironment() {
     };
 }
 
-async function ghText(args: string[], options: GhCommandOptions = {}) {
+export async function ghText(args: string[], options: GhCommandOptions = {}) {
     logger.debug({ args, cwd: options.cwd }, "gh text");
 
     const process = Bun.spawn(["gh", ...args], {
@@ -76,21 +76,23 @@ async function ghText(args: string[], options: GhCommandOptions = {}) {
     return stdout;
 }
 
-async function parseJson<T>(value: string): Promise<T> {
+export async function parseJson<T>(value: string): Promise<T> {
     return JSON.parse(value) as T;
 }
 
-function normalizeAuthor(
+export function normalizeAuthor(
     author: GitHubAuthorPayload | null | undefined,
 ): GitHubUserInfo | undefined {
-    if (!author?.login || !author.url || !author.avatarUrl) {
+    if (!author?.login) {
         return undefined;
     }
 
     return {
-        avatarUrl: author.avatarUrl,
+        avatarUrl:
+            author.avatarUrl ??
+            `https://github.com/${encodeURIComponent(author.login)}.png?size=64`,
         login: author.login,
-        url: author.url,
+        url: author.url ?? `https://github.com/${author.login}`,
     };
 }
 

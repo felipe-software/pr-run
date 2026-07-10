@@ -17,6 +17,21 @@ export const prRunQueryKeys = {
             baseBranchName,
             "commits",
         ] as const,
+    activity: (
+        projectId: string,
+        branchName: string,
+        baseBranchName: string,
+        pullRequestNumber?: number,
+    ) =>
+        [
+            ...prRunQueryKeys.project(projectId),
+            "branch",
+            branchName,
+            "base",
+            baseBranchName,
+            "activity",
+            pullRequestNumber ?? "branch",
+        ] as const,
     diff: (projectId: string, branchName: string, baseBranchName: string) =>
         [
             ...prRunQueryKeys.project(projectId),
@@ -39,5 +54,12 @@ export const prRunQueryKeys = {
             "branch",
             branchName,
             "env",
+        ] as const,
+    packageScripts: (projectId: string, branchName: string) =>
+        [
+            ...prRunQueryKeys.project(projectId),
+            "branch",
+            branchName,
+            "package-scripts",
         ] as const,
 };

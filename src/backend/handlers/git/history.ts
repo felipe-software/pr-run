@@ -111,7 +111,8 @@ export async function getCommitHistory(
                 remoteName,
                 "-n",
                 "30",
-                "--pretty=format:%H%x1f%h%x1f%s%x1f%an%x1f%ae%x1f%cI",
+                "--numstat",
+                "--format=%x1e%H%x1f%h%x1f%s%x1f%an%x1f%ae%x1f%cI",
             ]);
         })(),
     );
@@ -129,25 +130,64 @@ export async function getCommitHistory(
         );
     }
 
-    const commits = output
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => {
-            const [hash, shortHash, subject, authorName, authorEmail, date] =
-                line.split("\x1f");
-
-            return {
-                hash,
-                shortHash,
-                subject,
-                authorName,
-                authorEmail,
-                date,
-                isInSelectedBranch:
-                    branchOnlyCommitHashes?.has(hash) ??
-                    marksAllCommitsAsSelectedBranch,
-            };
-        });
+    const commits = parseCommitHistory(output).map((commit) => ({
+        ...commit,
+        isInSelectedBranch:
+            branchOnlyCommitHashes?.has(commit.hash) ??
+            marksAllCommitsAsSelectedBranch,
+    }));
 
     return await enrichCommitsWithGitHub(project, commits);
+}
+
+export function parseCommitHistory(output: string): CommitInfo[] {
+    return output
+        .split("\x1e")
+        .map((record) => record.trim())
+        .filter(Boolean)
+        .map((record) => {
+            const [metadata = "", ...statLines] = record.split("\n");
+            const [hash, shortHash, subject, authorName, authorEmail, date] =
+                metadata.split("\x1f");
+            let additions = 0;
+            let deletions = 0;
+            let hasBinaryChanges = false;
+            let hasTextChanges = false;
+
+            for (const line of statLines) {
+                const [additionValue, deletionValue] = line.split("\t");
+
+                if (additionValue === "-" || deletionValue === "-") {
+                    hasBinaryChanges = true;
+                    continue;
+                }
+
+                const additionCount = Number(additionValue);
+                const deletionCount = Number(deletionValue);
+
+                if (
+                    !Number.isFinite(additionCount) ||
+                    !Number.isFinite(deletionCount)
+                ) {
+                    continue;
+                }
+
+                additions += additionCount;
+                deletions += deletionCount;
+                hasTextChanges = true;
+            }
+
+            return {
+                additions: hasTextChanges ? additions : undefined,
+                authorEmail,
+                authorName,
+                date,
+                deletions: hasTextChanges ? deletions : undefined,
+                hasBinaryChanges,
+                hash,
+                isInSelectedBranch: false,
+                shortHash,
+                subject,
+            };
+        });
 }
