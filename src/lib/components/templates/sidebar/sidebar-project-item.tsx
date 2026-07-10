@@ -236,7 +236,7 @@ export function SidebarProjectItem({
                 <div
                     className={cn(
                         `relative mt-0.5 ml-2 flex min-w-0 flex-col gap-0.5
-                            py-0.5 pl-1`,
+                            py-0.5 pl-4`,
                         !isExpanded && "opacity-90",
                     )}
                 >
@@ -290,7 +290,7 @@ export function SidebarProjectItem({
                             className="before:bg-sidebar-border/80 relative flex
                                 min-w-0 flex-col gap-0.5 before:absolute
                                 before:top-[-0.25rem] before:bottom-[22.5px]
-                                before:-left-1 before:w-px before:rounded-full
+                                before:-left-4 before:w-px before:rounded-full
                                 before:content-['']"
                         >
                             {displayedBranches.map((branch) => {

@@ -78,11 +78,14 @@ export async function listBranches(
             compareBranchName: pullRequest.baseBranchName,
             repository,
             pullRequest: {
+                assignees: pullRequest.assignees,
+                author: pullRequest.author,
+                baseBranchName: pullRequest.baseBranchName,
+                latestReviews: pullRequest.latestReviews,
                 number: pullRequest.number,
+                reviewRequests: pullRequest.reviewRequests,
                 title: pullRequest.title,
                 url: pullRequest.url,
-                baseBranchName: pullRequest.baseBranchName,
-                author: pullRequest.author,
             },
         };
     });

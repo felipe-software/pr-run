@@ -40,11 +40,19 @@ export type GitHubUserInfo = {
 };
 
 export type PullRequestInfo = {
+    assignees: GitHubUserInfo[];
+    author?: GitHubUserInfo;
+    baseBranchName: string;
+    latestReviews: PullRequestLatestReview[];
     number: number;
+    reviewRequests: GitHubUserInfo[];
     title: string;
     url: string;
-    baseBranchName: string;
-    author?: GitHubUserInfo;
+};
+
+export type PullRequestLatestReview = {
+    author: GitHubUserInfo;
+    state: PullRequestReviewState;
 };
 
 export type BranchDiffFile = {

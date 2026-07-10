@@ -5,9 +5,12 @@ Sidebar branch items are split into small components under
 
 - `sidebar-branch-item.tsx` renders the clickable row, branch name, status pill,
   last commit age, and worktree removal action.
-- `sidebar-item-icon.tsx` renders the branch or pull request icon.
+- `sidebar-pr-people-tooltip.tsx` renders a PR author's avatar and the compact
+  review-workflow tooltip.
+- `sidebar-pr-people.ts` merges requested reviewers, latest reviewers, and
+  assignees into the tooltip's related-people list.
 - `sidebar-item-status.ts` classifies each branch item and stores the sidebar
-  label, icon color classes, and pill color classes in one place.
+  label and pill color classes in one place.
 - `sidebar-project-item.tsx` groups branch items by project and decides which
   stale items are visible.
 
@@ -42,15 +45,26 @@ Sidebar branch items are split into small components under
 The priority order matters. For example, a pull request that is stale is shown
 as `Stale`, and a stale branch with a worktree is shown as `Stale Worktree`.
 
+## Identity and State
+
+The leading position answers who is responsible for a pull request:
+
+- Pull request rows show the PR author's GitHub avatar.
+- Hovering or focusing a PR row shows requested reviewers, latest review
+  states, and assignees.
+- Plain branch and worktree rows do not reserve an identity slot because Git
+  does not provide a truthful branch owner.
+- Busy terminal state is shown beside the status pill instead of being attached
+  to the identity area.
+
+The connector lands on the first meaningful content in each row: the author
+avatar for a pull request, or the branch name for every other branch.
+
 ## Color Source
 
 Sidebar item colors should be changed only in `sidebar-item-status.ts`.
 
-Both `SidebarBranchItem` and `SidebarItemIcon` consume the same status config:
-
 - `pillClassName` controls the status pill color.
-- `iconClassName` controls the icon background and icon color.
 
-This keeps the icon and status pill visually aligned for combined states such as
-`Stale Worktree`. Sidebar pills use the `custom` `StatusPill` tone so the
-sidebar status config fully owns the background, border, and text colors.
+Sidebar pills use the `custom` `StatusPill` tone so the sidebar status config
+fully owns the background, border, and text colors.

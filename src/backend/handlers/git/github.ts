@@ -4,6 +4,8 @@ import type {
     GitHubRepositoryInfo,
     GitHubUserInfo,
     ProjectConfig,
+    PullRequestLatestReview,
+    PullRequestReviewState,
 } from "@/backend/types";
 
 type GitHubRepositoryPayload = GitHubRepositoryInfo & {
@@ -19,13 +21,21 @@ type GitHubAuthorPayload = {
 };
 
 type GitHubPullRequestPayload = {
+    assignees?: (GitHubAuthorPayload | null)[] | null;
     author?: GitHubAuthorPayload | null;
     baseRefName?: string | null;
     headRefName?: string | null;
+    latestReviews?: (GitHubLatestReviewPayload | null)[] | null;
     number?: number | null;
+    reviewRequests?: (GitHubAuthorPayload | null)[] | null;
     title?: string | null;
     updatedAt?: string | null;
     url?: string | null;
+};
+
+type GitHubLatestReviewPayload = {
+    author?: GitHubAuthorPayload | null;
+    state?: string | null;
 };
 
 type GitHubCommitPayload = {
@@ -34,10 +44,13 @@ type GitHubCommitPayload = {
 };
 
 export type GitHubPullRequest = {
+    assignees: GitHubUserInfo[];
     author?: GitHubUserInfo;
     baseBranchName: string;
     branchName: string;
+    latestReviews: PullRequestLatestReview[];
     number: number;
+    reviewRequests: GitHubUserInfo[];
     title: string;
     updatedAt: string | null;
     url: string;
@@ -46,6 +59,19 @@ export type GitHubPullRequest = {
 type GhCommandOptions = {
     cwd?: string;
 };
+
+const PULL_REQUEST_JSON_FIELDS = [
+    "number",
+    "title",
+    "headRefName",
+    "baseRefName",
+    "author",
+    "url",
+    "updatedAt",
+    "assignees",
+    "reviewRequests",
+    "latestReviews",
+].join(",");
 
 function ghEnvironment() {
     return {
@@ -94,6 +120,83 @@ export function normalizeAuthor(
         login: author.login,
         url: author.url ?? `https://github.com/${author.login}`,
     };
+}
+
+function normalizeAuthors(
+    authors: (GitHubAuthorPayload | null)[] | null | undefined,
+) {
+    return (authors ?? []).flatMap((author) => {
+        const normalizedAuthor = normalizeAuthor(author);
+        return normalizedAuthor ? [normalizedAuthor] : [];
+    });
+}
+
+function normalizeLatestReviewState(
+    state: string | null | undefined,
+): PullRequestReviewState {
+    if (
+        state === "APPROVED" ||
+        state === "CHANGES_REQUESTED" ||
+        state === "COMMENTED" ||
+        state === "DISMISSED" ||
+        state === "PENDING"
+    ) {
+        return state;
+    }
+
+    return "COMMENTED";
+}
+
+function normalizeLatestReviews(
+    reviews: (GitHubLatestReviewPayload | null)[] | null | undefined,
+) {
+    return (reviews ?? []).flatMap((review) => {
+        const author = normalizeAuthor(review?.author);
+
+        if (!author) {
+            return [];
+        }
+
+        return [
+            {
+                author,
+                state: normalizeLatestReviewState(review?.state),
+            },
+        ];
+    });
+}
+
+export function normalizeGitHubPullRequests(
+    pullRequests: GitHubPullRequestPayload[],
+) {
+    return pullRequests
+        .map((pullRequest): GitHubPullRequest | null => {
+            if (
+                !pullRequest.number ||
+                !pullRequest.title ||
+                !pullRequest.url ||
+                !pullRequest.headRefName ||
+                !pullRequest.baseRefName
+            ) {
+                return null;
+            }
+
+            return {
+                assignees: normalizeAuthors(pullRequest.assignees),
+                author: normalizeAuthor(pullRequest.author),
+                baseBranchName: pullRequest.baseRefName,
+                branchName: pullRequest.headRefName,
+                latestReviews: normalizeLatestReviews(
+                    pullRequest.latestReviews,
+                ),
+                number: pullRequest.number,
+                reviewRequests: normalizeAuthors(pullRequest.reviewRequests),
+                title: pullRequest.title,
+                updatedAt: pullRequest.updatedAt ?? null,
+                url: pullRequest.url,
+            };
+        })
+        .filter((item): item is GitHubPullRequest => Boolean(item));
 }
 
 export async function findGitHubRepository(project: ProjectConfig) {
@@ -150,7 +253,7 @@ export async function listGitHubPullRequests(
                 "--limit",
                 "100",
                 "--json",
-                "number,title,headRefName,baseRefName,author,url,updatedAt",
+                PULL_REQUEST_JSON_FIELDS,
             ],
             { cwd: project.path },
         ),
@@ -176,29 +279,7 @@ export async function listGitHubPullRequests(
         return [];
     }
 
-    return pullRequests
-        .map((pullRequest): GitHubPullRequest | null => {
-            if (
-                !pullRequest.number ||
-                !pullRequest.title ||
-                !pullRequest.url ||
-                !pullRequest.headRefName ||
-                !pullRequest.baseRefName
-            ) {
-                return null;
-            }
-
-            return {
-                author: normalizeAuthor(pullRequest.author),
-                baseBranchName: pullRequest.baseRefName,
-                branchName: pullRequest.headRefName,
-                number: pullRequest.number,
-                title: pullRequest.title,
-                updatedAt: pullRequest.updatedAt ?? null,
-                url: pullRequest.url,
-            };
-        })
-        .filter((item): item is GitHubPullRequest => Boolean(item));
+    return normalizeGitHubPullRequests(pullRequests);
 }
 
 export async function getGitHubCommit(
