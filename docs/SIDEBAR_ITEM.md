@@ -9,6 +9,8 @@ Sidebar branch items are split into small components under
   review-workflow tooltip.
 - `sidebar-pr-people.ts` merges requested reviewers, latest reviewers, and
   assignees into the tooltip's related-people list.
+- `src/lib/components/atoms/worktree-indicator.tsx` provides the shared
+  icon-only and labeled Git worktree indicator used across the application.
 - `sidebar-item-status.ts` classifies each branch item and stores the sidebar
   label and pill color classes in one place.
 - `sidebar-project-item.tsx` groups branch items by project and decides which

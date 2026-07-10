@@ -1,6 +1,7 @@
 import { GitBranch, GitPullRequest, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { WorktreeIndicator } from "@/lib/components/atoms/worktree-indicator";
 import type { AppStatusSummary } from "@/lib/components/templates/pr-run-app/use-app-status-summary";
 import { ScrollArea } from "@/lib/components/ui/scroll-area";
 import {
@@ -59,11 +60,7 @@ export function StatusBar({ summary, onOpenBusyTerminals }: StatusBarProps) {
                     value={summary.openPullRequestCount}
                 />
                 <StatusBarItem
-                    icon={
-                        <StatusBarIcon className="text-muted-foreground">
-                            <GitBranch className="h-3.5 w-3.5" />
-                        </StatusBarIcon>
-                    }
+                    icon={<WorktreeIndicator aria-hidden="true" />}
                     label="worktrees"
                     value={summary.worktreeCount}
                 />
@@ -94,8 +91,10 @@ function StatusBarItem({ icon, label, onClick, value }: StatusBarItemProps) {
     const content = (
         <>
             {icon}
-            <span className="tabular-nums">{value}</span>
-            <span>{label}</span>
+            <span className="inline-flex items-center gap-0.5">
+                <span className="tabular-nums">{value}</span>
+                <span>{label}</span>
+            </span>
         </>
     );
 
@@ -148,7 +147,7 @@ function StatusBarIcon({
     return (
         <span
             className={cn(
-                "grid h-4 w-4 flex-none place-items-center",
+                "inline-flex h-4 w-4 flex-none items-center justify-center",
                 className,
             )}
         >

@@ -1,11 +1,7 @@
-import {
-    ArrowDownRight,
-    ArrowUpRight,
-    FolderTree,
-    GitPullRequest,
-} from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, GitPullRequest } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { WorktreeIndicator } from "@/lib/components/atoms/worktree-indicator";
 import type { OverviewTotals } from "@/types/overview";
 
 type OverviewMetricsProps = {
@@ -27,7 +23,7 @@ export function OverviewMetrics({ totals }: OverviewMetricsProps) {
                 value={totals.openPullRequests}
             />
             <Metric
-                icon={<FolderTree className="size-4" />}
+                icon={<WorktreeIndicator aria-hidden="true" />}
                 label="Worktrees"
                 value={totals.worktrees}
             />

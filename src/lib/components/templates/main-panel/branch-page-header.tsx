@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { StatusPill } from "@/lib/components/atoms/status-pill";
+import { WorktreeIndicator } from "@/lib/components/atoms/worktree-indicator";
 import { Alert } from "@/lib/components/ui/alert";
 import { Button } from "@/lib/components/ui/button";
 import { toast } from "@/lib/components/ui/toast";
@@ -114,13 +115,11 @@ export function BranchPageHeader({
                                 {pullRequest.author.login}
                             </a>
                         ) : null}
-                        <StatusPill
-                            tone={branch.hasWorktree ? "worktree" : "idle"}
-                        >
-                            {branch.hasWorktree
-                                ? "Worktree ready"
-                                : "No worktree"}
-                        </StatusPill>
+                        {branch.hasWorktree ? (
+                            <WorktreeIndicator variant="label" />
+                        ) : (
+                            <StatusPill tone="idle">No worktree</StatusPill>
+                        )}
                         <span
                             className="bg-muted/45 inline-flex min-w-0
                                 items-center gap-1 rounded-md px-1.5 py-0.5

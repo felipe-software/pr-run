@@ -1,7 +1,8 @@
-import { FolderPlus, RefreshCw, Trash2, TreeDeciduous } from "lucide-react";
+import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
+import { WorktreeIndicator } from "@/lib/components/atoms/worktree-indicator";
 import { Button } from "@/lib/components/ui/button";
 import {
     Dialog,
@@ -107,17 +108,10 @@ export function SidebarBranchItem({
                         <TooltipTrigger
                             delay={100}
                             render={
-                                <span
+                                <WorktreeIndicator
                                     aria-hidden="true"
-                                    className="bg-success text-background mr-1.5
-                                        grid size-4 shrink-0 place-items-center
-                                        rounded-[4px]"
-                                >
-                                    <TreeDeciduous
-                                        className="size-3 fill-current/25"
-                                        strokeWidth={2.75}
-                                    />
-                                </span>
+                                    className="mr-1.5"
+                                />
                             }
                         />
                         <TooltipPopup>Git worktree is ready.</TooltipPopup>
