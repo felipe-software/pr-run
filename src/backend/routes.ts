@@ -85,6 +85,25 @@ export function registerRoutes(app: Elysia) {
                 await projectConfigHandler.readConfig(),
             ]),
         )
+        .get("/overview", async ({ query }) => {
+            const projectId = query.projectId
+                ? String(query.projectId)
+                : undefined;
+            const config = await projectConfigHandler.readConfig();
+            const projects = config.groups.flatMap((group) => group.projects);
+            const selectedProjects = projectId
+                ? [await projectConfigHandler.findProject(projectId)]
+                : projects;
+
+            return success("Overview loaded.", [
+                await gitHandler.getOverviewSnapshot(
+                    selectedProjects,
+                    projectId
+                        ? { projectId, type: "project" }
+                        : { type: "all" },
+                ),
+            ]);
+        })
         .get("/scripts", async () =>
             success("Scripts loaded.", await scriptsHandler.listScripts()),
         )
@@ -256,6 +275,179 @@ export function registerRoutes(app: Elysia) {
                 await gitHandler.getCommitHistory(project, branch, baseBranch),
             );
         })
+        .get("/projects/:projectId/activity", async ({ params, query }) => {
+            const branch = String(query.branch ?? "");
+            const baseBranch = query.baseBranch
+                ? String(query.baseBranch)
+                : undefined;
+            const pullRequestNumber = query.pullRequestNumber
+                ? Number(query.pullRequestNumber)
+                : undefined;
+
+            if (!branch) {
+                throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
+            }
+
+            if (
+                pullRequestNumber !== undefined &&
+                !Number.isSafeInteger(pullRequestNumber)
+            ) {
+                throw new ApiError(
+                    "BAD_REQUEST",
+                    "Enter a valid pull request number.",
+                    400,
+                );
+            }
+
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            return success("Worktree activity loaded.", [
+                await gitHandler.getWorktreeActivity(
+                    project,
+                    branch,
+                    baseBranch,
+                    pullRequestNumber,
+                ),
+            ]);
+        })
+        .post(
+            "/projects/:projectId/pull-requests/:pullRequestNumber/comments",
+            async ({ params, body }) => {
+                const payload = body as { body?: string };
+                const pullRequestNumber = parsePullRequestNumber(
+                    params.pullRequestNumber,
+                );
+
+                if (!payload.body?.trim()) {
+                    throw new ApiError("BAD_REQUEST", "Enter a comment.", 400);
+                }
+
+                const project = await projectConfigHandler.findProject(
+                    params.projectId,
+                );
+                return success("Comment added.", [
+                    await gitHandler.addGeneralComment(
+                        project,
+                        pullRequestNumber,
+                        payload.body.trim(),
+                    ),
+                ]);
+            },
+        )
+        .post(
+            "/projects/:projectId/pull-requests/:pullRequestNumber/review-comments",
+            async ({ params, body }) => {
+                const payload = body as {
+                    body?: string;
+                    line?: number;
+                    mode?: string;
+                    path?: string;
+                    side?: string;
+                    startLine?: number;
+                    startSide?: string;
+                };
+                const pullRequestNumber = parsePullRequestNumber(
+                    params.pullRequestNumber,
+                );
+
+                if (
+                    !payload.body?.trim() ||
+                    !payload.path?.trim() ||
+                    !Number.isSafeInteger(payload.line) ||
+                    Number(payload.line) < 1 ||
+                    (payload.mode !== "immediate" &&
+                        payload.mode !== "pending") ||
+                    (payload.side !== "LEFT" && payload.side !== "RIGHT") ||
+                    (payload.startSide !== undefined &&
+                        payload.startSide !== "LEFT" &&
+                        payload.startSide !== "RIGHT")
+                ) {
+                    throw new ApiError(
+                        "BAD_REQUEST",
+                        "Enter a valid review comment and line range.",
+                        400,
+                    );
+                }
+
+                const project = await projectConfigHandler.findProject(
+                    params.projectId,
+                );
+                return success("Review comment added.", [
+                    await gitHandler.addReviewComment(
+                        project,
+                        pullRequestNumber,
+                        {
+                            body: payload.body.trim(),
+                            line: Number(payload.line),
+                            mode: payload.mode,
+                            path: payload.path.trim(),
+                            side: payload.side,
+                            startLine: payload.startLine,
+                            startSide: payload.startSide,
+                        },
+                    ),
+                ]);
+            },
+        )
+        .post(
+            "/projects/:projectId/pull-requests/:pullRequestNumber/reviews/submit",
+            async ({ params, body }) => {
+                const payload = body as { body?: string; event?: string };
+                const pullRequestNumber = parsePullRequestNumber(
+                    params.pullRequestNumber,
+                );
+
+                if (
+                    payload.event !== "APPROVE" &&
+                    payload.event !== "COMMENT" &&
+                    payload.event !== "REQUEST_CHANGES"
+                ) {
+                    throw new ApiError(
+                        "BAD_REQUEST",
+                        "Enter a valid review outcome.",
+                        400,
+                    );
+                }
+
+                if (
+                    payload.event === "REQUEST_CHANGES" &&
+                    !payload.body?.trim()
+                ) {
+                    throw new ApiError(
+                        "BAD_REQUEST",
+                        "Explain the requested changes.",
+                        400,
+                    );
+                }
+
+                const project = await projectConfigHandler.findProject(
+                    params.projectId,
+                );
+                return success("Review submitted.", [
+                    await gitHandler.submitReview(
+                        project,
+                        pullRequestNumber,
+                        payload.event,
+                        payload.body,
+                    ),
+                ]);
+            },
+        )
+        .delete(
+            "/projects/:projectId/pull-requests/:pullRequestNumber/reviews/pending",
+            async ({ params }) => {
+                const project = await projectConfigHandler.findProject(
+                    params.projectId,
+                );
+                return success("Pending review discarded.", [
+                    await gitHandler.discardPendingReview(
+                        project,
+                        parsePullRequestNumber(params.pullRequestNumber),
+                    ),
+                ]);
+            },
+        )
         .get("/projects/:projectId/diff", async ({ params, query }) => {
             const branch = String(query.branch ?? "");
             const baseBranch = query.baseBranch
@@ -273,6 +465,26 @@ export function registerRoutes(app: Elysia) {
                 await gitHandler.getBranchDiff(project, branch, baseBranch),
             ]);
         })
+        .get(
+            "/projects/:projectId/package-scripts",
+            async ({ params, query }) => {
+                const branch = String(query.branch ?? "");
+
+                if (!branch) {
+                    throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
+                }
+
+                const project = await projectConfigHandler.findProject(
+                    params.projectId,
+                );
+                return success("Package scripts loaded.", [
+                    await scriptsHandler.getPackageScriptCatalog(
+                        project,
+                        branch,
+                    ),
+                ]);
+            },
+        )
         .get("/projects/:projectId/docker", async ({ params, query }) => {
             const branch = String(query.branch ?? "");
 
@@ -336,6 +548,40 @@ export function registerRoutes(app: Elysia) {
                         payload.branch,
                         payload.action,
                         payload.service?.trim() || undefined,
+                    ),
+                ]);
+            },
+        )
+        .post(
+            "/projects/:projectId/package-scripts/terminal-command",
+            async ({ params, body }) => {
+                const payload = body as {
+                    branch?: string;
+                    packagePath?: string;
+                    scriptName?: string;
+                };
+
+                if (
+                    !payload.branch ||
+                    !payload.packagePath ||
+                    !payload.scriptName
+                ) {
+                    throw new ApiError(
+                        "BAD_REQUEST",
+                        "Enter a branch, package path, and script name.",
+                        400,
+                    );
+                }
+
+                const project = await projectConfigHandler.findProject(
+                    params.projectId,
+                );
+                return success("Package script command prepared.", [
+                    await scriptsHandler.preparePackageScriptTerminalCommand(
+                        project,
+                        payload.branch,
+                        payload.packagePath,
+                        payload.scriptName,
                     ),
                 ]);
             },
@@ -406,4 +652,18 @@ export function registerRoutes(app: Elysia) {
                 );
             },
         );
+}
+
+function parsePullRequestNumber(value: string) {
+    const number = Number(value);
+
+    if (!Number.isSafeInteger(number) || number < 1) {
+        throw new ApiError(
+            "BAD_REQUEST",
+            "Enter a valid pull request number.",
+            400,
+        );
+    }
+
+    return number;
 }

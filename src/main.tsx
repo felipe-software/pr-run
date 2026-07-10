@@ -7,6 +7,7 @@ import "@fontsource/jetbrains-mono/500.css";
 import "@xterm/xterm/css/xterm.css";
 import App from "@/App";
 import { CrashBoundary } from "@/lib/components/atoms/crash-boundary";
+import { ToastViewport } from "@/lib/components/ui/toast";
 import { queryClient } from "@/lib/query-client";
 import "./index.css";
 
@@ -14,6 +15,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
         <CrashBoundary>
             <App />
+            <ToastViewport />
         </CrashBoundary>
     </QueryClientProvider>,
 );

@@ -1,7 +1,15 @@
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
-import { TabShell } from "@/lib/components/atoms/tab-shell";
+import { cn } from "@/lib/utils/cn";
+import {
+    Container,
+    FileKey2,
+    Files,
+    MessageSquareText,
+    Play,
+    type LucideIcon,
+} from "lucide-react";
 
-type BranchPageTab = "general" | "run" | "diff" | "docker" | "env";
+type BranchPageTab = "activity" | "run" | "changes" | "docker" | "env";
 
 type BranchPageTabsProps = {
     activeTab: BranchPageTab;
@@ -9,12 +17,12 @@ type BranchPageTabsProps = {
     onSelectTab: (tab: BranchPageTab) => void;
 };
 
-const tabs: { label: string; value: BranchPageTab }[] = [
-    { label: "General", value: "general" },
-    { label: "Run", value: "run" },
-    { label: "Diff", value: "diff" },
-    { label: "Docker", value: "docker" },
-    { label: "Env", value: "env" },
+const tabs: { icon: LucideIcon; label: string; value: BranchPageTab }[] = [
+    { icon: MessageSquareText, label: "Activity", value: "activity" },
+    { icon: Play, label: "Run", value: "run" },
+    { icon: Files, label: "Changes", value: "changes" },
+    { icon: Container, label: "Docker", value: "docker" },
+    { icon: FileKey2, label: "Environment", value: "env" },
 ];
 
 export function BranchPageTabs({
@@ -23,33 +31,43 @@ export function BranchPageTabs({
     onSelectTab,
 }: BranchPageTabsProps) {
     return (
-        <div
-            className="relative z-10 mb-[-1px] flex w-fit items-end pr-1 pl-1"
+        <nav
+            aria-label="Worktree sections"
+            className="border-border/70 flex min-w-0 gap-0.5 overflow-x-auto
+                border-b px-1"
             role="tablist"
         >
-            {tabs.map((tab) => (
-                <TabShell
-                    className="min-w-[84px]"
-                    isActive={activeTab === tab.value}
-                    key={tab.value}
-                >
+            {tabs.map((tab) => {
+                const Icon = tab.icon;
+
+                return (
                     <button
                         aria-selected={activeTab === tab.value}
-                        className="flex h-full w-full items-center
-                            justify-center gap-1.5 px-3 font-[inherit] text-xs
-                            leading-none"
+                        className={cn(
+                            `text-muted-foreground focus-visible:ring-ring
+                            relative flex h-9 items-center justify-center
+                            gap-1.5 rounded-md px-3 text-xs font-medium
+                            transition-colors outline-none focus-visible:ring-2`,
+                            activeTab === tab.value &&
+                                `text-foreground after:bg-primary after:absolute
+                                after:right-2 after:bottom-0 after:left-2
+                                after:h-0.5 after:rounded-full`,
+                        )}
+                        key={tab.value}
                         role="tab"
                         type="button"
                         onClick={() => onSelectTab(tab.value)}
                     >
                         {tab.value === "run" && isRunTabBusy ? (
                             <BusyIcon size="sm" />
-                        ) : null}
+                        ) : (
+                            <Icon className="size-3.5" />
+                        )}
                         {tab.label}
                     </button>
-                </TabShell>
-            ))}
-        </div>
+                );
+            })}
+        </nav>
     );
 }
 

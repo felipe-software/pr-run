@@ -10,9 +10,14 @@ export function useUpdateProjectWorktreesMutation() {
         mutationFn: (projectId: string) =>
             prRunApi.updateProjectWorktrees(projectId),
         onSuccess: async (_result, projectId) => {
-            await queryClient.invalidateQueries({
-                queryKey: prRunQueryKeys.project(projectId),
-            });
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: prRunQueryKeys.project(projectId),
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ["pr-run", "overview"],
+                }),
+            ]);
         },
     });
 }

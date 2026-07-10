@@ -1,14 +1,15 @@
-import type { BranchInfo } from "@/types/pr-run";
+import type { BranchInfo, PullRequestInfo } from "@/types/pr-run";
 
 export type SidebarItemStatus =
-    | "stale-worktree"
-    | "worktree"
+    | "draft"
+    | "open"
+    | "closed"
+    | "merged"
     | "stale"
-    | "pull-request"
     | "branch";
 
 type SidebarItemStatusConfig = {
-    iconClassName: string;
+    description: string;
     label: string;
     pillClassName: string;
     status: SidebarItemStatus;
@@ -18,35 +19,41 @@ const sidebarItemStatusConfigs: Record<
     SidebarItemStatus,
     SidebarItemStatusConfig
 > = {
-    "stale-worktree": {
-        iconClassName: "bg-danger/15 text-danger-foreground",
-        label: "Stale Worktree",
-        pillClassName: "border-danger/25 bg-danger/15 text-danger-foreground",
-        status: "stale-worktree",
+    draft: {
+        description: "This pull request is a draft.",
+        label: "Draft",
+        pillClassName: "border-border bg-muted/35 text-muted-foreground",
+        status: "draft",
     },
-    worktree: {
-        iconClassName: "bg-success/15 text-success",
-        label: "Worktree",
+    open: {
+        description: "This pull request is open.",
+        label: "Open",
         pillClassName:
             "border-success/25 bg-success/10 text-success-foreground",
-        status: "worktree",
+        status: "open",
+    },
+    closed: {
+        description: "This pull request is closed.",
+        label: "Closed",
+        pillClassName: "border-danger/25 bg-danger/12 text-danger-foreground",
+        status: "closed",
+    },
+    merged: {
+        description: "This pull request was merged.",
+        label: "Merged",
+        pillClassName:
+            "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+        status: "merged",
     },
     stale: {
-        iconClassName: "bg-warning/15 text-warning-foreground",
+        description: "This branch has no recent activity.",
         label: "Stale",
         pillClassName:
             "border-warning/25 bg-warning/10 text-warning-foreground",
         status: "stale",
     },
-    "pull-request": {
-        iconClassName: "bg-blue-500/20 text-blue-600 dark:text-blue-300",
-        label: "PR",
-        pillClassName:
-            "border-blue-500/25 bg-blue-500/10 text-blue-700 dark:text-blue-300",
-        status: "pull-request",
-    },
     branch: {
-        iconClassName: "bg-muted/45 text-muted-foreground/75",
+        description: "This is a remote branch.",
         label: "Branch",
         pillClassName: "border-border bg-muted/35 text-muted-foreground",
         status: "branch",
@@ -54,21 +61,25 @@ const sidebarItemStatusConfigs: Record<
 };
 
 export function getSidebarItemStatus(branch: BranchInfo) {
-    if (branch.hasWorktree && branch.isStale) {
-        return sidebarItemStatusConfigs["stale-worktree"];
-    }
-
-    if (branch.hasWorktree) {
-        return sidebarItemStatusConfigs.worktree;
+    if (branch.pullRequest) {
+        return getPullRequestSidebarStatus(branch.pullRequest);
     }
 
     if (branch.isStale) {
         return sidebarItemStatusConfigs.stale;
     }
 
-    if (branch.source === "pull-request") {
-        return sidebarItemStatusConfigs["pull-request"];
+    return sidebarItemStatusConfigs.branch;
+}
+
+export function getPullRequestSidebarStatus(pullRequest: PullRequestInfo) {
+    if (pullRequest.state === "OPEN") {
+        return pullRequest.isDraft
+            ? sidebarItemStatusConfigs.draft
+            : sidebarItemStatusConfigs.open;
     }
 
-    return sidebarItemStatusConfigs.branch;
+    return pullRequest.state === "MERGED"
+        ? sidebarItemStatusConfigs.merged
+        : sidebarItemStatusConfigs.closed;
 }

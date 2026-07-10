@@ -1,9 +1,10 @@
-import { ChevronDown, ChevronRight, Folder, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
-import { Button } from "@/lib/components/atoms/button";
+import { ProjectAvatar } from "@/lib/components/atoms/project-avatar";
+import { Button } from "@/lib/components/ui/button";
 import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
 import { SidebarBranchItem } from "@/lib/components/templates/sidebar/sidebar-branch-item";
@@ -17,7 +18,7 @@ import { getWorktreeOwnerKey } from "@/lib/hooks/store/use-worktree-terminal-sto
 import { shortenPath } from "@/lib/format";
 import { cn } from "@/lib/utils/cn";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import type { ProjectConfig } from "@/types/pr-run";
+import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 
 type SidebarProjectItemProps = {
     busyOwnerKeys: Set<string>;
@@ -28,12 +29,13 @@ type SidebarProjectItemProps = {
     pendingWorktreeCheckoutKey?: string;
     pendingWorktreeRemovalKey?: string;
     project: ProjectConfig;
+    projectAvatarUri?: string;
     selectedBranchName?: string;
     onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
-    onSelectBranch: (projectId: string, branchName: string) => void;
+    onSelectBranch: (project: ProjectConfig, branch: BranchInfo) => void;
     onToggleProject: (projectId: string) => void;
-    onUpdateProject: (project: ProjectConfig) => Promise<void>;
+    onUpdateProject: (project: ProjectConfig) => Promise<boolean>;
 };
 
 const INITIAL_VISIBLE_BRANCH_COUNT = 5;
@@ -47,6 +49,7 @@ export function SidebarProjectItem({
     pendingWorktreeCheckoutKey,
     pendingWorktreeRemovalKey,
     project,
+    projectAvatarUri,
     selectedBranchName,
     onCheckoutBranch,
     onRemoveWorktree,
@@ -98,121 +101,146 @@ export function SidebarProjectItem({
 
         useSshPassphraseStore
             .getState()
-            .setRetryAction(() =>
+            .setRetryAction(`sidebar:${project.id}:branches`, () =>
                 branchesQuery.refetch().then(() => undefined),
             );
+        return () =>
+            useSshPassphraseStore
+                .getState()
+                .setRetryAction(`sidebar:${project.id}:branches`, null);
     }, [branchesQuery, isAwaitingSshPassphrase]);
     const isActionVisible = isUpdatingProject;
+    const displayedBranches = isExpanded
+        ? visibleBranches
+        : visibleBranches.filter((branch) =>
+              busyOwnerKeys.has(getWorktreeOwnerKey(project.id, branch.name)),
+          );
 
     return (
         <div className="group/menu-item relative">
             <div
-                className={cn(
-                    "group relative isolate flex items-stretch rounded-md",
-                    isSelected &&
-                        "bg-sidebar-accent text-sidebar-accent-foreground",
-                )}
+                className="bg-sidebar sticky top-0 isolate z-10 flex h-8
+                    items-stretch py-0.5"
             >
-                <button
-                    aria-expanded={isExpanded}
-                    data-active={isSelected}
-                    className="peer/menu-button text-sidebar-foreground
-                        hover:bg-sidebar-accent
-                        hover:text-sidebar-accent-foreground
-                        focus-visible:ring-ring active:bg-sidebar-accent flex
-                        min-w-0 flex-1 cursor-pointer items-center
-                        overflow-hidden rounded-md bg-transparent px-2 py-1.5
-                        text-left text-sm transition-colors outline-none
-                        focus-visible:ring-2"
-                    type="button"
-                    onClick={() => onToggleProject(project.id)}
-                >
-                    {isExpanded ? (
-                        <ChevronDown
-                            className="text-muted-foreground/70 h-3.5 w-3.5
-                                shrink-0"
-                        />
-                    ) : (
-                        <ChevronRight
-                            className="text-muted-foreground/70 h-3.5 w-3.5
-                                shrink-0"
-                        />
-                    )}
-                    <span
-                        className="bg-muted/45 text-muted-foreground/75 relative
-                            grid h-5 w-5 flex-none place-items-center
-                            rounded-md"
-                    >
-                        <Folder className="h-3.5 w-3.5" />
-                        {isBusy ? (
-                            <BusyIcon
-                                className="absolute -right-1 -bottom-1"
-                                size="sm"
-                            />
-                        ) : null}
-                    </span>
-                    <div className="ml-2 flex min-w-0 flex-1 justify-between">
-                        <span
-                            className="block truncate text-xs leading-4
-                                font-medium tracking-tight"
-                        >
-                            {project.name}
-                        </span>
-                        <span
-                            className={cn(
-                                `text-muted-foreground/65 pointer-events-none
-                                block truncate text-[10px] leading-4
-                                transition-opacity duration-150
-                                group-focus-within/menu-item:opacity-0
-                                group-hover/menu-item:opacity-0`,
-                                isActionVisible && "opacity-0",
-                            )}
-                        >
-                            {shortenPath(project.path)}
-                        </span>
-                    </div>
-                </button>
                 <div
                     className={cn(
-                        `pointer-events-none absolute inset-y-0 right-0 flex
-                        items-center px-1 opacity-0 transition-opacity
-                        duration-150
-                        group-focus-within/menu-item:pointer-events-auto
-                        group-focus-within/menu-item:opacity-100
-                        group-hover/menu-item:pointer-events-auto
-                        group-hover/menu-item:opacity-100`,
-                        isActionVisible && "pointer-events-auto opacity-100",
+                        `group hover:bg-sidebar-accent relative flex min-w-0
+                        flex-1 items-stretch rounded-md transition-colors`,
+                        isSelected && "text-sidebar-accent-foreground",
                     )}
+                    style={
+                        isSelected
+                            ? { backgroundColor: "rgba(255, 255, 255, 0.07)" }
+                            : undefined
+                    }
                 >
-                    <Button
-                        aria-label={`Reload ${project.name} worktrees`}
-                        className="text-muted-foreground/65
-                            data-[hover=true]:bg-sidebar-accent
-                            data-[hover=true]:text-sidebar-accent-foreground
-                            border-transparent bg-transparent shadow-none"
-                        isDisabled={isUpdatingProject}
-                        isIconOnly
-                        size="icon-xs"
+                    <button
+                        aria-expanded={isExpanded}
+                        data-active={isSelected}
+                        className={cn(
+                            `text-sidebar-foreground
+                            hover:text-sidebar-accent-foreground
+                            focus-visible:ring-ring flex min-w-0 flex-1
+                            cursor-pointer items-center overflow-hidden
+                            rounded-md px-1.5 text-left outline-none
+                            focus-visible:ring-2`,
+                            isSelected && "text-sidebar-accent-foreground",
+                        )}
                         type="button"
-                        onPress={() => {
-                            onUpdateProject(project);
-                        }}
+                        onClick={() => onToggleProject(project.id)}
                     >
-                        <RefreshCw
-                            className={[
-                                "h-3.5 w-3.5",
-                                isUpdatingProject ? "animate-spin" : "",
-                            ].join(" ")}
-                        />
-                    </Button>
+                        {isExpanded ? (
+                            <ChevronDown
+                                className="text-muted-foreground/70 mr-1 size-3
+                                    shrink-0"
+                            />
+                        ) : (
+                            <ChevronRight
+                                className="text-muted-foreground/70 mr-1 size-3
+                                    shrink-0"
+                            />
+                        )}
+                        <span
+                            className="relative grid h-5 w-5 flex-none
+                                place-items-center"
+                        >
+                            {projectAvatarUri ? (
+                                <ProjectAvatar
+                                    className="size-5"
+                                    src={projectAvatarUri}
+                                />
+                            ) : null}
+                            {isBusy ? (
+                                <BusyIcon
+                                    className="absolute -right-1 -bottom-1"
+                                    size="sm"
+                                />
+                            ) : null}
+                        </span>
+                        <div
+                            className="ml-2 flex min-w-0 flex-1 justify-between"
+                        >
+                            <span
+                                className="block truncate text-xs leading-4
+                                    font-medium tracking-tight"
+                            >
+                                {project.name}
+                            </span>
+                            <span
+                                className={cn(
+                                    `text-muted-foreground/65
+                                    pointer-events-none block truncate
+                                    text-[10px] leading-4 transition-opacity
+                                    duration-150
+                                    group-focus-within/menu-item:opacity-0
+                                    group-hover/menu-item:opacity-0`,
+                                    isActionVisible && "opacity-0",
+                                )}
+                            >
+                                {shortenPath(project.path)}
+                            </span>
+                        </div>
+                    </button>
+                    <div
+                        className={cn(
+                            `pointer-events-none absolute inset-y-0 right-0 flex
+                            items-center px-1 opacity-0 transition-opacity
+                            duration-150
+                            group-focus-within/menu-item:pointer-events-auto
+                            group-focus-within/menu-item:opacity-100
+                            group-hover/menu-item:pointer-events-auto
+                            group-hover/menu-item:opacity-100`,
+                            isActionVisible &&
+                                "pointer-events-auto opacity-100",
+                        )}
+                    >
+                        <Button
+                            aria-label={`Reload ${project.name} worktrees`}
+                            className="text-muted-foreground/65"
+                            disabled={isUpdatingProject}
+                            size="icon-xs"
+                            type="button"
+                            variant="ghost"
+                            onClick={() => {
+                                onUpdateProject(project);
+                            }}
+                        >
+                            <RefreshCw
+                                className={[
+                                    "h-3.5 w-3.5",
+                                    isUpdatingProject ? "animate-spin" : "",
+                                ].join(" ")}
+                            />
+                        </Button>
+                    </div>
                 </div>
             </div>
 
             {isExpanded || isBusy ? (
                 <div
                     className={cn(
-                        `border-sidebar-border/80 relative mt-0.5 ml-2 flex
-                            min-w-0 flex-col gap-0.5 border-l py-0.5 pl-1`,
+                        `relative mt-0.5 ml-2 flex min-w-0 flex-col gap-0.5
+                            py-0.5 pl-4`,
                         !isExpanded && "opacity-90",
                     )}
                 >
@@ -261,45 +289,59 @@ export function SidebarProjectItem({
                         </div>
                     ) : null}
 
-                    {(isExpanded
-                        ? visibleBranches
-                        : visibleBranches.filter((branch) =>
-                              busyOwnerKeys.has(
-                                  getWorktreeOwnerKey(project.id, branch.name),
-                              ),
-                          )
-                    ).map((branch) => {
-                        const isBranchBusy = busyOwnerKeys.has(
-                            getWorktreeOwnerKey(project.id, branch.name),
-                        );
+                    {displayedBranches.length > 0 ? (
+                        <div
+                            className="before:bg-sidebar-border/80 relative flex
+                                min-w-0 flex-col gap-0.5 before:absolute
+                                before:top-[-0.25rem] before:bottom-[22.5px]
+                                before:-left-4 before:w-px before:rounded-full
+                                before:content-['']"
+                        >
+                            {displayedBranches.map((branch) => {
+                                const isBranchBusy = busyOwnerKeys.has(
+                                    getWorktreeOwnerKey(
+                                        project.id,
+                                        branch.name,
+                                    ),
+                                );
 
-                        return (
-                            <SidebarBranchItem
-                                branch={branch}
-                                isBusy={isBranchBusy}
-                                isCollapsedPreview={!isExpanded}
-                                isCheckingOutWorktree={
-                                    pendingWorktreeCheckoutKey ===
-                                    `${project.id}:${branch.name}`
-                                }
-                                isRemovingWorktree={
-                                    pendingWorktreeRemovalKey ===
-                                    `${project.id}:${branch.name}`
-                                }
-                                isSelected={selectedBranchName === branch.name}
-                                key={branch.remoteName}
-                                onCheckoutBranch={(branchName) =>
-                                    onCheckoutBranch(project.id, branchName)
-                                }
-                                onRemoveWorktree={(branchName) =>
-                                    onRemoveWorktree(project.id, branchName)
-                                }
-                                onSelectBranch={(branchName) =>
-                                    onSelectBranch(project.id, branchName)
-                                }
-                            />
-                        );
-                    })}
+                                return (
+                                    <SidebarBranchItem
+                                        branch={branch}
+                                        isBusy={isBranchBusy}
+                                        isCollapsedPreview={!isExpanded}
+                                        isCheckingOutWorktree={
+                                            pendingWorktreeCheckoutKey ===
+                                            `${project.id}:${branch.name}`
+                                        }
+                                        isRemovingWorktree={
+                                            pendingWorktreeRemovalKey ===
+                                            `${project.id}:${branch.name}`
+                                        }
+                                        isSelected={
+                                            selectedBranchName === branch.name
+                                        }
+                                        key={branch.remoteName}
+                                        onCheckoutBranch={(branchName) =>
+                                            onCheckoutBranch(
+                                                project.id,
+                                                branchName,
+                                            )
+                                        }
+                                        onRemoveWorktree={(branchName) =>
+                                            onRemoveWorktree(
+                                                project.id,
+                                                branchName,
+                                            )
+                                        }
+                                        onSelectBranch={() =>
+                                            onSelectBranch(project, branch)
+                                        }
+                                    />
+                                );
+                            })}
+                        </div>
+                    ) : null}
 
                     {isExpanded &&
                     !areAllRecentBranchesVisible &&
@@ -310,7 +352,8 @@ export function SidebarProjectItem({
                                 justify-start rounded-md px-2 text-[11px]"
                             size="xs"
                             type="button"
-                            onPress={() => setAreAllRecentBranchesVisible(true)}
+                            variant="ghost"
+                            onClick={() => setAreAllRecentBranchesVisible(true)}
                         >
                             Show more ({hiddenRecentBranchCount})
                         </Button>
@@ -327,7 +370,8 @@ export function SidebarProjectItem({
                                 justify-start rounded-md px-2 text-[11px]"
                             size="xs"
                             type="button"
-                            onPress={() => setAreStaleBranchesVisible(true)}
+                            variant="ghost"
+                            onClick={() => setAreStaleBranchesVisible(true)}
                         >
                             Show stale ({staleBranches.length})
                         </Button>

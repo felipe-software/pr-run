@@ -82,6 +82,13 @@ async function requestMany<T>(path: string, init?: RequestInit): Promise<T[]> {
 }
 
 contextBridge.exposeInMainWorld("prRun", {
+    platform: process.platform,
+    setTitleBarTheme(theme: "dark" | "light") {
+        return ipcRenderer.invoke(
+            "window:setTitleBarTheme",
+            theme,
+        ) as Promise<void>;
+    },
     async getBackendUrl() {
         return getBackendUrl();
     },

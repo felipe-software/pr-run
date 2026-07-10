@@ -1,4 +1,4 @@
-import { toast } from "@heroui/react";
+import { toast } from "@/lib/components/ui/toast";
 import { useCallback, useEffect, useRef } from "react";
 
 import { prRunApi } from "@/lib/api";
@@ -51,7 +51,7 @@ export function useWorktreeTerminalOwner({
         tryPromise(ensureDefaultTerminal(ownerKey, worktreePath)).then(
             ([error]) => {
                 if (error) {
-                    toast.danger(getErrorMessage(error), { timeout: 3200 });
+                    toast.error(getErrorMessage(error), { timeout: 3200 });
                 }
             },
         );
@@ -107,7 +107,7 @@ export function useWorktreeTerminalOwner({
         );
 
         if (error) {
-            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            toast.error(getErrorMessage(error), { timeout: 3200 });
         }
     }, [createTerminal, ownerKey, worktreePath]);
 
@@ -116,7 +116,7 @@ export function useWorktreeTerminalOwner({
             const [error] = await tryPromise(closeTab(ownerKey, tabId));
 
             if (error) {
-                toast.danger(getErrorMessage(error), { timeout: 3200 });
+                toast.error(getErrorMessage(error), { timeout: 3200 });
             }
         },
         [closeTab, ownerKey],

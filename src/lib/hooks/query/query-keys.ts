@@ -1,5 +1,7 @@
 export const prRunQueryKeys = {
     config: ["pr-run", "config"] as const,
+    overview: (projectId?: string) =>
+        ["pr-run", "overview", projectId ?? "all"] as const,
     scripts: ["pr-run", "scripts"] as const,
     scriptSource: (scriptId: string) =>
         [...prRunQueryKeys.scripts, scriptId, "source"] as const,
@@ -14,6 +16,21 @@ export const prRunQueryKeys = {
             "base",
             baseBranchName,
             "commits",
+        ] as const,
+    activity: (
+        projectId: string,
+        branchName: string,
+        baseBranchName: string,
+        pullRequestNumber?: number,
+    ) =>
+        [
+            ...prRunQueryKeys.project(projectId),
+            "branch",
+            branchName,
+            "base",
+            baseBranchName,
+            "activity",
+            pullRequestNumber ?? "branch",
         ] as const,
     diff: (projectId: string, branchName: string, baseBranchName: string) =>
         [
@@ -37,5 +54,12 @@ export const prRunQueryKeys = {
             "branch",
             branchName,
             "env",
+        ] as const,
+    packageScripts: (projectId: string, branchName: string) =>
+        [
+            ...prRunQueryKeys.project(projectId),
+            "branch",
+            branchName,
+            "package-scripts",
         ] as const,
 };

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { isHandledSshPromptError } from "@/lib/api";
 import { EmptyState } from "@/lib/components/atoms/empty-state";
@@ -15,9 +16,11 @@ import {
     MainPanelLoadingState,
     MainPanelState,
 } from "@/lib/components/templates/main-panel/main-panel-state";
-import { CommitHistory } from "@/lib/components/molecules/commit-history";
-import { useCommitHistoryQuery } from "@/lib/hooks/query/use-commit-history-query";
+import { ScrollArea } from "@/lib/components/ui/scroll-area";
+import { WorktreeActivity } from "@/lib/components/templates/main-panel/activity";
+import { useWorktreeActivityQuery } from "@/lib/hooks/query/use-worktree-activity-query";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
+import { prRunQueryKeys } from "@/lib/hooks/query/query-keys";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
 import {
     getWorktreeOwnerKey,
@@ -25,17 +28,18 @@ import {
 } from "@/lib/hooks/store/use-worktree-terminal-store";
 import { cn } from "@/lib/utils/cn";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { tryPromise } from "@/lib/error";
 import type { ProjectConfig } from "@/types/pr-run";
 
-const BranchScriptsSection = lazy(() =>
-    import("@/lib/components/templates/branch-scripts-section").then(
-        (module) => ({ default: module.BranchScriptsSection }),
-    ),
+const WorktreeRun = lazy(() =>
+    import("@/lib/components/templates/main-panel/run").then((module) => ({
+        default: module.WorktreeRun,
+    })),
 );
 
-const BranchDiffPanel = lazy(() =>
-    import("@/lib/components/templates/branch-diff-panel").then((module) => ({
-        default: module.BranchDiffPanel,
+const WorktreeChanges = lazy(() =>
+    import("@/lib/components/templates/main-panel/changes").then((module) => ({
+        default: module.WorktreeChanges,
     })),
 );
 
@@ -79,7 +83,9 @@ export function MainPanel({
     onCreateScript,
     onRunTerminalContextChange,
 }: MainPanelProps) {
-    const [activeTab, setActiveTab] = useState<BranchPageTab>("general");
+    const [activeTab, setActiveTab] = useState<BranchPageTab>("changes");
+    const [isRefreshingActiveTab, setIsRefreshingActiveTab] = useState(false);
+    const queryClient = useQueryClient();
     const selectedKey =
         project && branchName ? `${project.id}:${branchName}` : "";
     const selectedTerminalOwner = useWorktreeTerminalStore((state) =>
@@ -96,17 +102,23 @@ export function MainPanel({
             ),
         [branchName, branchesQuery.data],
     );
-    const commitsQuery = useCommitHistoryQuery(
+    const activityQuery = useWorktreeActivityQuery(
         project?.id,
         branchName ?? undefined,
         selectedBranch?.compareBranchName,
-        Boolean(project && branchName && selectedBranch),
+        selectedBranch?.pullRequest?.number,
+        Boolean(
+            project &&
+            branchName &&
+            selectedBranch &&
+            (activeTab === "activity" || activeTab === "changes"),
+        ),
     );
     const isAwaitingBranchPassphrase = isHandledSshPromptError(
         branchesQuery.error,
     );
-    const isAwaitingCommitPassphrase = isHandledSshPromptError(
-        commitsQuery.error,
+    const isAwaitingActivityPassphrase = isHandledSshPromptError(
+        activityQuery.error,
     );
     const isRunTabBusy = Boolean(
         selectedTerminalOwner?.tabs.some(
@@ -143,7 +155,7 @@ export function MainPanel({
     });
 
     useEffect(() => {
-        setActiveTab("general");
+        setActiveTab("changes");
     }, [selectedKey]);
 
     useEffect(() => {
@@ -161,20 +173,30 @@ export function MainPanel({
 
         useSshPassphraseStore
             .getState()
-            .setRetryAction(() =>
+            .setRetryAction("main-panel:branches", () =>
                 branchesQuery.refetch().then(() => undefined),
             );
+        return () =>
+            useSshPassphraseStore
+                .getState()
+                .setRetryAction("main-panel:branches", null);
     }, [branchesQuery, isAwaitingBranchPassphrase]);
 
     useEffect(() => {
-        if (!isAwaitingCommitPassphrase) {
+        if (!isAwaitingActivityPassphrase) {
             return;
         }
 
         useSshPassphraseStore
             .getState()
-            .setRetryAction(() => commitsQuery.refetch().then(() => undefined));
-    }, [commitsQuery, isAwaitingCommitPassphrase]);
+            .setRetryAction("main-panel:activity", () =>
+                activityQuery.refetch().then(() => undefined),
+            );
+        return () =>
+            useSshPassphraseStore
+                .getState()
+                .setRetryAction("main-panel:activity", null);
+    }, [activityQuery, isAwaitingActivityPassphrase]);
 
     if (!project || !branchName) {
         return <BranchEmptyState />;
@@ -200,11 +222,12 @@ export function MainPanel({
         );
     }
 
-    const commitsError =
-        commitsQuery.error && !isAwaitingCommitPassphrase
-            ? getErrorMessage(commitsQuery.error)
+    const activityError =
+        activityQuery.error && !isAwaitingActivityPassphrase
+            ? getErrorMessage(activityQuery.error)
             : undefined;
     const currentBranch = selectedBranch;
+    const currentProjectId = project.id;
     const worktreeOwnerKey = getWorktreeOwnerKey(
         project.id,
         currentBranch.name,
@@ -224,6 +247,66 @@ export function MainPanel({
         });
     }
 
+    async function refreshActiveTab() {
+        setIsRefreshingActiveTab(true);
+        const requests: Promise<unknown>[] = [branchesQuery.refetch()];
+
+        if (activeTab === "activity" || activeTab === "changes") {
+            requests.push(activityQuery.refetch());
+        }
+
+        if (activeTab === "changes") {
+            requests.push(
+                queryClient.invalidateQueries({
+                    queryKey: prRunQueryKeys.diff(
+                        currentProjectId,
+                        currentBranch.name,
+                        currentBranch.compareBranchName ?? "default",
+                    ),
+                }),
+            );
+        } else if (activeTab === "run") {
+            requests.push(
+                queryClient.invalidateQueries({
+                    queryKey: prRunQueryKeys.packageScripts(
+                        currentProjectId,
+                        currentBranch.name,
+                    ),
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: prRunQueryKeys.scripts,
+                }),
+            );
+        } else if (activeTab === "docker") {
+            requests.push(
+                queryClient.invalidateQueries({
+                    queryKey: prRunQueryKeys.docker(
+                        currentProjectId,
+                        currentBranch.name,
+                    ),
+                }),
+            );
+        } else if (activeTab === "env") {
+            requests.push(
+                queryClient.invalidateQueries({
+                    queryKey: prRunQueryKeys.env(
+                        currentProjectId,
+                        currentBranch.name,
+                    ),
+                }),
+            );
+        }
+
+        await tryPromise(Promise.all(requests));
+        setIsRefreshingActiveTab(false);
+    }
+
+    const isRefreshing =
+        isRefreshingActiveTab ||
+        branchesQuery.isFetching ||
+        ((activeTab === "activity" || activeTab === "changes") &&
+            activityQuery.isFetching);
+
     return (
         <main
             className={cn(
@@ -237,36 +320,51 @@ export function MainPanel({
                     max-[500px]:min-h-[500px]"
             >
                 <div className="flex shrink-0 flex-col gap-0">
+                    <BranchPageHeader
+                        actionError={actionError}
+                        branch={selectedBranch}
+                        isCheckingOutWorktree={isCheckingOutWorktree}
+                        isRefreshing={isRefreshing}
+                        project={project}
+                        onCheckoutBranch={onCheckoutBranch}
+                        onRefresh={refreshActiveTab}
+                    />
                     <BranchPageTabs
                         activeTab={activeTab}
                         isRunTabBusy={isRunTabBusy}
                         onSelectTab={setActiveTab}
                     />
-                    <BranchPageHeader
-                        actionError={actionError}
-                        branch={selectedBranch}
-                        isCheckingOutWorktree={isCheckingOutWorktree}
-                        isRefreshingCommits={commitsQuery.isFetching}
-                        project={project}
-                        onCheckoutBranch={onCheckoutBranch}
-                        onReloadCommits={() => void commitsQuery.refetch()}
-                    />
                 </div>
 
                 <div className="flex min-h-0 flex-1 flex-col">
-                    {activeTab === "general" ? (
+                    {activeTab === "activity" ? (
                         <section className="flex min-h-0 flex-1 flex-col">
-                            <div className="min-h-0 flex-1 overflow-auto">
-                                <CommitHistory
-                                    commits={commitsQuery.data ?? []}
-                                    error={
-                                        isAwaitingCommitPassphrase
-                                            ? "Waiting for SSH passphrase..."
-                                            : commitsError
+                            <ScrollArea
+                                className="min-h-0 flex-1"
+                                hideScrollbars
+                                scrollFade
+                            >
+                                <WorktreeActivity
+                                    baseBranchName={
+                                        currentBranch.compareBranchName
                                     }
-                                    isLoading={commitsQuery.isPending}
+                                    branchName={currentBranch.name}
+                                    data={activityQuery.data}
+                                    error={
+                                        isAwaitingActivityPassphrase
+                                            ? "Waiting for SSH passphrase..."
+                                            : activityError
+                                    }
+                                    isLoading={activityQuery.isPending}
+                                    projectId={project.id}
+                                    pullRequestNumber={
+                                        currentBranch.pullRequest?.number
+                                    }
+                                    repositoryUrl={
+                                        currentBranch.repository?.url
+                                    }
                                 />
-                            </div>
+                            </ScrollArea>
                         </section>
                     ) : activeTab === "run" ? (
                         selectedBranch.hasWorktree ? (
@@ -282,7 +380,7 @@ export function MainPanel({
                                         </Surface>
                                     }
                                 >
-                                    <BranchScriptsSection
+                                    <WorktreeRun
                                         branchName={currentBranch.name}
                                         projectId={project.id}
                                         onCreateScript={onCreateScript}
@@ -298,7 +396,7 @@ export function MainPanel({
                                 />
                             </Surface>
                         )
-                    ) : activeTab === "diff" ? (
+                    ) : activeTab === "changes" ? (
                         <Suspense
                             fallback={
                                 <Surface
@@ -310,10 +408,15 @@ export function MainPanel({
                                 </Surface>
                             }
                         >
-                            <BranchDiffPanel
+                            <WorktreeChanges
+                                activity={activityQuery.data}
+                                activityError={activityError}
                                 baseBranchName={currentBranch.compareBranchName}
                                 branchName={currentBranch.name}
                                 projectId={project.id}
+                                pullRequestNumber={
+                                    currentBranch.pullRequest?.number
+                                }
                             />
                         </Suspense>
                     ) : activeTab === "docker" ? (

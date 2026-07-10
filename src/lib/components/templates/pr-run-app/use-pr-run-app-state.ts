@@ -1,58 +1,51 @@
-import { toast } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
+import { toast } from "@/lib/components/ui/toast";
 import { useAddProjectMutation } from "@/lib/hooks/query/use-add-project-mutation";
 import { useCheckoutBranchMutation } from "@/lib/hooks/query/use-checkout-branch-mutation";
 import { useConfigQuery } from "@/lib/hooks/query/use-config-query";
 import { useCreateScriptMutation } from "@/lib/hooks/query/use-create-script-mutation";
-import { usePreloadProjects } from "@/lib/hooks/query/use-preload-projects";
 import { useRemoveWorktreeMutation } from "@/lib/hooks/query/use-remove-worktree-mutation";
 import { useUpdateProjectWorktreesMutation } from "@/lib/hooks/query/use-update-project-worktrees-mutation";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
+import { useUiPreferencesStore } from "@/lib/hooks/store/use-ui-preferences-store";
 import {
     getWorktreeOwnerKey,
     useWorktreeTerminalStore,
 } from "@/lib/hooks/store/use-worktree-terminal-store";
 import { tryPromise } from "@/lib/error";
+import { assignProjectAvatars } from "@/lib/project-avatar";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import type { ProjectConfig } from "@/types/pr-run";
+import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 
-import type {
-    SelectedBranchState,
-    SelectedBranchView,
-} from "@/lib/components/templates/pr-run-app/types";
 import { useAppStatusSummary } from "@/lib/components/templates/pr-run-app/use-app-status-summary";
+import { useSettingsState } from "@/lib/components/templates/pr-run-app/settings-state";
+import { useWorkspaceState } from "@/lib/components/templates/pr-run-app/workspace-state";
 
-const SIDEBAR_WIDTH_STORAGE_KEY = "pr-run.sidebar.width";
 const SIDEBAR_MIN_WIDTH = 256;
 const SIDEBAR_MAX_WIDTH = 560;
 const MAIN_CONTENT_MIN_WIDTH = 640;
 
 export function usePrRunAppState() {
-    const [selectedBranch, setSelectedBranch] =
-        useState<SelectedBranchState | null>(null);
+    const settingsState = useSettingsState();
     const [actionError, setActionError] = useState<string>();
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-        () => new Set(["default"]),
-    );
     const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(
         () => new Set(),
     );
     const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
     const [isCreateScriptOpen, setIsCreateScriptOpen] = useState(false);
-    const [theme, setTheme] = useState<"dark" | "light">(() => {
-        return localStorage.getItem("pr-run-theme") === "light"
-            ? "light"
-            : "dark";
-    });
-    const [sidebarWidth, setSidebarWidth] = useState(() => {
-        const stored = Number(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
-
-        return Number.isFinite(stored)
-            ? clamp(stored, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
-            : 320;
-    });
+    const storedSidebarWidth = useUiPreferencesStore(
+        (store) => store.sidebarWidth,
+    );
+    const setStoredSidebarWidth = useUiPreferencesStore(
+        (store) => store.setSidebarWidth,
+    );
+    const theme = useUiPreferencesStore((store) => store.theme);
+    const setTheme = useUiPreferencesStore((store) => store.setTheme);
+    const [sidebarWidth, setSidebarWidth] = useState(() =>
+        clamp(storedSidebarWidth ?? 320, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH),
+    );
     const [isResizingSidebar, setIsResizingSidebar] = useState(false);
     const configQuery = useConfigQuery();
     const addProjectMutation = useAddProjectMutation();
@@ -65,28 +58,43 @@ export function usePrRunAppState() {
         () => groups.flatMap((group) => group.projects),
         [groups],
     );
-    usePreloadProjects(projects);
-    const statusSummary = useAppStatusSummary(projects);
-    const selectedProject = useMemo(
-        () =>
-            projects.find(
-                (project) => project.id === selectedBranch?.projectId,
-            ) ?? null,
-        [projects, selectedBranch?.projectId],
+    const projectAvatarUris = useMemo(
+        () => assignProjectAvatars(projects),
+        [projects],
     );
-    const selectedBranchView: SelectedBranchView = {
-        branchName: selectedBranch?.branchName ?? null,
-        project: selectedProject,
-    };
+    const workspaceState = useWorkspaceState({
+        onLeaveSettings: settingsState.closeSettings,
+        projects,
+    });
+    const { selectedBranch, selectedBranchView } = workspaceState;
+    const statusSummary = useAppStatusSummary(projects);
     const configError = configQuery.error
         ? getErrorMessage(configQuery.error)
         : undefined;
 
     useEffect(() => {
-        document.documentElement.dataset.theme = theme;
-        document.documentElement.classList.toggle("dark", theme === "dark");
-        document.documentElement.style.colorScheme = theme;
-        localStorage.setItem("pr-run-theme", theme);
+        const media = window.matchMedia("(prefers-color-scheme: dark)");
+        const applyTheme = () => {
+            const resolved =
+                theme === "system" ? (media.matches ? "dark" : "light") : theme;
+            document.documentElement.classList.add("no-transitions");
+            document.documentElement.dataset.theme = resolved;
+            document.documentElement.classList.toggle(
+                "dark",
+                resolved === "dark",
+            );
+            document.documentElement.style.colorScheme = resolved;
+            syncTitleBarTheme(resolved);
+            window.setTimeout(
+                () =>
+                    document.documentElement.classList.remove("no-transitions"),
+                0,
+            );
+        };
+
+        applyTheme();
+        media.addEventListener("change", applyTheme);
+        return () => media.removeEventListener("change", applyTheme);
     }, [theme]);
 
     useEffect(() => {
@@ -132,30 +140,8 @@ export function usePrRunAppState() {
     }, [isResizingSidebar]);
 
     useEffect(() => {
-        localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
-    }, [sidebarWidth]);
-
-    useEffect(() => {
-        if (!selectedBranch || selectedProject) {
-            return;
-        }
-
-        setSelectedBranch(null);
-    }, [selectedBranch, selectedProject]);
-
-    function toggleGroup(groupId: string) {
-        setExpandedGroups((current) => {
-            const next = new Set(current);
-
-            if (next.has(groupId)) {
-                next.delete(groupId);
-            } else {
-                next.add(groupId);
-            }
-
-            return next;
-        });
-    }
+        setStoredSidebarWidth(sidebarWidth);
+    }, [setStoredSidebarWidth, sidebarWidth]);
 
     function toggleProject(projectId: string) {
         setCollapsedProjects((current) => {
@@ -169,11 +155,6 @@ export function usePrRunAppState() {
 
             return next;
         });
-    }
-
-    function selectBranch(projectId: string, branchName: string) {
-        setActionError(undefined);
-        setSelectedBranch({ branchName, projectId });
     }
 
     async function submitAddProject(projectPath: string) {
@@ -198,7 +179,7 @@ export function usePrRunAppState() {
             if (isHandledSshPromptError(error)) {
                 useSshPassphraseStore
                     .getState()
-                    .setRetryAction(() =>
+                    .setRetryAction(`checkout:${projectId}:${branchName}`, () =>
                         checkoutBranch(projectId, branchName).then(
                             () => undefined,
                         ),
@@ -213,6 +194,7 @@ export function usePrRunAppState() {
         showSuccessToast(
             result.status === "ready" ? "Worktree ready" : result.message,
         );
+        workspaceState.openCreatedWorktree(projectId, branchName);
     }
 
     async function createScript(title: string) {
@@ -223,7 +205,7 @@ export function usePrRunAppState() {
 
         if (error) {
             setActionError(getErrorMessage(error));
-            toast.danger(getErrorMessage(error), { timeout: 3200 });
+            toast.error(getErrorMessage(error), { timeout: 3200 });
             return;
         }
 
@@ -241,7 +223,7 @@ export function usePrRunAppState() {
             if (isHandledSshPromptError(error)) {
                 useSshPassphraseStore
                     .getState()
-                    .setRetryAction(() =>
+                    .setRetryAction(`remove:${projectId}:${branchName}`, () =>
                         removeWorktree(projectId, branchName).then(
                             () => undefined,
                         ),
@@ -254,6 +236,7 @@ export function usePrRunAppState() {
         }
 
         showSuccessToast(result.message);
+        workspaceState.closeWorktreeTab(`${projectId}:${branchName}`);
         await useWorktreeTerminalStore
             .getState()
             .disposeOwner(getWorktreeOwnerKey(projectId, branchName));
@@ -269,17 +252,19 @@ export function usePrRunAppState() {
             if (isHandledSshPromptError(error)) {
                 useSshPassphraseStore
                     .getState()
-                    .setRetryAction(() =>
+                    .setRetryAction(`refresh:${project.id}`, () =>
                         updateProject(project).then(() => undefined),
                     );
-                return;
+                return false;
             }
 
             setActionError(getErrorMessage(error));
-            return;
+            toast.error(getErrorMessage(error), { timeout: 3200 });
+            return false;
         }
 
         showSuccessToast(result.message);
+        return true;
     }
 
     return {
@@ -291,7 +276,6 @@ export function usePrRunAppState() {
             ? getErrorMessage(createScriptMutation.error)
             : undefined,
         configError,
-        expandedGroups,
         collapsedProjects,
         groups,
         isAddProjectOpen,
@@ -308,6 +292,7 @@ export function usePrRunAppState() {
         pendingProjectUpdateId: updateProjectWorktreesMutation.isPending
             ? updateProjectWorktreesMutation.variables
             : undefined,
+        projectAvatarUris,
         pendingWorktreeCheckoutKey: checkoutBranchMutation.isPending
             ? `${checkoutBranchMutation.variables?.projectId}:${checkoutBranchMutation.variables?.branchName}`
             : undefined,
@@ -331,15 +316,37 @@ export function usePrRunAppState() {
             setIsCreateScriptOpen(true);
         },
         openSshPassphrase: () => useSshPassphraseStore.getState().open(null),
+        ...settingsState,
         removeWorktree,
-        selectBranch,
         setTheme,
         submitAddProject,
-        toggleGroup,
         toggleProject,
         updateProject,
         checkoutBranch,
+        closeWorktreeTab: workspaceState.closeWorktreeTab,
+        isOverviewOpen: workspaceState.isOverviewOpen,
+        openOverview: () => {
+            setActionError(undefined);
+            workspaceState.openOverview();
+        },
+        selectBranch: (project: ProjectConfig, branch: BranchInfo) => {
+            setActionError(undefined);
+            workspaceState.selectBranch(project, branch);
+        },
+        selectWorktreeTab: workspaceState.selectWorktreeTab,
     };
+}
+
+async function syncTitleBarTheme(theme: "dark" | "light") {
+    if (!window.prRun) {
+        return;
+    }
+
+    const [error] = await tryPromise(window.prRun.setTitleBarTheme(theme));
+
+    if (error) {
+        console.error("Failed to update the title bar theme.", error);
+    }
 }
 
 function showSuccessToast(message: string) {

@@ -40,21 +40,40 @@ export type GitHubUserInfo = {
 };
 
 export type PullRequestInfo = {
+    additions?: number;
+    assignees: GitHubUserInfo[];
+    author?: GitHubUserInfo;
+    baseBranchName: string;
+    changedFiles?: number;
+    deletions?: number;
+    isDraft: boolean;
+    latestReviews: PullRequestLatestReview[];
     number: number;
+    reviewRequests: GitHubUserInfo[];
+    state: PullRequestState;
     title: string;
     url: string;
-    baseBranchName: string;
-    author?: GitHubUserInfo;
+};
+
+export type PullRequestState = "OPEN" | "CLOSED" | "MERGED";
+
+export type PullRequestLatestReview = {
+    author: GitHubUserInfo;
+    state: PullRequestReviewState;
 };
 
 export type BranchDiffFile = {
     path: string;
     additions: number;
     deletions: number;
+    previousPath?: string;
+    status: "added" | "binary" | "deleted" | "modified" | "renamed";
 };
 
 export type BranchDiffResult = {
+    additions: number;
     branch: string;
+    deletions: number;
     files: BranchDiffFile[];
     patch: string;
 };
@@ -144,6 +163,7 @@ export type UpdateWorktreesResult = {
 };
 
 export type CommitInfo = {
+    additions?: number;
     hash: string;
     shortHash: string;
     subject: string;
@@ -153,8 +173,139 @@ export type CommitInfo = {
     authorLogin?: string;
     authorUrl?: string;
     date: string;
+    deletions?: number;
+    hasBinaryChanges?: boolean;
     url?: string;
     isInSelectedBranch: boolean;
+};
+
+export type PullRequestReviewState =
+    | "APPROVED"
+    | "CHANGES_REQUESTED"
+    | "COMMENTED"
+    | "DISMISSED"
+    | "PENDING";
+
+export type PullRequestReviewComment = {
+    author: GitHubUserInfo;
+    body: string;
+    createdAt: string;
+    id: number;
+    isOutdated: boolean;
+    line?: number;
+    path: string;
+    pullRequestReviewId?: number;
+    side?: "LEFT" | "RIGHT";
+    startLine?: number;
+    startSide?: "LEFT" | "RIGHT";
+    subjectType: "file" | "line";
+    url: string;
+    viewerDidAuthor: boolean;
+};
+
+export type PullRequestReviewActivity = {
+    author: GitHubUserInfo;
+    body: string;
+    comments: PullRequestReviewComment[];
+    id: string;
+    state: PullRequestReviewState;
+    submittedAt: string;
+    url?: string;
+};
+
+export type PullRequestGeneralComment = {
+    author: GitHubUserInfo;
+    body: string;
+    createdAt: string;
+    id: string;
+    url: string;
+    viewerDidAuthor: boolean;
+};
+
+export type WorktreeActivityItem =
+    | {
+          commit: CommitInfo;
+          id: string;
+          occurredAt: string;
+          type: "commit";
+      }
+    | {
+          comment: PullRequestGeneralComment;
+          id: string;
+          occurredAt: string;
+          type: "comment";
+      }
+    | {
+          id: string;
+          occurredAt: string;
+          review: PullRequestReviewActivity;
+          type: "review";
+      };
+
+export type GitHubIntegrationStatus =
+    | { status: "available" }
+    | {
+          message: string;
+          reason:
+              | "not-a-pull-request"
+              | "not-authenticated"
+              | "pull-request-mismatch"
+              | "pull-request-not-found"
+              | "request-failed";
+          status: "unavailable";
+      };
+
+export type PendingPullRequestReview = {
+    body: string;
+    comments: PullRequestReviewComment[];
+    id: number;
+    nodeId: string;
+};
+
+export type WorktreeActivityResult = {
+    baseCommits: CommitInfo[];
+    integration: GitHubIntegrationStatus;
+    items: WorktreeActivityItem[];
+    pendingReview?: PendingPullRequestReview;
+    reviewComments: PullRequestReviewComment[];
+    reviewDecision?: string;
+    viewer?: GitHubUserInfo;
+};
+
+export type ReviewCommentMode = "immediate" | "pending";
+
+export type ReviewEvent = "APPROVE" | "COMMENT" | "REQUEST_CHANGES";
+
+export type PullRequestReviewMutationResult = {
+    id: number | string;
+    url?: string;
+};
+
+export type PackageManager = "bun" | "npm" | "pnpm" | "yarn";
+
+export type PackageScriptInfo = {
+    command: string;
+    name: string;
+    packageName: string;
+    packagePath: string;
+    quick: boolean;
+};
+
+export type PackageScriptGroup = {
+    name: string;
+    path: string;
+    scripts: PackageScriptInfo[];
+};
+
+export type PackageScriptCatalog = {
+    manager: PackageManager;
+    packages: PackageScriptGroup[];
+    quickScripts: PackageScriptInfo[];
+};
+
+export type PackageScriptTerminalCommandResult = {
+    command: string;
+    title: string;
 };
 
 export type ScriptInfo = {

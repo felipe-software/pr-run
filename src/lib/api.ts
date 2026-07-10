@@ -10,9 +10,14 @@ import type {
     DockerTerminalCommandAction,
     DockerTerminalCommandResult,
     EnvFilesOverviewResult,
+    PackageScriptCatalog,
+    PackageScriptTerminalCommandResult,
     ProjectConfig,
     ProjectsConfig,
     RemoveWorktreeResult,
+    PullRequestReviewMutationResult,
+    ReviewCommentMode,
+    ReviewEvent,
     ScriptInfo,
     ScriptOpenResult,
     ScriptRunResult,
@@ -26,11 +31,14 @@ import type {
     TerminalSessionSnapshot,
     UpdateResult,
     UpdateWorktreesResult,
+    WorktreeActivityResult,
 } from "@/types/pr-run";
+import type { OverviewSnapshot } from "@/types/overview";
 import {
     type PendingRequest,
     useSshPassphraseStore,
 } from "@/lib/hooks/store/use-ssh-passphrase-store";
+import { tryPromise } from "@/lib/error";
 
 type ApiError = Error & {
     action?: string;
@@ -222,13 +230,17 @@ async function requestMany<T>(pathOrUrl: string, options?: Options) {
 }
 
 async function clearSshPassphraseCache() {
-    try {
-        await requestOneRaw<SshPassphraseResult>("/ssh-passphrase/clear", {
-            method: "POST",
-        });
-    } catch {
-        // Clearing a stale passphrase is best-effort only.
+    const [error] = await tryPromise(clearSshPassphrase());
+
+    if (error) {
+        return;
     }
+}
+
+async function clearSshPassphrase() {
+    return requestOneRaw<SshPassphraseResult>("/ssh-passphrase/clear", {
+        method: "POST",
+    });
 }
 
 async function requestOneRaw<T>(pathOrUrl: string, options?: Options) {
@@ -289,11 +301,12 @@ export async function saveSshPassphrase() {
             method: "POST",
         });
 
-        const { pendingRequest, retryAction } =
+        const { pendingRequest, retryActions } =
             useSshPassphraseStore.getState();
+        const actions = Object.values(retryActions);
 
-        if (retryAction) {
-            await retryAction();
+        if (actions.length > 0) {
+            await Promise.all(actions.map((action) => action()));
         } else if (pendingRequest) {
             await retryPendingRequest(pendingRequest);
         }
@@ -342,7 +355,7 @@ export const prRunApi = {
             },
         );
     },
-    clearSshPassphrase: clearSshPassphraseCache,
+    clearSshPassphrase,
     async createTerminalEventSource(sessionId: string) {
         return new EventSource(
             await toApiUrl(
@@ -379,6 +392,26 @@ export const prRunApi = {
             `/projects/${encodeURIComponent(projectId)}/commits?${params.toString()}`,
         );
     },
+    getWorktreeActivity(
+        projectId: string,
+        branch: string,
+        baseBranch?: string,
+        pullRequestNumber?: number,
+    ) {
+        const params = new URLSearchParams({ branch });
+
+        if (baseBranch) {
+            params.set("baseBranch", baseBranch);
+        }
+
+        if (pullRequestNumber) {
+            params.set("pullRequestNumber", String(pullRequestNumber));
+        }
+
+        return requestOne<WorktreeActivityResult>(
+            `/projects/${encodeURIComponent(projectId)}/activity?${params.toString()}`,
+        );
+    },
     getBranchDiff(projectId: string, branch: string, baseBranch?: string) {
         const params = new URLSearchParams({ branch });
 
@@ -403,6 +436,20 @@ export const prRunApi = {
         return requestOne<EnvFilesOverviewResult>(
             `/projects/${encodeURIComponent(projectId)}/env?${params.toString()}`,
         );
+    },
+    getPackageScripts(projectId: string, branch: string) {
+        const params = new URLSearchParams({ branch });
+
+        return requestOne<PackageScriptCatalog>(
+            `/projects/${encodeURIComponent(projectId)}/package-scripts?${params.toString()}`,
+        );
+    },
+    getOverview(projectId?: string) {
+        const query = projectId
+            ? `?${new URLSearchParams({ projectId }).toString()}`
+            : "";
+
+        return requestOne<OverviewSnapshot>(`/overview${query}`);
     },
     getConfig() {
         return requestOne<ProjectsConfig>("/config");
@@ -459,6 +506,68 @@ export const prRunApi = {
                 json: { branch },
                 method: "POST",
             },
+        );
+    },
+    preparePackageScriptTerminalCommand(
+        projectId: string,
+        branch: string,
+        packagePath: string,
+        scriptName: string,
+    ) {
+        return requestOne<PackageScriptTerminalCommandResult>(
+            `/projects/${encodeURIComponent(projectId)}/package-scripts/terminal-command`,
+            {
+                json: { branch, packagePath, scriptName },
+                method: "POST",
+            },
+        );
+    },
+    addPullRequestComment(
+        projectId: string,
+        pullRequestNumber: number,
+        body: string,
+    ) {
+        return requestOne<PullRequestReviewMutationResult>(
+            `/projects/${encodeURIComponent(projectId)}/pull-requests/${pullRequestNumber}/comments`,
+            { json: { body }, method: "POST" },
+        );
+    },
+    addPullRequestReviewComment(
+        projectId: string,
+        pullRequestNumber: number,
+        input: {
+            body: string;
+            line: number;
+            mode: ReviewCommentMode;
+            path: string;
+            side: "LEFT" | "RIGHT";
+            startLine?: number;
+            startSide?: "LEFT" | "RIGHT";
+        },
+    ) {
+        return requestOne<PullRequestReviewMutationResult>(
+            `/projects/${encodeURIComponent(projectId)}/pull-requests/${pullRequestNumber}/review-comments`,
+            { json: input, method: "POST" },
+        );
+    },
+    submitPullRequestReview(
+        projectId: string,
+        pullRequestNumber: number,
+        event: ReviewEvent,
+        body?: string,
+    ) {
+        return requestOne<PullRequestReviewMutationResult>(
+            `/projects/${encodeURIComponent(projectId)}/pull-requests/${pullRequestNumber}/reviews/submit`,
+            { json: { body, event }, method: "POST" },
+        );
+    },
+    discardPendingPullRequestReview(
+        projectId: string,
+        pullRequestNumber: number,
+    ) {
+        return requestOne<PullRequestReviewMutationResult>(
+            `/projects/${encodeURIComponent(projectId)}/pull-requests/${pullRequestNumber}/reviews/pending`,
+            { method: "DELETE" },
         );
     },
     getScriptSource(scriptId: string) {

@@ -5,34 +5,7 @@ import { logger } from "@/backend/logger";
 import { clearSshPassphrase, getSshPassphrase } from "@/backend/ssh-passphrase";
 import { ApiError } from "@/backend/types";
 
-type GitCommand =
-    | ["rev-parse", "--show-toplevel"]
-    | ["rev-parse", "--verify", string]
-    | ["fetch", "origin"]
-    | ["symbolic-ref", "--quiet", "--short", string]
-    | [
-          "for-each-ref",
-          "--sort=-committerdate",
-          "--format=%(refname:short)|%(committerdate:unix)",
-          "refs/remotes/origin",
-      ]
-    | ["for-each-ref", "--format=%(refname)", string]
-    | ["worktree", "add", "--track", "-b", string, string, string]
-    | ["worktree", "add", string, string]
-    | ["worktree", "add", "--detach", string, string]
-    | ["worktree", "remove", "--force", string]
-    | ["reset", "--hard", string]
-    | ["worktree", "list", "--porcelain"]
-    | ["log", string, "--pretty=format:%H"]
-    | ["diff", "--numstat", string]
-    | ["diff", "--patch", string]
-    | [
-          "log",
-          string,
-          "-n",
-          "30",
-          "--pretty=format:%H%x1f%h%x1f%s%x1f%an%x1f%ae%x1f%cI",
-      ];
+type GitCommand = string[];
 
 type GitResultMode = "quiet" | "text";
 type GitCommandStage = "git" | "git:sshpass";

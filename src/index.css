@@ -1,10 +1,34 @@
 @import "tailwindcss";
-@import "@heroui/styles";
 
 @custom-variant dark (&:is(.dark, .dark *));
+@custom-variant wco (&:is(.wco, .wco *));
+
+:root {
+    --app-scrollbar-width: 6px;
+    --workspace-topbar-height: 36px;
+    --workspace-controls-top: 0px;
+    --workspace-controls-left: calc(env(safe-area-inset-left) + 0.75rem);
+    --workspace-controls-right: calc(env(safe-area-inset-right) + 0.75rem);
+    --workspace-native-controls-inset: 0px;
+    --workspace-titlebar-control-size: 1.75rem;
+}
+
+.wco {
+    --workspace-topbar-height: env(titlebar-area-height, 36px);
+    --workspace-controls-top: env(titlebar-area-y, 0px);
+    --workspace-controls-left: calc(env(titlebar-area-x, 0px) + 0.75rem);
+    --workspace-controls-right: calc(
+        100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) +
+            0.75rem
+    );
+    --workspace-native-controls-inset: calc(
+        100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px) +
+            0.75rem
+    );
+}
 
 @theme inline {
-    --animate-skeleton: skeleton 2s -1s infinite linear;
+    --animate-skeleton: skeleton 0.5s -1s infinite linear;
     --font-sans:
         "DM Sans Variable", "DM Sans", -apple-system, BlinkMacSystemFont,
         "Segoe UI", system-ui, sans-serif;
@@ -13,8 +37,12 @@
         "Liberation Mono", Menlo, monospace;
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
     --color-surface: var(--surface);
     --color-surface-foreground: var(--surface-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
     --color-border: var(--border);
@@ -22,10 +50,18 @@
     --color-ring: var(--ring);
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
     --color-success: var(--success);
     --color-success-foreground: var(--success-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
     --color-danger: var(--danger);
     --color-danger-foreground: var(--danger-foreground);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
     --color-warning: var(--warning);
     --color-warning-foreground: var(--warning-foreground);
     --color-sidebar: var(--sidebar);
@@ -37,6 +73,7 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
     --radius-xl: calc(var(--radius) + 4px);
+    --radius-2xl: calc(var(--radius) + 8px);
 
     @keyframes skeleton {
         to {
@@ -52,8 +89,10 @@
     --background: oklch(0.985 0.002 264);
     --app-chrome-background: color-mix(in srgb, var(--background) 96%, black);
     --foreground: oklch(0.19 0.005 264);
-    --surface: color-mix(in srgb, var(--sidebar) 84%, var(--foreground));
-    --surface-foreground: var(--sidebar-foreground);
+    --card: color-mix(in srgb, var(--sidebar) 84%, var(--foreground));
+    --card-foreground: var(--sidebar-foreground);
+    --popover: var(--card);
+    --popover-foreground: var(--card-foreground);
     --muted: color-mix(in srgb, var(--foreground) 5%, transparent);
     --muted-foreground: color-mix(in srgb, var(--foreground) 58%, white);
     --border: color-mix(in srgb, var(--foreground) 10%, transparent);
@@ -61,17 +100,27 @@
     --ring: oklch(0.58 0.13 164);
     --primary: oklch(0.54 0.13 164);
     --primary-foreground: white;
+    --secondary: color-mix(in srgb, var(--foreground) 7%, transparent);
+    --secondary-foreground: var(--foreground);
+    --accent: color-mix(in srgb, var(--foreground) 6%, transparent);
+    --accent-foreground: var(--foreground);
     --success: oklch(0.58 0.14 156);
     --success-foreground: oklch(0.33 0.1 156);
-    --danger: oklch(0.58 0.19 28);
-    --danger-foreground: oklch(0.42 0.16 28);
+    --destructive: oklch(0.58 0.19 28);
+    --destructive-foreground: oklch(0.42 0.16 28);
+    --info: oklch(0.58 0.12 245);
+    --info-foreground: oklch(0.38 0.1 245);
     --warning: oklch(0.72 0.14 78);
     --warning-foreground: oklch(0.42 0.1 78);
-    --sidebar: color-mix(in srgb, var(--background) 92%, var(--foreground));
+    --sidebar: color-mix(in srgb, var(--background) 96%, var(--foreground));
     --sidebar-foreground: var(--foreground);
     --sidebar-border: color-mix(in srgb, var(--border) 86%, transparent);
     --sidebar-accent: color-mix(in srgb, var(--foreground) 6%, transparent);
     --sidebar-accent-foreground: var(--foreground);
+    --surface: var(--card);
+    --surface-foreground: var(--card-foreground);
+    --danger: var(--destructive);
+    --danger-foreground: var(--destructive-foreground);
 }
 
 .dark,
@@ -80,8 +129,10 @@
     --background: oklch(0.145 0.004 264);
     --app-chrome-background: color-mix(in srgb, var(--background) 92%, black);
     --foreground: oklch(0.94 0.004 264);
-    --surface: color-mix(in srgb, var(--sidebar) 84%, black);
-    --surface-foreground: var(--sidebar-foreground);
+    --card: color-mix(in srgb, var(--sidebar) 84%, black);
+    --card-foreground: var(--sidebar-foreground);
+    --popover: var(--card);
+    --popover-foreground: var(--card-foreground);
     --muted: color-mix(in srgb, var(--foreground) 7%, transparent);
     --muted-foreground: color-mix(in srgb, var(--foreground) 58%, black);
     --border: color-mix(in srgb, var(--foreground) 9%, transparent);
@@ -89,17 +140,92 @@
     --ring: oklch(0.66 0.12 164);
     --primary: oklch(0.66 0.12 164);
     --primary-foreground: oklch(0.13 0.004 264);
+    --secondary: color-mix(in srgb, var(--foreground) 9%, transparent);
+    --secondary-foreground: var(--foreground);
+    --accent: color-mix(in srgb, var(--foreground) 8%, transparent);
+    --accent-foreground: var(--foreground);
     --success: oklch(0.68 0.13 156);
     --success-foreground: oklch(0.78 0.12 156);
-    --danger: oklch(0.68 0.17 28);
-    --danger-foreground: oklch(0.74 0.15 28);
+    --destructive: oklch(0.68 0.17 28);
+    --destructive-foreground: oklch(0.74 0.15 28);
+    --info: oklch(0.7 0.11 245);
+    --info-foreground: oklch(0.78 0.1 245);
     --warning: oklch(0.77 0.13 78);
     --warning-foreground: oklch(0.82 0.12 78);
-    --sidebar: color-mix(in srgb, var(--background) 91%, white);
+    --sidebar: color-mix(in srgb, var(--background) 96%, white);
     --sidebar-foreground: var(--foreground);
     --sidebar-border: color-mix(in srgb, var(--border) 82%, transparent);
     --sidebar-accent: color-mix(in srgb, var(--foreground) 7%, transparent);
     --sidebar-accent-foreground: var(--foreground);
+}
+
+@layer components {
+    .workspace-topbar {
+        display: flex;
+        height: var(--workspace-topbar-height);
+        min-height: var(--workspace-topbar-height);
+        flex-shrink: 0;
+        align-items: center;
+    }
+
+    .workspace-titlebar {
+        display: flex;
+        height: var(--workspace-topbar-height);
+        min-height: var(--workspace-topbar-height);
+        align-items: center;
+        background: var(--sidebar);
+    }
+
+    @media (max-width: 63.999rem) {
+        .workspace-titlebar-brand {
+            width: 3rem !important;
+            padding-inline: 0.5rem;
+        }
+
+        .workspace-titlebar-brand > :not(:first-child) {
+            display: none;
+        }
+
+        .workspace-titlebar-brand-macos {
+            width: 7rem !important;
+            padding-left: 5rem !important;
+        }
+    }
+
+    .surface-subheader {
+        display: flex;
+        height: 2.5rem;
+        min-height: 2.5rem;
+        flex-shrink: 0;
+        align-items: center;
+        border-bottom: 1px solid
+            color-mix(in srgb, var(--border) 60%, transparent);
+        background: var(--background);
+    }
+
+    .drag-region {
+        -webkit-app-region: drag;
+    }
+
+    .no-drag {
+        -webkit-app-region: no-drag;
+    }
+
+    .drag-region button,
+    .drag-region input,
+    .drag-region textarea,
+    .drag-region select,
+    .drag-region a {
+        -webkit-app-region: no-drag;
+    }
+}
+
+.no-transitions,
+.no-transitions *,
+.no-transitions *::before,
+.no-transitions *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
 }
 
 @layer base {
