@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils/cn";
 import type { ProjectAvatarUris } from "@/lib/project-avatar";
 
 type WorkspaceTitlebarProps = {
+    areWorkspaceShortcutsEnabled: boolean;
     isSidebarOpen: boolean;
     projectAvatarUris: ProjectAvatarUris;
     sidebarWidth: number;
@@ -26,6 +27,7 @@ type WorkspaceTitlebarProps = {
 };
 
 export function WorkspaceTitlebar({
+    areWorkspaceShortcutsEnabled,
     isSidebarOpen,
     projectAvatarUris,
     sidebarWidth,
@@ -47,6 +49,12 @@ export function WorkspaceTitlebar({
             }
 
             if (event.key === "Tab") {
+                event.preventDefault();
+
+                if (!areWorkspaceShortcutsEnabled) {
+                    return;
+                }
+
                 const nextTabId = cycleWorkspaceTabs(
                     useWorkspaceTabsStore.getState(),
                     event.shiftKey ? "previous" : "next",
@@ -56,20 +64,22 @@ export function WorkspaceTitlebar({
                     return;
                 }
 
-                event.preventDefault();
                 onSelectTab(nextTabId);
                 return;
             }
 
-            if (event.key.toLowerCase() === "w" && activeTabId) {
+            if (event.key.toLowerCase() === "w") {
                 event.preventDefault();
-                onCloseTab(activeTabId);
+
+                if (areWorkspaceShortcutsEnabled && activeTabId) {
+                    onCloseTab(activeTabId);
+                }
             }
         }
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [activeTabId, onCloseTab, onSelectTab]);
+    }, [activeTabId, areWorkspaceShortcutsEnabled, onCloseTab, onSelectTab]);
 
     return (
         <header

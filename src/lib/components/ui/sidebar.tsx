@@ -149,6 +149,7 @@ export function SidebarRail({ className, ...props }: ComponentProps<"button">) {
 }
 export function SidebarTrigger({
     className,
+    onClick,
     ...props
 }: ComponentProps<typeof Button>) {
     const { toggle } = useSidebar();
@@ -158,8 +159,14 @@ export function SidebarTrigger({
             className={className}
             size="icon-sm"
             variant="ghost"
-            onClick={toggle}
             {...props}
+            onClick={(event) => {
+                onClick?.(event);
+
+                if (!event.defaultPrevented) {
+                    toggle();
+                }
+            }}
         />
     );
 }

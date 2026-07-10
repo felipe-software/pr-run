@@ -43,6 +43,7 @@ type ApiReview = {
     body?: string | null;
     html_url?: string;
     id: number;
+    node_id?: string;
     state?: string;
     submitted_at?: string | null;
     user?: ApiUser;
@@ -61,6 +62,7 @@ type ApiReviewComment = {
     side?: "LEFT" | "RIGHT" | null;
     start_line?: number | null;
     start_side?: "LEFT" | "RIGHT" | null;
+    subject_type?: "file" | "line";
     user?: ApiUser;
 };
 
@@ -165,6 +167,7 @@ export async function getGitHubReviewSnapshot(
                           comment.pullRequestReviewId === pendingApiReview.id,
                   ),
                   id: pendingApiReview.id,
+                  nodeId: pendingApiReview.node_id ?? "",
               }
             : undefined,
         reviewComments,
@@ -192,7 +195,7 @@ export async function getGitHubReviewSnapshot(
     };
 }
 
-function normalizeReviewComment(
+export function normalizeReviewComment(
     comment: ApiReviewComment,
     viewerLogin: string,
 ): PullRequestReviewComment {
@@ -201,7 +204,7 @@ function normalizeReviewComment(
         body: comment.body ?? "",
         createdAt: comment.created_at ?? new Date(0).toISOString(),
         id: comment.id,
-        isOutdated: !comment.line,
+        isOutdated: comment.subject_type !== "file" && comment.line == null,
         line: comment.line ?? comment.original_line ?? undefined,
         path: comment.path ?? "Unknown file",
         pullRequestReviewId: comment.pull_request_review_id,
@@ -209,6 +212,7 @@ function normalizeReviewComment(
         startLine:
             comment.start_line ?? comment.original_start_line ?? undefined,
         startSide: comment.start_side ?? undefined,
+        subjectType: comment.subject_type === "file" ? "file" : "line",
         url: comment.html_url ?? "",
         viewerDidAuthor: comment.user?.login === viewerLogin,
     };

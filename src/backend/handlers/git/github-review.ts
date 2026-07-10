@@ -22,6 +22,23 @@ export type ReviewCommentInput = {
 type GitHubMutationPayload = {
     html_url?: string;
     id?: number | string;
+    node_id?: string;
+};
+
+type AddReviewThreadPayload = {
+    data?: {
+        addPullRequestReviewThread?: {
+            thread?: {
+                comments?: {
+                    nodes?: Array<{
+                        databaseId?: number;
+                        url?: string;
+                    }>;
+                };
+            };
+        };
+    };
+    errors?: Array<{ message?: string }>;
 };
 
 export async function addPullRequestComment(
@@ -78,29 +95,68 @@ export async function addPullRequestReviewComment(
             return mutationResult(result);
         }
 
-        const pendingReviewId =
-            snapshot.pendingReview?.id ??
-            (
-                await ghApiJson<GitHubMutationPayload>(
+        const pendingReview =
+            snapshot.pendingReview ??
+            (await (async () => {
+                const created = await ghApiJson<GitHubMutationPayload>(
                     project,
                     `repos/${repository.nameWithOwner}/pulls/${pullRequestNumber}/reviews`,
                     "POST",
                     { commit_id: snapshot.headRefOid },
-                )
-            ).id;
+                );
 
-        if (!pendingReviewId) {
-            throw new Error("GitHub did not return a pending review id.");
+                return created.id && created.node_id
+                    ? {
+                          body: "",
+                          comments: [],
+                          id: Number(created.id),
+                          nodeId: created.node_id,
+                      }
+                    : undefined;
+            })());
+
+        if (!pendingReview?.nodeId) {
+            throw new Error("GitHub did not return a pending review node id.");
         }
 
-        const result = await ghApiJson<GitHubMutationPayload>(
+        const result = await ghGraphql<AddReviewThreadPayload>(
             project,
-            `repos/${repository.nameWithOwner}/pulls/${pullRequestNumber}/reviews/${pendingReviewId}/comments`,
-            "POST",
-            payload,
+            `mutation AddReviewThread($input: AddPullRequestReviewThreadInput!) {
+                addPullRequestReviewThread(input: $input) {
+                    thread { comments(first: 1) { nodes { databaseId url } } }
+                }
+            }`,
+            {
+                input: {
+                    body: input.body,
+                    line: input.line,
+                    path: input.path,
+                    pullRequestReviewId: pendingReview.nodeId,
+                    side: input.side,
+                    ...(input.startLine
+                        ? {
+                              startLine: input.startLine,
+                              startSide: input.startSide ?? input.side,
+                          }
+                        : {}),
+                },
+            },
         );
+        const comment =
+            result.data?.addPullRequestReviewThread?.thread?.comments
+                ?.nodes?.[0];
 
-        return mutationResult(result);
+        if (result.errors?.length || !comment) {
+            throw new Error(
+                result.errors?.map((error) => error.message).join("; ") ||
+                    "GitHub did not return the created review comment.",
+            );
+        }
+
+        return {
+            id: comment.databaseId ?? crypto.randomUUID(),
+            url: comment.url,
+        };
     });
 }
 
@@ -117,6 +173,12 @@ export async function submitPullRequestReview(
             repository,
             pullRequestNumber,
         );
+        const trimmedBody = validateReviewSubmission(
+            event,
+            body,
+            snapshot.pendingReview?.comments.length ?? 0,
+        );
+
         const endpoint = snapshot.pendingReview
             ? `repos/${repository.nameWithOwner}/pulls/${pullRequestNumber}/reviews/${snapshot.pendingReview.id}/events`
             : `repos/${repository.nameWithOwner}/pulls/${pullRequestNumber}/reviews`;
@@ -125,7 +187,7 @@ export async function submitPullRequestReview(
             endpoint,
             "POST",
             {
-                body: body?.trim() || undefined,
+                body: trimmedBody || undefined,
                 commit_id: snapshot.pendingReview
                     ? undefined
                     : snapshot.headRefOid,
@@ -135,6 +197,32 @@ export async function submitPullRequestReview(
 
         return mutationResult(result);
     });
+}
+
+export function validateReviewSubmission(
+    event: ReviewEvent,
+    body: string | undefined,
+    pendingCommentCount: number,
+) {
+    const trimmedBody = body?.trim() ?? "";
+
+    if (event === "REQUEST_CHANGES" && !trimmedBody) {
+        throw new ApiError(
+            "BAD_REQUEST",
+            "Explain the requested changes before submitting the review.",
+            400,
+        );
+    }
+
+    if (event === "COMMENT" && !trimmedBody && pendingCommentCount === 0) {
+        throw new ApiError(
+            "BAD_REQUEST",
+            "Add a review summary or an inline comment before submitting.",
+            400,
+        );
+    }
+
+    return trimmedBody;
 }
 
 export async function discardPendingPullRequestReview(
@@ -217,6 +305,35 @@ async function ghApiJson<T>(
     }
 
     return stdout.trim() ? (JSON.parse(stdout) as T) : ({} as T);
+}
+
+async function ghGraphql<T>(
+    project: ProjectConfig,
+    query: string,
+    variables: Record<string, unknown>,
+) {
+    const childProcess = Bun.spawn(["gh", "api", "graphql", "--input", "-"], {
+        cwd: project.path,
+        env: { ...process.env, GH_PROMPT_DISABLED: "1" },
+        stderr: "pipe",
+        stdin: "pipe",
+        stdout: "pipe",
+    });
+
+    childProcess.stdin.write(JSON.stringify({ query, variables }));
+    childProcess.stdin.end();
+
+    const [stdout, stderr, exitCode] = await Promise.all([
+        new Response(childProcess.stdout).text(),
+        new Response(childProcess.stderr).text(),
+        childProcess.exited,
+    ]);
+
+    if (exitCode !== 0) {
+        throw new Error(stderr.trim() || `gh exited with code ${exitCode}.`);
+    }
+
+    return JSON.parse(stdout) as T;
 }
 
 function removeUndefined(value: Record<string, unknown>) {

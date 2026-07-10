@@ -39,7 +39,7 @@ type TerminalTreeGroup = {
     terminals: TerminalTreeTab[];
 };
 
-type TerminalTreeTab = {
+export type TerminalTreeTab = {
     branchName: string;
     busyState: "idle" | "busy" | "unknown";
     id: string;
@@ -77,18 +77,11 @@ export function GlobalTerminalPanel({
         [groups, owners],
     );
     const terminals = useMemo(() => flattenTerminalTree(tree), [tree]);
-    const preferredTerminal = preferredOwnerKey
-        ? (terminals.find(
-              (terminal) => terminal.ownerKey === preferredOwnerKey,
-          ) ?? null)
-        : null;
-    const selectedTerminal =
-        terminals.find(
-            (terminal) => terminal.terminalKey === selectedTerminalKey,
-        ) ??
-        preferredTerminal ??
-        terminals[0] ??
-        null;
+    const selectedTerminal = selectGlobalTerminal(
+        terminals,
+        preferredOwnerKey,
+        selectedTerminalKey,
+    );
     const selectedOwnerKey = selectedTerminal?.ownerKey ?? preferredOwnerKey;
     const selectedOwner = selectedOwnerKey ? owners[selectedOwnerKey] : null;
     const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(
@@ -350,6 +343,34 @@ export function GlobalTerminalPanel({
                 </aside>
             </div>
         </section>
+    );
+}
+
+export function selectGlobalTerminal(
+    terminals: TerminalTreeTab[],
+    preferredOwnerKey: string | null,
+    selectedTerminalKey: string | null,
+) {
+    if (preferredOwnerKey) {
+        return (
+            terminals.find(
+                (terminal) =>
+                    terminal.ownerKey === preferredOwnerKey &&
+                    terminal.terminalKey === selectedTerminalKey,
+            ) ??
+            terminals.find(
+                (terminal) => terminal.ownerKey === preferredOwnerKey,
+            ) ??
+            null
+        );
+    }
+
+    return (
+        terminals.find(
+            (terminal) => terminal.terminalKey === selectedTerminalKey,
+        ) ??
+        terminals[0] ??
+        null
     );
 }
 

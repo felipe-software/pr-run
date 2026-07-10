@@ -33,9 +33,12 @@ const pullRequest = (
     branchName: string,
     overrides: Partial<GitHubPullRequest> = {},
 ): GitHubPullRequest => ({
+    additions: 0,
     assignees: [],
     baseBranchName: "main",
     branchName,
+    changedFiles: 0,
+    deletions: 0,
     isDraft: false,
     latestReviews: [],
     number: 1,

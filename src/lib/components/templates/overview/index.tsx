@@ -107,10 +107,24 @@ export function Overview({ projects }: OverviewProps) {
                 </header>
 
                 {overviewQuery.isPending ? <OverviewLoadingState /> : null}
-                {overviewQuery.error ? (
+                {overviewQuery.error && !snapshot ? (
                     <OverviewErrorState
                         message={getErrorMessage(overviewQuery.error)}
                     />
+                ) : null}
+                {overviewQuery.error && snapshot ? (
+                    <div
+                        className="border-warning/30 bg-warning/10
+                            text-warning-foreground flex items-start gap-2
+                            rounded-lg border px-3 py-2 text-xs"
+                    >
+                        <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                        <span>
+                            Refresh failed. Showing the last successful snapshot
+                            from{" "}
+                            {new Date(snapshot.generatedAt).toLocaleString()}.
+                        </span>
+                    </div>
                 ) : null}
                 {snapshot ? (
                     <>

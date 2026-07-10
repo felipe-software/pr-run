@@ -35,7 +35,7 @@ type SidebarProjectItemProps = {
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
     onSelectBranch: (project: ProjectConfig, branch: BranchInfo) => void;
     onToggleProject: (projectId: string) => void;
-    onUpdateProject: (project: ProjectConfig) => Promise<void>;
+    onUpdateProject: (project: ProjectConfig) => Promise<boolean>;
 };
 
 const INITIAL_VISIBLE_BRANCH_COUNT = 5;
@@ -101,9 +101,13 @@ export function SidebarProjectItem({
 
         useSshPassphraseStore
             .getState()
-            .setRetryAction(() =>
+            .setRetryAction(`sidebar:${project.id}:branches`, () =>
                 branchesQuery.refetch().then(() => undefined),
             );
+        return () =>
+            useSshPassphraseStore
+                .getState()
+                .setRetryAction(`sidebar:${project.id}:branches`, null);
     }, [branchesQuery, isAwaitingSshPassphrase]);
     const isActionVisible = isUpdatingProject;
     const displayedBranches = isExpanded

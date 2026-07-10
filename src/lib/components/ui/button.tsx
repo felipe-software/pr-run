@@ -1,7 +1,7 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
-import type * as React from "react";
+import { isValidElement } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
@@ -46,12 +46,11 @@ export function Button({
     className,
     render,
     size,
+    type: explicitType,
     variant,
     ...props
 }: ButtonProps) {
-    const type: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] = render
-        ? undefined
-        : "button";
+    const type = resolveButtonType(render, explicitType);
 
     return useRender({
         defaultTagName: "button",
@@ -65,6 +64,21 @@ export function Button({
         ),
         render,
     });
+}
+
+export function resolveButtonType(
+    render: ButtonProps["render"],
+    explicitType?: ButtonProps["type"],
+) {
+    if (explicitType) {
+        return explicitType;
+    }
+
+    if (!render || (isValidElement(render) && render.type === "button")) {
+        return "button";
+    }
+
+    return undefined;
 }
 
 export { buttonVariants };

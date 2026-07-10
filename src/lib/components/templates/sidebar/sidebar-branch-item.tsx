@@ -1,5 +1,5 @@
 import { FolderPlus, RefreshCw, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
 import { WorktreeIndicator } from "@/lib/components/atoms/worktree-indicator";
@@ -51,6 +51,12 @@ export function SidebarBranchItem({
     onSelectBranch,
 }: SidebarBranchItemProps) {
     const [isRemoveConfirmOpen, setIsRemoveConfirmOpen] = useState(false);
+
+    useEffect(() => {
+        if (!branch.hasWorktree) {
+            setIsRemoveConfirmOpen(false);
+        }
+    }, [branch.hasWorktree]);
     const status = getSidebarItemStatus(branch);
     const isActionPending = isCheckingOutWorktree || isRemovingWorktree;
     const pullRequestAuthor = branch.pullRequest?.author;

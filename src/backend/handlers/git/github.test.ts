@@ -7,12 +7,15 @@ describe("normalizeGitHubPullRequests", () => {
         const [pullRequest] = normalizeGitHubPullRequests([
             {
                 assignees: [{ login: "assignee" }],
+                additions: 12,
                 author: {
                     avatarUrl: "https://avatars.example/author.png",
                     login: "author",
                     url: "https://github.com/author",
                 },
                 baseRefName: "main",
+                changedFiles: 4,
+                deletions: 3,
                 headRefName: "feat/sidebar-identity",
                 latestReviews: [
                     {
@@ -31,6 +34,7 @@ describe("normalizeGitHubPullRequests", () => {
         ]);
 
         expect(pullRequest).toMatchObject({
+            additions: 12,
             assignees: [
                 {
                     avatarUrl: "https://github.com/assignee.png?size=64",
@@ -43,6 +47,8 @@ describe("normalizeGitHubPullRequests", () => {
                 login: "author",
                 url: "https://github.com/author",
             },
+            changedFiles: 4,
+            deletions: 3,
             latestReviews: [
                 {
                     author: {

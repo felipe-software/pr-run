@@ -7,7 +7,7 @@ export type SettingsPageProps = {
     onClose: () => void;
     onCreateScript: () => void;
     onOpenSshPassphrase: () => void;
-    onRefreshProject: (project: ProjectConfig) => Promise<void>;
+    onRefreshProject: (project: ProjectConfig) => Promise<boolean>;
     onSelectSection: (section: SettingsSection) => void;
     section: SettingsSection;
     summary: AppStatusSummary;

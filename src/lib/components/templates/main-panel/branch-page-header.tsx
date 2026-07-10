@@ -38,6 +38,11 @@ export function BranchPageHeader({
     const heading = pullRequest?.title ?? branch.name;
 
     async function copyBranchName() {
+        if (!navigator.clipboard) {
+            toast.error("Could not copy the branch name.", { timeout: 2400 });
+            return;
+        }
+
         const [error] = await tryPromise(
             navigator.clipboard.writeText(branch.name),
         );

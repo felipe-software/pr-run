@@ -33,6 +33,11 @@ export function ReviewComposer({
             projectId,
             pullRequestNumber,
         });
+    const isReviewActionPending =
+        discardReviewMutation.isPending || submitReviewMutation.isPending;
+    const canSubmitCommentReview = Boolean(
+        reviewBody.trim() || pendingReview?.comments.length,
+    );
 
     async function addComment() {
         const body = commentBody.trim();
@@ -134,7 +139,7 @@ export function ReviewComposer({
                     </div>
                     {pendingReview ? (
                         <Button
-                            disabled={discardReviewMutation.isPending}
+                            disabled={isReviewActionPending}
                             size="xs"
                             variant="ghost"
                             onClick={discardReview}
@@ -148,12 +153,15 @@ export function ReviewComposer({
                     aria-label="Review summary"
                     className="min-h-16"
                     placeholder="Review summary (optional for comment or approval)…"
+                    disabled={isReviewActionPending}
                     value={reviewBody}
                     onChange={(event) => setReviewBody(event.target.value)}
                 />
                 <div className="flex flex-wrap justify-end gap-2">
                     <Button
-                        disabled={submitReviewMutation.isPending}
+                        disabled={
+                            isReviewActionPending || !canSubmitCommentReview
+                        }
                         size="sm"
                         variant="outline"
                         onClick={() => submitReview("COMMENT")}
@@ -162,7 +170,7 @@ export function ReviewComposer({
                         Comment
                     </Button>
                     <Button
-                        disabled={submitReviewMutation.isPending}
+                        disabled={isReviewActionPending}
                         size="sm"
                         variant="destructive-outline"
                         onClick={() => submitReview("REQUEST_CHANGES")}
@@ -171,7 +179,7 @@ export function ReviewComposer({
                         Request changes
                     </Button>
                     <Button
-                        disabled={submitReviewMutation.isPending}
+                        disabled={isReviewActionPending}
                         size="sm"
                         onClick={() => submitReview("APPROVE")}
                     >

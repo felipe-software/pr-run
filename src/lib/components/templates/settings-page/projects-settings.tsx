@@ -9,7 +9,7 @@ export function ProjectsSettings({
     onRefreshProject,
 }: {
     groups: ProjectGroup[];
-    onRefreshProject: (project: ProjectConfig) => Promise<void>;
+    onRefreshProject: (project: ProjectConfig) => Promise<boolean>;
 }) {
     return (
         <SettingsSection

@@ -16,6 +16,7 @@ type WorktreeActivityProps = {
     isLoading: boolean;
     projectId: string;
     pullRequestNumber?: number;
+    repositoryUrl?: string;
 };
 
 export function WorktreeActivity({
@@ -26,6 +27,7 @@ export function WorktreeActivity({
     isLoading,
     projectId,
     pullRequestNumber,
+    repositoryUrl,
 }: WorktreeActivityProps) {
     if (isLoading) {
         return <ActivitySkeleton />;
@@ -39,7 +41,12 @@ export function WorktreeActivity({
         );
     }
 
-    if (!data || (data.baseCommits.length === 0 && data.items.length === 0)) {
+    if (
+        !data ||
+        (data.baseCommits.length === 0 &&
+            data.items.length === 0 &&
+            !data.pendingReview)
+    ) {
         return (
             <Surface className="min-h-48" variant="muted">
                 <EmptyState
@@ -82,13 +89,19 @@ export function WorktreeActivity({
                 ) : null}
                 <div className="divide-border/60 divide-y">
                     {data.items.map((item) => (
-                        <ActivityItem item={item} key={item.id} />
+                        <ActivityItem
+                            branchName={branchName}
+                            item={item}
+                            key={item.id}
+                            repositoryUrl={repositoryUrl}
+                        />
                     ))}
                 </div>
             </section>
 
             {pullRequestNumber && data.integration.status === "available" ? (
                 <ReviewComposer
+                    key={`${projectId}:${pullRequestNumber}`}
                     baseBranchName={baseBranchName}
                     branchName={branchName}
                     pendingReview={data.pendingReview}

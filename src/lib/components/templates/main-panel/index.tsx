@@ -173,9 +173,13 @@ export function MainPanel({
 
         useSshPassphraseStore
             .getState()
-            .setRetryAction(() =>
+            .setRetryAction("main-panel:branches", () =>
                 branchesQuery.refetch().then(() => undefined),
             );
+        return () =>
+            useSshPassphraseStore
+                .getState()
+                .setRetryAction("main-panel:branches", null);
     }, [branchesQuery, isAwaitingBranchPassphrase]);
 
     useEffect(() => {
@@ -185,9 +189,13 @@ export function MainPanel({
 
         useSshPassphraseStore
             .getState()
-            .setRetryAction(() =>
+            .setRetryAction("main-panel:activity", () =>
                 activityQuery.refetch().then(() => undefined),
             );
+        return () =>
+            useSshPassphraseStore
+                .getState()
+                .setRetryAction("main-panel:activity", null);
     }, [activityQuery, isAwaitingActivityPassphrase]);
 
     if (!project || !branchName) {
@@ -352,6 +360,9 @@ export function MainPanel({
                                     pullRequestNumber={
                                         currentBranch.pullRequest?.number
                                     }
+                                    repositoryUrl={
+                                        currentBranch.repository?.url
+                                    }
                                 />
                             </ScrollArea>
                         </section>
@@ -399,6 +410,7 @@ export function MainPanel({
                         >
                             <WorktreeChanges
                                 activity={activityQuery.data}
+                                activityError={activityError}
                                 baseBranchName={currentBranch.compareBranchName}
                                 branchName={currentBranch.name}
                                 projectId={project.id}

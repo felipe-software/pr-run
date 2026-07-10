@@ -44,7 +44,7 @@ export function useAppStatusSummary(
                     branchCount += 1;
                 }
 
-                if (branch.source === "pull-request") {
+                if (branch.pullRequest?.state === "OPEN") {
                     openPullRequestCount += 1;
                 }
 

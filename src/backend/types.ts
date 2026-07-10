@@ -40,9 +40,12 @@ export type GitHubUserInfo = {
 };
 
 export type PullRequestInfo = {
+    additions?: number;
     assignees: GitHubUserInfo[];
     author?: GitHubUserInfo;
     baseBranchName: string;
+    changedFiles?: number;
+    deletions?: number;
     isDraft: boolean;
     latestReviews: PullRequestLatestReview[];
     number: number;
@@ -245,6 +248,7 @@ export type PullRequestReviewComment = {
     side?: "LEFT" | "RIGHT";
     startLine?: number;
     startSide?: "LEFT" | "RIGHT";
+    subjectType: "file" | "line";
     url: string;
     viewerDidAuthor: boolean;
 };
@@ -292,7 +296,12 @@ export type GitHubIntegrationStatus =
     | { status: "available" }
     | {
           message: string;
-          reason: "not-a-pull-request" | "not-authenticated" | "request-failed";
+          reason:
+              | "not-a-pull-request"
+              | "not-authenticated"
+              | "pull-request-mismatch"
+              | "pull-request-not-found"
+              | "request-failed";
           status: "unavailable";
       };
 
@@ -300,6 +309,7 @@ export type PendingPullRequestReview = {
     body: string;
     comments: PullRequestReviewComment[];
     id: number;
+    nodeId: string;
 };
 
 export type WorktreeActivityResult = {

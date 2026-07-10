@@ -21,6 +21,7 @@ import type { WorktreeActivityResult } from "@/types/pr-run";
 
 type WorktreeChangesProps = {
     activity?: WorktreeActivityResult;
+    activityError?: string;
     baseBranchName?: string;
     branchName: string;
     projectId: string;
@@ -33,6 +34,7 @@ const VIEW_MODE_KEY = "pr-run.diff.view-mode";
 
 export function WorktreeChanges({
     activity,
+    activityError,
     baseBranchName,
     branchName,
     projectId,
@@ -72,8 +74,14 @@ export function WorktreeChanges({
     }, [branchName, projectId]);
 
     useEffect(() => {
-        if (!selectedPath && fileDiffs[0]) {
-            setSelectedPath(fileDiffs[0].name);
+        const firstPath = fileDiffs[0]?.name;
+        const selectionExists = fileDiffs.some(
+            (file) => file.name === selectedPath,
+        );
+
+        if (firstPath && (!selectedPath || !selectionExists)) {
+            setSelectedPath(firstPath);
+            setDraft(undefined);
         }
     }, [fileDiffs, selectedPath]);
 
@@ -96,7 +104,13 @@ export function WorktreeChanges({
 
         useSshPassphraseStore
             .getState()
-            .setRetryAction(() => diffQuery.refetch().then(() => undefined));
+            .setRetryAction("main-panel:diff", () =>
+                diffQuery.refetch().then(() => undefined),
+            );
+        return () =>
+            useSshPassphraseStore
+                .getState()
+                .setRetryAction("main-panel:diff", null);
     }, [diffQuery, isAwaitingSshPassphrase]);
 
     if (diffQuery.isPending) {
@@ -167,6 +181,15 @@ export function WorktreeChanges({
                 onToggleWrap={() => setShouldWrap((value) => !value)}
             />
 
+            {activityError ? (
+                <div
+                    className="border-danger/25 bg-danger/8
+                        text-danger-foreground border-b px-3 py-2 text-xs"
+                >
+                    {activityError} Review comments and actions are unavailable.
+                </div>
+            ) : null}
+
             <div className="bg-background min-h-0 flex-1 overflow-hidden">
                 {mode === "continuous" ? (
                     <ContinuousDiff
@@ -197,12 +220,14 @@ export function WorktreeChanges({
                         pullRequestNumber={pullRequestNumber}
                         shouldWrap={shouldWrap}
                         onChangeDraft={setDraft}
-                        onNext={() =>
-                            setSelectedPath(fileDiffs[selectedIndex + 1]?.name)
-                        }
-                        onPrevious={() =>
-                            setSelectedPath(fileDiffs[selectedIndex - 1]?.name)
-                        }
+                        onNext={() => {
+                            const path = fileDiffs[selectedIndex + 1]?.name;
+                            if (path) selectFile(path);
+                        }}
+                        onPrevious={() => {
+                            const path = fileDiffs[selectedIndex - 1]?.name;
+                            if (path) selectFile(path);
+                        }}
                     />
                 ) : null}
             </div>
@@ -212,6 +237,7 @@ export function WorktreeChanges({
             activity?.integration.status === "available" ? (
                 <div className="max-h-[24rem] shrink-0 overflow-y-auto">
                     <ReviewComposer
+                        key={`${projectId}:${pullRequestNumber}`}
                         baseBranchName={baseBranchName}
                         branchName={branchName}
                         pendingReview={activity.pendingReview}

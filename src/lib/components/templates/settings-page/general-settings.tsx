@@ -12,7 +12,7 @@ export function GeneralSettings({
     projects,
     onRefreshProject,
 }: {
-    onRefreshProject: (project: ProjectConfig) => Promise<void>;
+    onRefreshProject: (project: ProjectConfig) => Promise<boolean>;
     projects: ProjectConfig[];
 }) {
     const [backendUrl, setBackendUrl] = useState(
@@ -27,9 +27,13 @@ export function GeneralSettings({
     async function refreshAll() {
         setIsRefreshing(true);
         for (const project of projects) {
-            const [error] = await tryPromise(onRefreshProject(project));
-            if (error) {
-                toast.error(getErrorMessage(error));
+            const [error, didRefresh] = await tryPromise(
+                onRefreshProject(project),
+            );
+            if (error || !didRefresh) {
+                if (error) {
+                    toast.error(getErrorMessage(error));
+                }
                 break;
             }
         }

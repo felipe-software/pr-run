@@ -23,7 +23,6 @@ import { useAppStatusSummary } from "@/lib/components/templates/pr-run-app/use-a
 import { useSettingsState } from "@/lib/components/templates/pr-run-app/settings-state";
 import { useWorkspaceState } from "@/lib/components/templates/pr-run-app/workspace-state";
 
-const SIDEBAR_WIDTH_STORAGE_KEY = "pr-run:sidebar-width";
 const SIDEBAR_MIN_WIDTH = 256;
 const SIDEBAR_MAX_WIDTH = 560;
 const MAIN_CONTENT_MIN_WIDTH = 640;
@@ -36,18 +35,17 @@ export function usePrRunAppState() {
     );
     const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
     const [isCreateScriptOpen, setIsCreateScriptOpen] = useState(false);
+    const storedSidebarWidth = useUiPreferencesStore(
+        (store) => store.sidebarWidth,
+    );
+    const setStoredSidebarWidth = useUiPreferencesStore(
+        (store) => store.setSidebarWidth,
+    );
     const theme = useUiPreferencesStore((store) => store.theme);
     const setTheme = useUiPreferencesStore((store) => store.setTheme);
-    const [sidebarWidth, setSidebarWidth] = useState(() => {
-        const stored = Number(
-            localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY) ??
-                localStorage.getItem("pr-run.sidebar.width"),
-        );
-
-        return Number.isFinite(stored)
-            ? clamp(stored, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
-            : 320;
-    });
+    const [sidebarWidth, setSidebarWidth] = useState(() =>
+        clamp(storedSidebarWidth ?? 320, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH),
+    );
     const [isResizingSidebar, setIsResizingSidebar] = useState(false);
     const configQuery = useConfigQuery();
     const addProjectMutation = useAddProjectMutation();
@@ -142,8 +140,8 @@ export function usePrRunAppState() {
     }, [isResizingSidebar]);
 
     useEffect(() => {
-        localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
-    }, [sidebarWidth]);
+        setStoredSidebarWidth(sidebarWidth);
+    }, [setStoredSidebarWidth, sidebarWidth]);
 
     function toggleProject(projectId: string) {
         setCollapsedProjects((current) => {
@@ -181,7 +179,7 @@ export function usePrRunAppState() {
             if (isHandledSshPromptError(error)) {
                 useSshPassphraseStore
                     .getState()
-                    .setRetryAction(() =>
+                    .setRetryAction(`checkout:${projectId}:${branchName}`, () =>
                         checkoutBranch(projectId, branchName).then(
                             () => undefined,
                         ),
@@ -225,7 +223,7 @@ export function usePrRunAppState() {
             if (isHandledSshPromptError(error)) {
                 useSshPassphraseStore
                     .getState()
-                    .setRetryAction(() =>
+                    .setRetryAction(`remove:${projectId}:${branchName}`, () =>
                         removeWorktree(projectId, branchName).then(
                             () => undefined,
                         ),
@@ -254,17 +252,19 @@ export function usePrRunAppState() {
             if (isHandledSshPromptError(error)) {
                 useSshPassphraseStore
                     .getState()
-                    .setRetryAction(() =>
+                    .setRetryAction(`refresh:${project.id}`, () =>
                         updateProject(project).then(() => undefined),
                     );
-                return;
+                return false;
             }
 
             setActionError(getErrorMessage(error));
-            return;
+            toast.error(getErrorMessage(error), { timeout: 3200 });
+            return false;
         }
 
         showSuccessToast(result.message);
+        return true;
     }
 
     return {

@@ -173,7 +173,6 @@ export function useWorkspaceState({
     function openOverview() {
         onLeaveSettings();
         setIsOverviewOpen(true);
-        setSelectedBranch(null);
     }
 
     function selectWorktreeTab(tabId: string) {

@@ -1,5 +1,9 @@
 import { tryPromise } from "@/backend/handlers/error";
-import { findGitHubRepository } from "@/backend/handlers/git/github";
+import {
+    findGitHubRepository,
+    getGitHubPullRequestIdentity,
+    GhCommandError,
+} from "@/backend/handlers/git/github";
 import { getGitHubReviewSnapshot } from "@/backend/handlers/git/github-activity";
 import { getCommitHistory } from "@/backend/handlers/git/history";
 import { logger } from "@/backend/logger";
@@ -50,6 +54,40 @@ export async function getWorktreeActivity(
             branchItems,
             "GitHub authentication is unavailable for this project.",
             "not-authenticated",
+        );
+    }
+
+    const [identityError, identity] = await tryPromise(
+        getGitHubPullRequestIdentity(project, repository, pullRequestNumber),
+    );
+
+    if (identityError) {
+        if (
+            identityError instanceof GhCommandError &&
+            identityError.httpStatus === 404
+        ) {
+            return unavailableActivity(
+                baseCommits,
+                branchItems,
+                `Pull request #${pullRequestNumber} was not found.`,
+                "pull-request-not-found",
+            );
+        }
+
+        return unavailableActivity(
+            baseCommits,
+            branchItems,
+            "GitHub review activity could not be loaded.",
+            "request-failed",
+        );
+    }
+
+    if (identity.headRefName !== branch.replace(/^origin\//, "")) {
+        return unavailableActivity(
+            baseCommits,
+            branchItems,
+            `Pull request #${pullRequestNumber} does not belong to ${branch}.`,
+            "pull-request-mismatch",
         );
     }
 
@@ -105,7 +143,11 @@ function unavailableActivity(
     baseCommits: WorktreeActivityResult["baseCommits"],
     items: WorktreeActivityItem[],
     message: string,
-    reason: "not-authenticated" | "request-failed",
+    reason:
+        | "not-authenticated"
+        | "pull-request-mismatch"
+        | "pull-request-not-found"
+        | "request-failed",
 ): WorktreeActivityResult {
     return {
         baseCommits,

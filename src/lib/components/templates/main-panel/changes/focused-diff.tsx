@@ -47,14 +47,15 @@ export function FocusedDiff({
     pullRequestNumber,
     shouldWrap,
 }: FocusedDiffProps) {
-    const selectedLines: SelectedLineRange | null = draft
-        ? {
-              end: draft.endLine,
-              endSide: draft.endSide,
-              side: draft.startSide,
-              start: draft.startLine,
-          }
-        : null;
+    const selectedLines: SelectedLineRange | null =
+        draft && draft.path === fileDiff.name
+            ? {
+                  end: draft.endLine,
+                  endSide: draft.endSide,
+                  side: draft.startSide,
+                  start: draft.startLine,
+              }
+            : null;
 
     function selectRange(range: SelectedLineRange | null) {
         if (!range || !pullRequestNumber) {

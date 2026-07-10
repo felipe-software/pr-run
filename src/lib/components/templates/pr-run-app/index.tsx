@@ -7,10 +7,7 @@ import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
 import { AddProjectDialog } from "@/lib/components/templates/add-project-dialog";
 import { CreateScriptDialog } from "@/lib/components/templates/create-script-dialog";
-import {
-    getTerminalKey,
-    GlobalTerminalPanel,
-} from "@/lib/components/templates/global-terminal-panel";
+import { GlobalTerminalPanel } from "@/lib/components/templates/global-terminal-panel";
 import { MainPanel } from "@/lib/components/templates/main-panel";
 import { Overview } from "@/lib/components/templates/overview";
 import type { RunTerminalContext } from "@/lib/components/templates/main-panel";
@@ -20,6 +17,12 @@ import { StatusBar } from "@/lib/components/templates/status-bar";
 import { WorkspaceTitlebar } from "@/lib/components/templates/workspace-titlebar";
 import { SettingsPage } from "@/lib/components/templates/settings-page";
 import { usePrRunAppState } from "@/lib/components/templates/pr-run-app/use-pr-run-app-state";
+import {
+    clamp,
+    getActiveOwnerTerminalKey,
+    getPreferredGlobalTerminalKey,
+} from "@/lib/components/templates/pr-run-app/terminal-state";
+import { useUiPreferencesStore } from "@/lib/hooks/store/use-ui-preferences-store";
 import { useWorktreeTerminalStore } from "@/lib/hooks/store/use-worktree-terminal-store";
 
 const TERMINAL_PANEL_DEFAULT_HEIGHT = 320;
@@ -42,17 +45,30 @@ export function PrRunApp() {
         useState(false);
     const [isTerminalPanelResizing, setIsTerminalPanelResizing] =
         useState(false);
+    const storedTerminalPanelHeight = useUiPreferencesStore(
+        (store) => store.terminalPanelHeight,
+    );
+    const setTerminalPanelHeightPreference = useUiPreferencesStore(
+        (store) => store.setTerminalPanelHeight,
+    );
+    const storedTerminalListWidth = useUiPreferencesStore(
+        (store) => store.terminalListWidth,
+    );
+    const setTerminalListWidthPreference = useUiPreferencesStore(
+        (store) => store.setTerminalListWidth,
+    );
     const [terminalPanelHeight, setTerminalPanelHeight] = useState(() =>
-        readPersistedSize(
-            "pr-run:terminal-panel-height",
-            TERMINAL_PANEL_DEFAULT_HEIGHT,
+        Math.max(
+            storedTerminalPanelHeight ?? TERMINAL_PANEL_DEFAULT_HEIGHT,
+            TERMINAL_PANEL_MIN_HEIGHT,
         ),
     );
     const [terminalPanelSidebarWidth, setTerminalPanelSidebarWidth] = useState(
         () =>
-            readPersistedSize(
-                "pr-run:terminal-list-width",
-                TERMINAL_PANEL_SIDEBAR_DEFAULT_WIDTH,
+            clamp(
+                storedTerminalListWidth ?? TERMINAL_PANEL_SIDEBAR_DEFAULT_WIDTH,
+                TERMINAL_PANEL_SIDEBAR_MIN_WIDTH,
+                TERMINAL_PANEL_SIDEBAR_MAX_WIDTH,
             ),
     );
     const [selectedGlobalTerminalKey, setSelectedGlobalTerminalKey] = useState<
@@ -78,6 +94,8 @@ export function PrRunApp() {
     const isSidebarOpen = isDesktopViewport
         ? !isDesktopSidebarHidden
         : isMobileSidebarOpen;
+    const isBranchWorkspaceVisible =
+        state.workspaceView.type !== "settings" && !state.isOverviewOpen;
 
     useEffect(() => {
         const media = window.matchMedia("(min-width: 64rem)");
@@ -125,18 +143,12 @@ export function PrRunApp() {
     }, []);
 
     useEffect(() => {
-        localStorage.setItem(
-            "pr-run:terminal-panel-height",
-            String(terminalPanelHeight),
-        );
-    }, [terminalPanelHeight]);
+        setTerminalPanelHeightPreference(terminalPanelHeight);
+    }, [setTerminalPanelHeightPreference, terminalPanelHeight]);
 
     useEffect(() => {
-        localStorage.setItem(
-            "pr-run:terminal-list-width",
-            String(terminalPanelSidebarWidth),
-        );
-    }, [terminalPanelSidebarWidth]);
+        setTerminalListWidthPreference(terminalPanelSidebarWidth);
+    }, [setTerminalListWidthPreference, terminalPanelSidebarWidth]);
 
     function beginTerminalUiResize() {
         if (resizeSettleTimeoutRef.current !== null) {
@@ -173,6 +185,12 @@ export function PrRunApp() {
         }
 
         setIsMobileSidebarOpen((open) => !open);
+    }
+
+    function closeMobileSidebar() {
+        if (!isDesktopViewport) {
+            setIsMobileSidebarOpen(false);
+        }
     }
 
     function beginTerminalPanelResize(
@@ -286,11 +304,15 @@ export function PrRunApp() {
             variant="plain"
         >
             <WorkspaceTitlebar
+                areWorkspaceShortcutsEnabled={isBranchWorkspaceVisible}
                 isSidebarOpen={isSidebarOpen}
                 projectAvatarUris={state.projectAvatarUris}
                 sidebarWidth={state.sidebarWidth}
                 onCloseTab={state.closeWorktreeTab}
-                onSelectTab={state.selectWorktreeTab}
+                onSelectTab={(tabId) => {
+                    state.selectWorktreeTab(tabId);
+                    closeMobileSidebar();
+                }}
                 onToggleSidebar={toggleSidebar}
             />
             <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -319,10 +341,19 @@ export function PrRunApp() {
                     onBeginResize={state.beginResize}
                     onCheckoutBranch={state.checkoutBranch}
                     onOpenAddProject={state.openAddProject}
-                    onOpenOverview={state.openOverview}
-                    onOpenSettings={state.openSettings}
+                    onOpenOverview={() => {
+                        state.openOverview();
+                        closeMobileSidebar();
+                    }}
+                    onOpenSettings={() => {
+                        state.openSettings();
+                        closeMobileSidebar();
+                    }}
                     onRemoveWorktree={state.removeWorktree}
-                    onSelectBranch={state.selectBranch}
+                    onSelectBranch={(project, branch) => {
+                        state.selectBranch(project, branch);
+                        closeMobileSidebar();
+                    }}
                     onToggleProject={state.toggleProject}
                     onUpdateProject={state.updateProject}
                 />
@@ -344,8 +375,16 @@ export function PrRunApp() {
                                 (group) => group.projects,
                             )}
                         />
-                    ) : (
-                        <>
+                    ) : null}
+                    {state.selectedBranchView.project &&
+                    state.selectedBranchView.branchName ? (
+                        <div
+                            className={
+                                isBranchWorkspaceVisible
+                                    ? "flex min-h-0 flex-1 flex-col"
+                                    : "hidden"
+                            }
+                        >
                             <MainPanel
                                 actionError={state.actionError}
                                 branchName={state.selectedBranchView.branchName}
@@ -384,8 +423,23 @@ export function PrRunApp() {
                                 onClose={() => setIsTerminalPanelOpen(false)}
                                 onSelectTerminal={setSelectedGlobalTerminalKey}
                             />
-                        </>
-                    )}
+                        </div>
+                    ) : state.workspaceView.type !== "settings" &&
+                      !state.isOverviewOpen ? (
+                        <MainPanel
+                            actionError={state.actionError}
+                            branchName={null}
+                            isCheckingOutWorktree={false}
+                            isRunTerminalDocked={false}
+                            isTerminalStateSyncPaused={false}
+                            project={null}
+                            onCheckoutBranch={state.checkoutBranch}
+                            onCreateScript={state.openCreateScript}
+                            onRunTerminalContextChange={
+                                handleRunTerminalContextChange
+                            }
+                        />
+                    ) : null}
                     <StatusBar
                         summary={state.statusSummary}
                         onOpenBusyTerminals={openGlobalTerminalPanel}
@@ -409,61 +463,4 @@ export function PrRunApp() {
             <SshPassphraseDialog />
         </Surface>
     );
-}
-
-function getPreferredGlobalTerminalKey(
-    owners: ReturnType<typeof useWorktreeTerminalStore.getState>["owners"],
-) {
-    const fallback = getFirstTerminalKey(owners);
-
-    for (const [ownerKey, owner] of Object.entries(owners)) {
-        const busyTab = owner.tabs.find(
-            (tab) => tab.status === "alive" && tab.busyState === "busy",
-        );
-
-        if (busyTab) {
-            return getTerminalKey(ownerKey, busyTab.id);
-        }
-    }
-
-    return fallback;
-}
-
-function getFirstTerminalKey(
-    owners: ReturnType<typeof useWorktreeTerminalStore.getState>["owners"],
-) {
-    for (const [ownerKey, owner] of Object.entries(owners)) {
-        const firstTab = owner.tabs[0];
-
-        if (firstTab) {
-            return getTerminalKey(ownerKey, firstTab.id);
-        }
-    }
-
-    return null;
-}
-
-function getActiveOwnerTerminalKey(
-    owners: ReturnType<typeof useWorktreeTerminalStore.getState>["owners"],
-    ownerKey: string,
-) {
-    const owner = owners[ownerKey];
-
-    if (!owner) {
-        return null;
-    }
-
-    const activeTab =
-        owner.tabs.find((tab) => tab.id === owner.activeTabId) ?? owner.tabs[0];
-
-    return activeTab ? getTerminalKey(ownerKey, activeTab.id) : null;
-}
-
-function clamp(value: number, min: number, max: number) {
-    return Math.min(Math.max(value, min), max);
-}
-
-function readPersistedSize(key: string, fallback: number) {
-    const value = Number(localStorage.getItem(key));
-    return Number.isFinite(value) ? value : fallback;
 }

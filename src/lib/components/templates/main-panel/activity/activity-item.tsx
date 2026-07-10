@@ -1,5 +1,5 @@
 import { Check, CircleDot, MessageSquareText, X } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
@@ -13,10 +13,16 @@ import type {
 } from "@/types/pr-run";
 
 type ActivityItemProps = {
+    branchName: string;
     item: WorktreeActivityItemType;
+    repositoryUrl?: string;
 };
 
-export function ActivityItem({ item }: ActivityItemProps) {
+export function ActivityItem({
+    branchName,
+    item,
+    repositoryUrl,
+}: ActivityItemProps) {
     if (item.type === "commit") {
         return <CommitRow commit={item.commit} />;
     }
@@ -65,7 +71,13 @@ export function ActivityItem({ item }: ActivityItemProps) {
                         · {formatDate(date)}
                     </time>
                 </div>
-                {content.body ? <MarkdownBody body={content.body} /> : null}
+                {content.body ? (
+                    <MarkdownBody
+                        body={content.body}
+                        branchName={branchName}
+                        repositoryUrl={repositoryUrl}
+                    />
+                ) : null}
                 {item.type === "review" && item.review.comments.length > 0 ? (
                     <div
                         className="border-border/70 mt-2 grid gap-2 border-l
@@ -82,7 +94,12 @@ export function ActivityItem({ item }: ActivityItemProps) {
                                 <span
                                     className="text-muted-foreground font-mono"
                                 >
-                                    {comment.path}:{comment.line ?? "outdated"}
+                                    {comment.path}:
+                                    {comment.isOutdated
+                                        ? "outdated"
+                                        : comment.subjectType === "file"
+                                          ? "file"
+                                          : comment.line}
                                 </span>
                                 <span
                                     className="text-foreground mt-0.5 block
@@ -100,7 +117,15 @@ export function ActivityItem({ item }: ActivityItemProps) {
     );
 }
 
-function MarkdownBody({ body }: { body: string }) {
+function MarkdownBody({
+    body,
+    branchName,
+    repositoryUrl,
+}: {
+    body: string;
+    branchName: string;
+    repositoryUrl?: string;
+}) {
     return (
         <div
             className="text-foreground/90 [&_a]:text-primary [&_code]:bg-muted
@@ -113,11 +138,48 @@ function MarkdownBody({ body }: { body: string }) {
             <ReactMarkdown
                 rehypePlugins={[rehypeRaw, rehypeSanitize]}
                 remarkPlugins={[remarkGfm]}
+                urlTransform={(url) =>
+                    resolveGitHubMarkdownUrl(url, repositoryUrl, branchName)
+                }
             >
                 {body}
             </ReactMarkdown>
         </div>
     );
+}
+
+export function resolveGitHubMarkdownUrl(
+    url: string,
+    repositoryUrl: string | undefined,
+    branchName: string,
+) {
+    const safeUrl = defaultUrlTransform(url);
+
+    if (
+        !safeUrl ||
+        !repositoryUrl ||
+        safeUrl.startsWith("#") ||
+        safeUrl.startsWith("//") ||
+        /^[a-z][a-z\d+.-]*:/i.test(safeUrl)
+    ) {
+        return safeUrl;
+    }
+
+    const repository = repositoryUrl.replace(/\/$/, "");
+
+    if (safeUrl.startsWith("../blob/")) {
+        return `${repository}/${safeUrl.replace(/^\.\.\//, "")}`;
+    }
+
+    const encodedBranch = branchName
+        .split("/")
+        .map(encodeURIComponent)
+        .join("/");
+    const relativePath = safeUrl.startsWith("/")
+        ? safeUrl.slice(1)
+        : safeUrl.replace(/^\.\//, "");
+
+    return `${repository}/blob/${encodedBranch}/${relativePath}`;
 }
 
 function reviewAction(state: PullRequestReviewState) {

@@ -34,13 +34,14 @@ export function ScriptsSettings({
         if (error) toast.error(getErrorMessage(error));
     }
     async function deleteScript() {
-        if (!pendingDelete) return;
-        const [error] = await tryPromise(remove.mutateAsync(pendingDelete.id));
+        const script = pendingDelete;
+        if (!script) return;
+        const [error] = await tryPromise(remove.mutateAsync(script.id));
         if (error) {
             toast.error(getErrorMessage(error));
             return;
         }
-        toast.success(`${pendingDelete.title} deleted.`, { timeout: 2400 });
+        toast.success(`${script.title} deleted.`, { timeout: 2400 });
         setPendingDelete(null);
     }
 
@@ -110,7 +111,11 @@ export function ScriptsSettings({
             </SettingsSection>
             <Dialog
                 open={Boolean(pendingDelete)}
-                onOpenChange={(isOpen) => !isOpen && setPendingDelete(null)}
+                onOpenChange={(isOpen) => {
+                    if (!isOpen && !remove.isPending) {
+                        setPendingDelete(null);
+                    }
+                }}
             >
                 <DialogPopup showCloseButton={!remove.isPending}>
                     <DialogHeader>

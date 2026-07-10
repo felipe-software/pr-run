@@ -1,9 +1,5 @@
 import { tryPromise } from "@/backend/handlers/error";
-import { gitQuiet, gitText } from "@/backend/handlers/git/command";
-import {
-    getDefaultRemoteBranch,
-    remoteBranch,
-} from "@/backend/handlers/git/helpers";
+import { gitQuiet } from "@/backend/handlers/git/command";
 import { listBranches } from "@/backend/handlers/git/worktrees";
 import type { ProjectConfig } from "@/backend/types";
 import type {
@@ -89,23 +85,19 @@ async function getProjectOverview(project: ProjectConfig) {
     await gitQuiet(project.path, ["fetch", "origin"]);
 
     const branches = await listBranches(project);
-    const pullRequestBranches = branches.filter((branch) => branch.pullRequest);
-    const defaultRemoteBranch = await getDefaultRemoteBranch(project.path);
+    const pullRequestBranches = branches.filter(
+        (branch) => branch.pullRequest?.state === "OPEN",
+    );
     const pullRequests = await mapWithConcurrency(
         pullRequestBranches,
         PULL_REQUEST_CONCURRENCY,
         async (branch) => {
             const pullRequest = branch.pullRequest!;
-            const stats = await getPullRequestDiffStats(
-                project.path,
-                branch.name,
-                branch.compareBranchName,
-                defaultRemoteBranch,
-            );
-
             return {
-                ...stats,
+                additions: pullRequest.additions ?? 0,
                 branchName: branch.name,
+                changedFiles: pullRequest.changedFiles ?? 0,
+                deletions: pullRequest.deletions ?? 0,
                 number: pullRequest.number,
                 projectId: project.id,
                 projectName: project.name,
@@ -130,29 +122,6 @@ async function getProjectOverview(project: ProjectConfig) {
     };
 
     return { pullRequests, summary };
-}
-
-async function getPullRequestDiffStats(
-    projectPath: string,
-    branchName: string,
-    baseBranchName: string | undefined,
-    defaultRemoteBranch: string | undefined,
-) {
-    const remoteBranchName = remoteBranch(branchName).remoteName;
-    const baseRemoteBranch = baseBranchName
-        ? remoteBranch(baseBranchName).remoteName
-        : defaultRemoteBranch;
-
-    if (!baseRemoteBranch || baseRemoteBranch === remoteBranchName) {
-        return { additions: 0, changedFiles: 0, deletions: 0 };
-    }
-
-    const output = await gitText(projectPath, [
-        "diff",
-        "--numstat",
-        `${baseRemoteBranch}...${remoteBranchName}`,
-    ]);
-    return parseOverviewDiffStats(output);
 }
 
 export function parseOverviewDiffStats(output: string) {

@@ -159,9 +159,12 @@ function historicalPullRequestBranch(
 
 function pullRequestInfo(pullRequest: GitHubPullRequest): PullRequestInfo {
     return {
+        additions: pullRequest.additions,
         assignees: pullRequest.assignees,
         author: pullRequest.author,
         baseBranchName: pullRequest.baseBranchName,
+        changedFiles: pullRequest.changedFiles,
+        deletions: pullRequest.deletions,
         isDraft: pullRequest.isDraft,
         latestReviews: pullRequest.latestReviews,
         number: pullRequest.number,

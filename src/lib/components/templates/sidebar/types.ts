@@ -25,5 +25,5 @@ export type SidebarProps = {
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
     onSelectBranch: (project: ProjectConfig, branch: BranchInfo) => void;
     onToggleProject: (projectId: string) => void;
-    onUpdateProject: (project: ProjectConfig) => Promise<void>;
+    onUpdateProject: (project: ProjectConfig) => Promise<boolean>;
 };

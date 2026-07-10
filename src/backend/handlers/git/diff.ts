@@ -24,7 +24,12 @@ async function getBranchDiffFiles(
 
     const comparison = `${defaultRemoteName}...${remoteName}`;
     const [numstatOutput, nameStatusOutput] = await Promise.all([
-        gitText(projectPath, ["diff", "--numstat", comparison]),
+        gitText(projectPath, [
+            "diff",
+            "--numstat",
+            "--find-renames",
+            comparison,
+        ]),
         gitText(projectPath, [
             "diff",
             "--name-status",

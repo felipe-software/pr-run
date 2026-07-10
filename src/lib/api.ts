@@ -301,11 +301,12 @@ export async function saveSshPassphrase() {
             method: "POST",
         });
 
-        const { pendingRequest, retryAction } =
+        const { pendingRequest, retryActions } =
             useSshPassphraseStore.getState();
+        const actions = Object.values(retryActions);
 
-        if (retryAction) {
-            await retryAction();
+        if (actions.length > 0) {
+            await Promise.all(actions.map((action) => action()));
         } else if (pendingRequest) {
             await retryPendingRequest(pendingRequest);
         }

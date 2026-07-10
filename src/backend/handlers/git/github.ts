@@ -22,9 +22,12 @@ type GitHubAuthorPayload = {
 };
 
 type GitHubPullRequestPayload = {
+    additions?: number | null;
     assignees?: (GitHubAuthorPayload | null)[] | null;
     author?: GitHubAuthorPayload | null;
     baseRefName?: string | null;
+    changedFiles?: number | null;
+    deletions?: number | null;
     headRefName?: string | null;
     isDraft?: boolean | null;
     latestReviews?: (GitHubLatestReviewPayload | null)[] | null;
@@ -47,10 +50,13 @@ type GitHubCommitPayload = {
 };
 
 export type GitHubPullRequest = {
+    additions: number;
     assignees: GitHubUserInfo[];
     author?: GitHubUserInfo;
     baseBranchName: string;
     branchName: string;
+    changedFiles: number;
+    deletions: number;
     isDraft: boolean;
     latestReviews: PullRequestLatestReview[];
     number: number;
@@ -65,13 +71,27 @@ type GhCommandOptions = {
     cwd?: string;
 };
 
+export class GhCommandError extends Error {
+    httpStatus?: number;
+
+    constructor(message: string) {
+        super(message);
+        this.name = "GhCommandError";
+        const status = message.match(/\(HTTP (\d{3})\)/)?.[1];
+        this.httpStatus = status ? Number(status) : undefined;
+    }
+}
+
 type GitHubPullRequestListState = "closed" | "open";
 
 const PULL_REQUEST_JSON_FIELDS = [
+    "additions",
     "number",
     "title",
     "headRefName",
     "baseRefName",
+    "changedFiles",
+    "deletions",
     "author",
     "isDraft",
     "url",
@@ -105,10 +125,35 @@ export async function ghText(args: string[], options: GhCommandOptions = {}) {
     ]);
 
     if (exitCode !== 0) {
-        throw new Error(stderr.trim() || `gh exited with code ${exitCode}.`);
+        throw new GhCommandError(
+            stderr.trim() || `gh exited with code ${exitCode}.`,
+        );
     }
 
     return stdout;
+}
+
+type GitHubPullRequestIdentity = {
+    headRefName: string;
+    nodeId: string;
+    number: number;
+};
+
+export async function getGitHubPullRequestIdentity(
+    project: ProjectConfig,
+    repository: GitHubRepositoryInfo,
+    pullRequestNumber: number,
+): Promise<GitHubPullRequestIdentity> {
+    const output = await ghText(
+        [
+            "api",
+            `repos/${repository.nameWithOwner}/pulls/${pullRequestNumber}`,
+            "--jq",
+            "{number:.number,nodeId:.node_id,headRefName:.head.ref}",
+        ],
+        { cwd: project.path },
+    );
+    return await parseJson<GitHubPullRequestIdentity>(output);
 }
 
 export async function parseJson<T>(value: string): Promise<T> {
@@ -204,10 +249,13 @@ export function normalizeGitHubPullRequests(
             }
 
             return {
+                additions: pullRequest.additions ?? 0,
                 assignees: normalizeAuthors(pullRequest.assignees),
                 author: normalizeAuthor(pullRequest.author),
                 baseBranchName: pullRequest.baseRefName,
                 branchName: pullRequest.headRefName,
+                changedFiles: pullRequest.changedFiles ?? 0,
+                deletions: pullRequest.deletions ?? 0,
                 isDraft: Boolean(pullRequest.isDraft),
                 latestReviews: normalizeLatestReviews(
                     pullRequest.latestReviews,

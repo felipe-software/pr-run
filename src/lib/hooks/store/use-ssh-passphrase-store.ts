@@ -13,12 +13,15 @@ type SshPassphraseState = {
     isSaving: boolean;
     passphrase: string;
     pendingRequest: PendingRequest | null;
-    retryAction: (() => Promise<void>) | null;
+    retryActions: Record<string, () => Promise<void>>;
     close: () => void;
     open: (request: PendingRequest | null) => void;
     setError: (error?: string) => void;
     setPassphrase: (passphrase: string) => void;
-    setRetryAction: (retryAction: (() => Promise<void>) | null) => void;
+    setRetryAction: (
+        key: string,
+        retryAction: (() => Promise<void>) | null,
+    ) => void;
     setSaving: (isSaving: boolean) => void;
 };
 
@@ -28,7 +31,7 @@ export const useSshPassphraseStore = create<SshPassphraseState>((set) => ({
     isSaving: false,
     passphrase: "",
     pendingRequest: null,
-    retryAction: null,
+    retryActions: {},
     close: () =>
         set({
             error: undefined,
@@ -36,7 +39,7 @@ export const useSshPassphraseStore = create<SshPassphraseState>((set) => ({
             isSaving: false,
             passphrase: "",
             pendingRequest: null,
-            retryAction: null,
+            retryActions: {},
         }),
     open: (pendingRequest) =>
         set({
@@ -45,10 +48,21 @@ export const useSshPassphraseStore = create<SshPassphraseState>((set) => ({
             isSaving: false,
             passphrase: "",
             pendingRequest,
-            retryAction: null,
+            retryActions: {},
         }),
     setError: (error) => set({ error }),
     setPassphrase: (passphrase) => set({ passphrase }),
-    setRetryAction: (retryAction) => set({ retryAction }),
+    setRetryAction: (key, retryAction) =>
+        set((state) => {
+            const retryActions = { ...state.retryActions };
+
+            if (retryAction) {
+                retryActions[key] = retryAction;
+            } else {
+                delete retryActions[key];
+            }
+
+            return { retryActions };
+        }),
     setSaving: (isSaving) => set({ isSaving }),
 }));

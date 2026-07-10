@@ -64,7 +64,17 @@ export async function preparePackageScriptTerminalCommand(
     packagePath: string,
     scriptName: string,
 ): Promise<PackageScriptTerminalCommandResult> {
-    const catalog = await getPackageScriptCatalog(project, branch);
+    const worktreePath = await requireWorktreePath(project, branch);
+
+    if (!worktreePath) {
+        throw new ApiError(
+            "WORKTREE_NOT_FOUND",
+            "Create the worktree before reading package scripts.",
+            404,
+        );
+    }
+
+    const catalog = await readCatalog(worktreePath);
     const script = catalog.packages
         .find((group) => group.path === packagePath)
         ?.scripts.find((item) => item.name === scriptName);
@@ -77,13 +87,12 @@ export async function preparePackageScriptTerminalCommand(
         );
     }
 
-    const runCommand = `${catalog.manager} run ${shellQuote(script.name)}`;
-    const command =
-        script.packagePath === "."
-            ? runCommand
-            : process.platform === "win32"
-              ? `cd /d ${windowsQuote(script.packagePath)} && ${runCommand}`
-              : `cd ${shellQuote(script.packagePath)} && ${runCommand}`;
+    const command = buildPackageScriptCommand(
+        catalog.manager,
+        worktreePath,
+        script,
+        process.platform,
+    );
 
     return {
         command,
@@ -224,7 +233,7 @@ export async function detectPackageManager(
         }
     }
 
-    return "bun";
+    return "npm";
 }
 
 export function rankQuickScripts(packages: PackageScriptGroup[]) {
@@ -256,4 +265,19 @@ function shellQuote(value: string) {
 
 function windowsQuote(value: string) {
     return `"${value.replaceAll('"', '\\"')}"`;
+}
+
+export function buildPackageScriptCommand(
+    manager: PackageManager,
+    worktreePath: string,
+    script: Pick<PackageScriptInfo, "name" | "packagePath">,
+    platform: NodeJS.Platform,
+) {
+    const packageDirectory = path.resolve(worktreePath, script.packagePath);
+    const quote = platform === "win32" ? windowsQuote : shellQuote;
+    const runCommand = `${manager} run ${quote(script.name)}`;
+
+    return platform === "win32"
+        ? `cd /d ${windowsQuote(packageDirectory)} && ${runCommand}`
+        : `cd ${shellQuote(packageDirectory)} && ${runCommand}`;
 }

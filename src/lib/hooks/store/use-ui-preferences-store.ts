@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { parseStoredNumber } from "@/lib/utils/parse-stored-number";
+
 export type ThemePreference = "system" | "dark" | "light";
 
 type UiPreferencesState = {
@@ -24,9 +26,7 @@ function readNumber(key: string, legacyKey?: string) {
     const value =
         localStorage.getItem(key) ??
         (legacyKey ? localStorage.getItem(legacyKey) : null);
-    const number = Number(value);
-
-    return Number.isFinite(number) ? number : null;
+    return parseStoredNumber(value);
 }
 
 function readTheme(): ThemePreference {
