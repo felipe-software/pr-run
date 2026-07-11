@@ -39,7 +39,8 @@ export function CommitRow({
                 compact
                     ? "hover:bg-muted/15 w-full rounded-none py-2.5"
                     : `border-border/70 bg-surface/80 hover:bg-surface w-fit
-                        max-w-[min(64%,42rem)] overflow-hidden rounded-lg border
+                        max-w-[min(64%,42rem)] min-w-[min(28rem,100%)]
+                        overflow-hidden rounded-lg border
                         max-[800px]:max-w-[85%] max-[600px]:max-w-full`,
                 muted && "opacity-60 hover:opacity-85",
                 contentAlignment,

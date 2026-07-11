@@ -43,14 +43,43 @@ export function BranchPageHeader({
         return (
             <header className="border-border/70 border-b">
                 <div className="flex h-11 min-w-0 items-center gap-3 px-3">
-                    <div className="flex min-w-0 flex-1 items-baseline gap-2">
-                        <span
-                            className="text-muted-foreground hidden shrink-0
-                                text-[11px] sm:inline"
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                        {pullRequest?.author ? (
+                            <a
+                                className="flex min-w-0 shrink-0 items-center
+                                    gap-1.5 hover:underline"
+                                href={pullRequest.author.url}
+                                rel="noreferrer"
+                                target="_blank"
+                            >
+                                <img
+                                    alt={`${pullRequest.author.login}'s avatar`}
+                                    className="size-5 rounded-md object-cover"
+                                    src={pullRequest.author.avatarUrl}
+                                />
+                                <span
+                                    className="max-w-28 truncate text-xs
+                                        font-medium max-[500px]:hidden"
+                                >
+                                    {pullRequest.author.login}
+                                </span>
+                            </a>
+                        ) : null}
+                        <a
+                            className="text-muted-foreground
+                                hover:text-foreground max-w-40 truncate
+                                text-[11px] hover:underline max-[600px]:hidden"
+                            href={branch.repository?.url}
+                            rel="noreferrer"
+                            target="_blank"
                         >
-                            {pullRequest
-                                ? `PR #${pullRequest.number}`
-                                : project.name}
+                            {branch.repository?.nameWithOwner ?? project.name}
+                        </a>
+                        <span
+                            aria-hidden="true"
+                            className="text-muted-foreground max-[600px]:hidden"
+                        >
+                            /
                         </span>
                         <h1
                             className="min-w-0 truncate text-sm font-semibold

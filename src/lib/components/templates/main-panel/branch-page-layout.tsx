@@ -27,7 +27,7 @@ const activityHeaderAnimation: AutoAnimationPlugin = (element, action) => {
                 { opacity: 1, transform: "translateY(0)" },
                 { opacity: 0, transform: "translateY(-3px)" },
             ],
-            { duration: 150, easing: "ease-in" },
+            { duration: 75, easing: "ease-in" },
         );
     }
 
@@ -38,12 +38,12 @@ const activityHeaderAnimation: AutoAnimationPlugin = (element, action) => {
                 { opacity: 0, transform: "translateY(3px)" },
                 { opacity: 1, transform: "translateY(0)" },
             ],
-            { duration: 180, easing: "ease-out" },
+            { duration: 90, easing: "ease-out" },
         );
     }
 
     return new KeyframeEffect(element, [{ opacity: 1 }, { opacity: 1 }], {
-        duration: 180,
+        duration: 90,
     });
 };
 
@@ -259,7 +259,7 @@ function AnimatedHeader({
 
         const animation = header.animate(
             [{ height: `${currentHeight}px` }, { height: `${targetHeight}px` }],
-            { duration: 180, easing: "ease-in-out" },
+            { duration: 90, easing: "ease-in-out" },
         );
 
         heightAnimationRef.current = animation;

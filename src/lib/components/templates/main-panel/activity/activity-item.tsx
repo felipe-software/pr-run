@@ -48,9 +48,10 @@ export function ActivityItem({
         <article
             className={cn(
                 `border-border/70 bg-surface/80 hover:bg-surface flex w-fit
-                max-w-[min(64%,42rem)] min-w-0 flex-col overflow-hidden
-                rounded-lg border px-2.5 py-2 text-left transition-colors
-                max-[800px]:max-w-[85%] max-[600px]:max-w-full`,
+                max-w-[min(64%,42rem)] min-w-[min(28rem,100%)] flex-col
+                overflow-hidden rounded-lg border px-2.5 py-2 text-left
+                transition-colors max-[800px]:max-w-[85%]
+                max-[600px]:max-w-full`,
                 side === "right" ? "items-end" : "items-start",
             )}
         >
@@ -98,7 +99,7 @@ export function ActivityItem({
             </header>
             {content.body ? (
                 <MarkdownRenderer
-                    className="mt-2 w-fit max-w-[60ch] leading-5
+                    className="mt-2 w-full max-w-[60ch] leading-5
                         [overflow-wrap:anywhere] break-words [&_img]:my-2
                         [&_p]:my-1.5"
                     markdown={content.body}
