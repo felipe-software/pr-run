@@ -223,6 +223,43 @@ async function createWindow() {
             sandbox: false,
         },
     });
+    function UpsertKeyValue(obj: any, keyToChange: any, value: any) {
+        const keyToChangeLower = keyToChange.toLowerCase();
+        for (const key of Object.keys(obj)) {
+            if (key.toLowerCase() === keyToChangeLower) {
+                // Reassign old key
+                obj[key] = value;
+                // Done
+                return;
+            }
+        }
+        // Insert at end instead
+        obj[keyToChange] = value;
+    }
+    mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
+        (details, callback) => {
+            const { requestHeaders } = details;
+            UpsertKeyValue(requestHeaders, "Access-Control-Allow-Origin", [
+                "*",
+            ]);
+            callback({ requestHeaders });
+        },
+    );
+
+    mainWindow.webContents.session.webRequest.onHeadersReceived(
+        (details, callback) => {
+            const { responseHeaders } = details;
+            UpsertKeyValue(responseHeaders, "Access-Control-Allow-Origin", [
+                "*",
+            ]);
+            UpsertKeyValue(responseHeaders, "Access-Control-Allow-Headers", [
+                "*",
+            ]);
+            callback({
+                responseHeaders,
+            });
+        },
+    );
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
         void shell.openExternal(url);

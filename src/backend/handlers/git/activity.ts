@@ -8,6 +8,7 @@ import { getGitHubReviewSnapshot } from "@/backend/handlers/git/github-activity"
 import { getCommitHistory } from "@/backend/handlers/git/history";
 import { logger } from "@/backend/logger";
 import type {
+    CommitInfo,
     ProjectConfig,
     WorktreeActivityItem,
     WorktreeActivityResult,
@@ -20,18 +21,7 @@ export async function getWorktreeActivity(
     pullRequestNumber?: number,
 ): Promise<WorktreeActivityResult> {
     const commits = await getCommitHistory(project, branch, baseBranch);
-    const baseCommits = commits
-        .filter((commit) => !commit.isInSelectedBranch)
-        .reverse();
-    const branchItems: WorktreeActivityItem[] = commits
-        .filter((commit) => commit.isInSelectedBranch)
-        .reverse()
-        .map((commit) => ({
-            commit,
-            id: `commit:${commit.hash}`,
-            occurredAt: commit.date,
-            type: "commit",
-        }));
+    let { baseCommits, branchItems } = partitionActivityCommits(commits);
 
     if (!pullRequestNumber) {
         return {
@@ -108,6 +98,11 @@ export async function getWorktreeActivity(
         );
     }
 
+    ({ baseCommits, branchItems } = partitionActivityCommits(
+        commits,
+        snapshot.pullRequestCommitHashes,
+    ));
+
     const items: WorktreeActivityItem[] = [
         ...branchItems,
         ...snapshot.comments.map(
@@ -137,6 +132,33 @@ export async function getWorktreeActivity(
         reviewDecision: snapshot.reviewDecision,
         viewer: snapshot.viewer,
     };
+}
+
+export function partitionActivityCommits(
+    commits: CommitInfo[],
+    pullRequestCommitHashes?: string[],
+) {
+    const pullRequestHashes = pullRequestCommitHashes
+        ? new Set(pullRequestCommitHashes)
+        : undefined;
+    const isConversationCommit = (commit: CommitInfo) =>
+        pullRequestHashes
+            ? pullRequestHashes.has(commit.hash)
+            : commit.isInSelectedBranch;
+    const baseCommits = commits
+        .filter((commit) => !isConversationCommit(commit))
+        .reverse();
+    const branchItems: WorktreeActivityItem[] = commits
+        .filter(isConversationCommit)
+        .reverse()
+        .map((commit) => ({
+            commit,
+            id: `commit:${commit.hash}`,
+            occurredAt: commit.date,
+            type: "commit",
+        }));
+
+    return { baseCommits, branchItems };
 }
 
 function unavailableActivity(

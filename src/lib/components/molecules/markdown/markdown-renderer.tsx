@@ -3,6 +3,8 @@ import {
     isValidElement,
     type ComponentProps,
     type ReactNode,
+    useEffect,
+    useState,
 } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import rehypeRaw from "rehype-raw";
@@ -10,6 +12,8 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
 import { MarkdownCodeBlock } from "@/lib/components/molecules/markdown/markdown-code-block";
+import { resolveGitHubMediaUrl } from "@/lib/api";
+import { tryPromise } from "@/lib/error";
 import { cn } from "@/lib/utils/cn";
 
 const markdownSanitizeSchema = {
@@ -33,14 +37,18 @@ const markdownSanitizeSchema = {
 export type MarkdownRendererProps = {
     className?: string;
     emptyMessage?: string;
+    imageUrlTransform?: (url: string) => Promise<string>;
     markdown: string;
+    mediaAlignment?: "left" | "right";
     urlTransform?: (url: string) => string;
 };
 
 export function MarkdownRenderer({
     className,
     emptyMessage = "Nothing to preview.",
+    imageUrlTransform = resolveGitHubMediaUrl,
     markdown,
+    mediaAlignment,
     urlTransform = safeMarkdownUrl,
 }: MarkdownRendererProps) {
     if (isBlankMarkdown(markdown)) {
@@ -77,12 +85,29 @@ export function MarkdownRenderer({
                 [&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0
                 [&_summary]:cursor-pointer [&_summary]:font-medium [&_ul]:my-2
                 [&_ul]:list-disc [&_ul]:pl-6`,
+                mediaAlignment &&
+                    `[&_[data-markdown-image-placeholder]]:block
+                    [&_a:has(>img)]:block [&_img]:block`,
+                mediaAlignment === "left" &&
+                    `[&_[data-markdown-image-placeholder]]:mr-auto
+                    [&_[data-markdown-image-placeholder]]:ml-0 [&_img]:mr-auto
+                    [&_img]:ml-0 [&_p:has(img)]:text-left`,
+                mediaAlignment === "right" &&
+                    `[&_[data-markdown-image-placeholder]]:mr-0
+                    [&_[data-markdown-image-placeholder]]:ml-auto [&_img]:mr-0
+                    [&_img]:ml-auto [&_p:has(img)]:text-right`,
                 className,
             )}
         >
             <ReactMarkdown
                 components={{
                     a: MarkdownLink,
+                    img: (props) => (
+                        <MarkdownImage
+                            {...props}
+                            imageUrlTransform={imageUrlTransform}
+                        />
+                    ),
                     input: MarkdownInput,
                     pre: MarkdownPre,
                     table: MarkdownTable,
@@ -123,6 +148,84 @@ function MarkdownLink({ href, ...props }: ComponentProps<"a">) {
 
 function MarkdownInput({ checked, type, ...props }: ComponentProps<"input">) {
     return <input {...props} checked={checked} disabled readOnly type={type} />;
+}
+
+function MarkdownImage({
+    alt,
+    imageUrlTransform,
+    src,
+    ...props
+}: ComponentProps<"img"> & {
+    imageUrlTransform: (url: string) => Promise<string>;
+}) {
+    const [failed, setFailed] = useState(false);
+    const [resolvedSource, setResolvedSource] = useState<string>();
+
+    useEffect(() => {
+        let isActive = true;
+        setFailed(false);
+        setResolvedSource(undefined);
+
+        if (!src) {
+            return;
+        }
+
+        async function resolveSource() {
+            const [error, transformedSource] = await tryPromise(
+                imageUrlTransform(src!),
+            );
+
+            if (!isActive) {
+                return;
+            }
+
+            if (error) {
+                setFailed(true);
+                return;
+            }
+
+            setResolvedSource(transformedSource);
+        }
+
+        resolveSource();
+
+        return () => {
+            isActive = false;
+        };
+    }, [imageUrlTransform, src]);
+
+    if (!src) {
+        return null;
+    }
+
+    if (failed) {
+        return (
+            <a href={src} rel="noreferrer noopener" target="_blank">
+                {alt ? `Open image: ${alt}` : "Open image on GitHub"}
+            </a>
+        );
+    }
+
+    if (!resolvedSource) {
+        return (
+            <span
+                aria-label={alt ? `Loading image: ${alt}` : "Loading image"}
+                className="bg-muted/60 my-3 block h-28 w-full max-w-xl
+                    animate-pulse rounded-md"
+                data-markdown-image-placeholder=""
+                role="img"
+            />
+        );
+    }
+
+    return (
+        <img
+            {...props}
+            alt={alt ?? ""}
+            src={resolvedSource}
+            onError={() => setFailed(true)}
+        />
+    );
 }
 
 function MarkdownPre({ children }: { children?: ReactNode }) {

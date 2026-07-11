@@ -1,21 +1,26 @@
 import { FileDiff } from "@pierre/diffs/react";
 
-import { MarkdownRenderer } from "@/lib/components/molecules/markdown/markdown-renderer";
+import {
+    MarkdownRenderer,
+    type MarkdownRendererProps,
+} from "@/lib/components/molecules/markdown/markdown-renderer";
 import { ActivityAvatar } from "@/lib/components/templates/main-panel/activity/activity-avatar";
+import { ActivityTime } from "@/lib/components/templates/main-panel/activity/activity-time";
 import { resolveGitHubMarkdownUrl } from "@/lib/components/templates/main-panel/activity/github-markdown-url";
 import { parseReviewDiff } from "@/lib/components/templates/main-panel/activity/review-diff";
-import { formatDate } from "@/lib/format";
 import type { PullRequestReviewComment } from "@/types/pr-run";
 
 type ReviewCommentCardProps = {
     branchName: string;
     comment: PullRequestReviewComment;
+    mediaAlignment?: MarkdownRendererProps["mediaAlignment"];
     repositoryUrl?: string;
 };
 
 export function ReviewCommentCard({
     branchName,
     comment,
+    mediaAlignment,
     repositoryUrl,
 }: ReviewCommentCardProps) {
     const fileDiff = parseReviewDiff(comment.path, comment.diffHunk);
@@ -81,26 +86,24 @@ export function ReviewCommentCard({
                             gap-y-0.5"
                     >
                         <a
-                            className="text-xs font-semibold hover:underline"
+                            className="text-xs leading-4 font-semibold
+                                hover:underline"
                             href={comment.author.url}
                             rel="noreferrer noopener"
                             target="_blank"
                         >
                             {comment.author.login}
                         </a>
-                        <a
+                        <ActivityTime
                             className="text-muted-foreground text-[10px]
-                                hover:underline"
-                            href={comment.url}
-                            rel="noreferrer noopener"
-                            target="_blank"
-                        >
-                            {formatDate(comment.createdAt)}
-                        </a>
+                                leading-3.5"
+                            value={comment.createdAt}
+                        />
                     </div>
                     <MarkdownRenderer
                         className="mt-1 text-xs leading-5"
                         markdown={comment.body}
+                        mediaAlignment={mediaAlignment}
                         urlTransform={(url) =>
                             resolveGitHubMarkdownUrl(
                                 url,

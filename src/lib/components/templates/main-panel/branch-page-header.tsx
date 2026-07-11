@@ -17,6 +17,7 @@ import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 type BranchPageHeaderProps = {
     actionError?: string;
     branch: BranchInfo;
+    isCompact?: boolean;
     isCheckingOutWorktree: boolean;
     isRefreshing: boolean;
     project: ProjectConfig;
@@ -27,6 +28,7 @@ type BranchPageHeaderProps = {
 export function BranchPageHeader({
     actionError,
     branch,
+    isCompact = false,
     isCheckingOutWorktree,
     isRefreshing,
     project,
@@ -36,6 +38,63 @@ export function BranchPageHeader({
     const baseBranchName = branch.compareBranchName ?? "default branch";
     const pullRequest = branch.pullRequest;
     const heading = pullRequest?.title ?? branch.name;
+
+    if (isCompact) {
+        return (
+            <header className="border-border/70 border-b">
+                <div className="flex h-11 min-w-0 items-center gap-3 px-3">
+                    <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                        <span
+                            className="text-muted-foreground hidden shrink-0
+                                text-[11px] sm:inline"
+                        >
+                            {pullRequest
+                                ? `PR #${pullRequest.number}`
+                                : project.name}
+                        </span>
+                        <h1
+                            className="min-w-0 truncate text-sm font-semibold
+                                tracking-[-0.015em]"
+                            title={heading}
+                        >
+                            {heading}
+                        </h1>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                        {pullRequest ? (
+                            <Button
+                                aria-label="Open pull request on GitHub"
+                                render={
+                                    <a
+                                        href={pullRequest.url}
+                                        rel="noreferrer"
+                                        target="_blank"
+                                    />
+                                }
+                                size="icon-xs"
+                                variant="ghost"
+                            >
+                                <ExternalLink className="size-3.5" />
+                            </Button>
+                        ) : null}
+                        <Button
+                            aria-label="Refresh branch activity"
+                            disabled={isRefreshing}
+                            size="icon-xs"
+                            variant="ghost"
+                            onClick={onRefresh}
+                        >
+                            <RefreshCw
+                                className={
+                                    isRefreshing ? "animate-spin" : undefined
+                                }
+                            />
+                        </Button>
+                    </div>
+                </div>
+            </header>
+        );
+    }
 
     async function copyBranchName() {
         if (!navigator.clipboard) {

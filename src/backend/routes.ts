@@ -104,6 +104,11 @@ export function registerRoutes(app: Elysia) {
                 ),
             ]);
         })
+        .get("/github/media", async ({ query }) => {
+            const sourceUrl = String(query.url ?? "");
+
+            return await gitHandler.getGitHubMedia(sourceUrl);
+        })
         .get("/scripts", async () =>
             success("Scripts loaded.", await scriptsHandler.listScripts()),
         )

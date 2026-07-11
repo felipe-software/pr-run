@@ -1,8 +1,4 @@
-import {
-    ghText,
-    normalizeAuthor,
-    parseJson,
-} from "@/backend/handlers/git/github";
+import { ghText, parseJson } from "@/backend/handlers/git/github";
 import type {
     GitHubRepositoryInfo,
     GitHubUserInfo,
@@ -14,21 +10,7 @@ import type {
     PullRequestReviewState,
 } from "@/backend/types";
 
-type GraphqlAuthor = {
-    avatarUrl?: string | null;
-    login?: string | null;
-    url?: string | null;
-};
-
 type PullRequestViewPayload = {
-    comments?: Array<{
-        author?: GraphqlAuthor | null;
-        body?: string;
-        createdAt?: string;
-        id?: string;
-        url?: string;
-        viewerDidAuthor?: boolean;
-    }>;
     headRefOid?: string;
     reviewDecision?: string;
 };
@@ -47,6 +29,18 @@ type ApiReview = {
     state?: string;
     submitted_at?: string | null;
     user?: ApiUser;
+};
+
+type ApiIssueComment = {
+    body?: string;
+    created_at?: string;
+    html_url?: string;
+    id: number;
+    user?: ApiUser;
+};
+
+type ApiPullRequestCommit = {
+    sha?: string;
 };
 
 type ApiReviewComment = {
@@ -71,6 +65,7 @@ export type GitHubReviewSnapshot = {
     comments: PullRequestGeneralComment[];
     headRefOid: string;
     pendingReview?: PendingPullRequestReview;
+    pullRequestCommitHashes: string[];
     reviewComments: PullRequestReviewComment[];
     reviewDecision?: string;
     reviews: PullRequestReviewActivity[];
@@ -83,46 +78,81 @@ export async function getGitHubReviewSnapshot(
     pullRequestNumber: number,
 ): Promise<GitHubReviewSnapshot> {
     const repositoryName = repository.nameWithOwner;
-    const [viewOutput, reviewsOutput, reviewCommentsOutput, viewerOutput] =
-        await Promise.all([
-            ghText(
-                [
-                    "pr",
-                    "view",
-                    String(pullRequestNumber),
-                    "--repo",
-                    repositoryName,
-                    "--json",
-                    "comments,headRefOid,reviewDecision",
-                ],
-                { cwd: project.path },
-            ),
-            ghText(
-                [
-                    "api",
-                    `repos/${repositoryName}/pulls/${pullRequestNumber}/reviews`,
-                    "--paginate",
-                    "--slurp",
-                ],
-                { cwd: project.path },
-            ),
-            ghText(
-                [
-                    "api",
-                    `repos/${repositoryName}/pulls/${pullRequestNumber}/comments`,
-                    "--paginate",
-                    "--slurp",
-                ],
-                { cwd: project.path },
-            ),
-            ghText(["api", "user"], { cwd: project.path }),
-        ]);
-    const [view, apiReviews, apiReviewComments, apiViewer] = await Promise.all([
+    const [
+        viewOutput,
+        commentsOutput,
+        reviewsOutput,
+        reviewCommentsOutput,
+        pullRequestCommitsOutput,
+        viewerOutput,
+    ] = await Promise.all([
+        ghText(
+            [
+                "pr",
+                "view",
+                String(pullRequestNumber),
+                "--repo",
+                repositoryName,
+                "--json",
+                "headRefOid,reviewDecision",
+            ],
+            { cwd: project.path },
+        ),
+        ghText(
+            [
+                "api",
+                `repos/${repositoryName}/issues/${pullRequestNumber}/comments`,
+                "--paginate",
+                "--slurp",
+            ],
+            { cwd: project.path },
+        ),
+        ghText(
+            [
+                "api",
+                `repos/${repositoryName}/pulls/${pullRequestNumber}/reviews`,
+                "--paginate",
+                "--slurp",
+            ],
+            { cwd: project.path },
+        ),
+        ghText(
+            [
+                "api",
+                `repos/${repositoryName}/pulls/${pullRequestNumber}/comments`,
+                "--paginate",
+                "--slurp",
+            ],
+            { cwd: project.path },
+        ),
+        ghText(
+            [
+                "api",
+                `repos/${repositoryName}/pulls/${pullRequestNumber}/commits`,
+                "--paginate",
+                "--slurp",
+            ],
+            { cwd: project.path },
+        ),
+        ghText(["api", "user"], { cwd: project.path }),
+    ]);
+    const [
+        view,
+        apiComments,
+        apiReviews,
+        apiReviewComments,
+        apiPullRequestCommits,
+        apiViewer,
+    ] = await Promise.all([
         parseJson<PullRequestViewPayload>(viewOutput),
+        parseJson<ApiIssueComment[][]>(commentsOutput).then((pages) =>
+            pages.flat(),
+        ),
         parseJson<ApiReview[][]>(reviewsOutput).then((pages) => pages.flat()),
         parseJson<ApiReviewComment[][]>(reviewCommentsOutput).then((pages) =>
             pages.flat(),
         ),
+        parseJson<ApiPullRequestCommit[][]>(pullRequestCommitsOutput),
         parseJson<ApiUser>(viewerOutput),
     ]);
     const viewer = normalizeApiUser(apiViewer);
@@ -139,25 +169,13 @@ export async function getGitHubReviewSnapshot(
     );
 
     return {
-        comments: (view.comments ?? []).flatMap((comment) => {
-            const author =
-                normalizeAuthor(comment.author) ??
-                normalizeGraphqlUser(comment.author);
+        comments: apiComments.flatMap((comment) => {
+            const normalizedComment = normalizeGeneralComment(
+                comment,
+                viewer.login,
+            );
 
-            if (!author || !comment.id || !comment.createdAt || !comment.url) {
-                return [];
-            }
-
-            return [
-                {
-                    author,
-                    body: comment.body ?? "",
-                    createdAt: comment.createdAt,
-                    id: comment.id,
-                    url: comment.url,
-                    viewerDidAuthor: Boolean(comment.viewerDidAuthor),
-                },
-            ];
+            return normalizedComment ? [normalizedComment] : [];
         }),
         headRefOid: view.headRefOid ?? "",
         pendingReview: pendingApiReview
@@ -171,6 +189,9 @@ export async function getGitHubReviewSnapshot(
                   nodeId: pendingApiReview.node_id ?? "",
               }
             : undefined,
+        pullRequestCommitHashes: normalizePullRequestCommitHashes(
+            apiPullRequestCommits,
+        ),
         reviewComments,
         reviewDecision: view.reviewDecision,
         reviews: publishedReviews.flatMap((review) => {
@@ -193,6 +214,39 @@ export async function getGitHubReviewSnapshot(
             ];
         }),
         viewer,
+    };
+}
+
+export function normalizePullRequestCommitHashes(
+    pages: ApiPullRequestCommit[][],
+) {
+    return Array.from(
+        new Set(
+            pages
+                .flat()
+                .map((commit) => commit.sha?.trim())
+                .filter((hash): hash is string => Boolean(hash)),
+        ),
+    );
+}
+
+export function normalizeGeneralComment(
+    comment: ApiIssueComment,
+    viewerLogin: string,
+): PullRequestGeneralComment | undefined {
+    if (!comment.created_at || !comment.html_url) {
+        return undefined;
+    }
+
+    const author = normalizeApiUser(comment.user);
+
+    return {
+        author,
+        body: comment.body ?? "",
+        createdAt: comment.created_at,
+        id: String(comment.id),
+        url: comment.html_url,
+        viewerDidAuthor: author.login === viewerLogin,
     };
 }
 
@@ -229,22 +283,6 @@ function normalizeApiUser(user: ApiUser | undefined): GitHubUserInfo {
             `https://github.com/identicons/${encodeURIComponent(login)}.png`,
         login,
         url: user?.html_url ?? `https://github.com/${login}`,
-    };
-}
-
-function normalizeGraphqlUser(
-    user: GraphqlAuthor | null | undefined,
-): GitHubUserInfo | undefined {
-    if (!user?.login) {
-        return undefined;
-    }
-
-    return {
-        avatarUrl:
-            user.avatarUrl ??
-            `https://github.com/${encodeURIComponent(user.login)}.png?size=64`,
-        login: user.login,
-        url: user.url ?? `https://github.com/${user.login}`,
     };
 }
 

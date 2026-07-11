@@ -90,6 +90,17 @@ export function getBackendUrl() {
     return backendUrlPromise;
 }
 
+export async function resolveGitHubMediaUrl(sourceUrl: string) {
+    if (!sourceUrl.startsWith("https://github.com/user-attachments/assets/")) {
+        return sourceUrl;
+    }
+
+    const backendUrl = await getBackendUrl();
+    const params = new URLSearchParams({ url: sourceUrl });
+
+    return `${backendUrl}/github/media?${params.toString()}`;
+}
+
 async function resolveBackendUrl() {
     if (window.prRun) {
         return window.prRun.getBackendUrl();

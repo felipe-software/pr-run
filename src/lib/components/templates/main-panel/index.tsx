@@ -12,11 +12,11 @@ import {
     type BranchPageTab,
 } from "@/lib/components/templates/main-panel/branch-page-tabs";
 import { BranchEmptyState } from "@/lib/components/templates/main-panel/branch-empty-state";
+import { BranchPageLayout } from "@/lib/components/templates/main-panel/branch-page-layout";
 import {
     MainPanelLoadingState,
     MainPanelState,
 } from "@/lib/components/templates/main-panel/main-panel-state";
-import { ScrollArea } from "@/lib/components/ui/scroll-area";
 import { WorktreeActivity } from "@/lib/components/templates/main-panel/activity";
 import { useWorktreeActivityQuery } from "@/lib/hooks/query/use-worktree-activity-query";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
@@ -83,7 +83,7 @@ export function MainPanel({
     onCreateScript,
     onRunTerminalContextChange,
 }: MainPanelProps) {
-    const [activeTab, setActiveTab] = useState<BranchPageTab>("changes");
+    const [activeTab, setActiveTab] = useState<BranchPageTab>("activity");
     const [isRefreshingActiveTab, setIsRefreshingActiveTab] = useState(false);
     const queryClient = useQueryClient();
     const selectedKey =
@@ -155,7 +155,7 @@ export function MainPanel({
     });
 
     useEffect(() => {
-        setActiveTab("changes");
+        setActiveTab("activity");
     }, [selectedKey]);
 
     useEffect(() => {
@@ -306,148 +306,122 @@ export function MainPanel({
         branchesQuery.isFetching ||
         ((activeTab === "activity" || activeTab === "changes") &&
             activityQuery.isFetching);
+    const latestActivityItem = activityQuery.data?.items.at(-1);
+    const activityContentVersion = activityQuery.data
+        ? [
+              activityQuery.data.items.length,
+              latestActivityItem?.id ?? "empty",
+              activityQuery.data.pendingReview?.id ?? "no-pending-review",
+          ].join(":")
+        : undefined;
 
     return (
         <main
             className={cn(
                 `bg-background flex min-h-0 overflow-hidden px-3 py-3
-                max-[900px]:px-2 max-[500px]:overflow-y-auto`,
+                max-[900px]:px-2`,
                 isRunTerminalDocked ? "shrink-0" : "h-full flex-1",
+                activeTab !== "activity" && "max-[500px]:overflow-y-auto",
             )}
         >
-            <div
-                className="flex min-h-0 w-full flex-1 flex-col gap-3
-                    max-[500px]:min-h-[500px]"
-            >
-                <div className="flex shrink-0 flex-col gap-0">
+            <BranchPageLayout
+                contentVersion={activityContentVersion}
+                isReading={activeTab === "activity"}
+                isReadingReady={!activityQuery.isPending}
+                renderHeader={(isCompact) => (
                     <BranchPageHeader
                         actionError={actionError}
                         branch={selectedBranch}
                         isCheckingOutWorktree={isCheckingOutWorktree}
+                        isCompact={isCompact}
                         isRefreshing={isRefreshing}
                         project={project}
                         onCheckoutBranch={onCheckoutBranch}
                         onRefresh={refreshActiveTab}
                     />
+                )}
+                scrollKey={selectedKey}
+                tabs={
                     <BranchPageTabs
                         activeTab={activeTab}
                         isRunTabBusy={isRunTabBusy}
                         onSelectTab={setActiveTab}
                     />
-                </div>
-
-                <div className="flex min-h-0 flex-1 flex-col">
-                    {activeTab === "activity" ? (
-                        <section className="flex min-h-0 flex-1 flex-col">
-                            <ScrollArea
-                                className="min-h-0 flex-1"
-                                hideScrollbars
-                                scrollFade
-                            >
-                                <WorktreeActivity
-                                    baseBranchName={
-                                        currentBranch.compareBranchName
-                                    }
-                                    branchName={currentBranch.name}
-                                    data={activityQuery.data}
-                                    error={
-                                        isAwaitingActivityPassphrase
-                                            ? "Waiting for SSH passphrase..."
-                                            : activityError
-                                    }
-                                    isLoading={activityQuery.isPending}
-                                    projectId={project.id}
-                                    pullRequestNumber={
-                                        currentBranch.pullRequest?.number
-                                    }
-                                    repositoryUrl={
-                                        currentBranch.repository?.url
-                                    }
-                                />
-                            </ScrollArea>
-                        </section>
-                    ) : activeTab === "run" ? (
-                        selectedBranch.hasWorktree ? (
-                            <div className="flex min-h-0 flex-1 flex-col">
-                                <Suspense
-                                    fallback={
-                                        <Surface
-                                            className="grid gap-2 px-3 py-2"
-                                            variant="muted"
-                                        >
-                                            <Skeleton className="h-4 w-32" />
-                                            <Skeleton className="h-7 w-full" />
-                                        </Surface>
-                                    }
-                                >
-                                    <WorktreeRun
-                                        branchName={currentBranch.name}
-                                        projectId={project.id}
-                                        onCreateScript={onCreateScript}
-                                        onRunScriptCommand={runTerminalCommand}
-                                    />
-                                </Suspense>
-                            </div>
-                        ) : (
-                            <Surface className="min-h-48" variant="muted">
-                                <EmptyState
-                                    description="Create the worktree before running project scripts in a terminal."
-                                    title="No worktree available"
-                                />
-                            </Surface>
-                        )
-                    ) : activeTab === "changes" ? (
-                        <Suspense
-                            fallback={
-                                <Surface
-                                    className="grid gap-2 px-3 py-3"
-                                    variant="muted"
-                                >
-                                    <Skeleton className="h-4 w-32" />
-                                    <Skeleton className="h-40 w-full" />
-                                </Surface>
-                            }
-                        >
-                            <WorktreeChanges
-                                activity={activityQuery.data}
-                                activityError={activityError}
-                                baseBranchName={currentBranch.compareBranchName}
-                                branchName={currentBranch.name}
-                                projectId={project.id}
-                                pullRequestNumber={
-                                    currentBranch.pullRequest?.number
-                                }
-                            />
-                        </Suspense>
-                    ) : activeTab === "docker" ? (
-                        selectedBranch.hasWorktree ? (
+                }
+            >
+                {activeTab === "activity" ? (
+                    <WorktreeActivity
+                        baseBranchName={currentBranch.compareBranchName}
+                        branchName={currentBranch.name}
+                        data={activityQuery.data}
+                        error={
+                            isAwaitingActivityPassphrase
+                                ? "Waiting for SSH passphrase..."
+                                : activityError
+                        }
+                        isLoading={activityQuery.isPending}
+                        projectId={project.id}
+                        pullRequestAuthorLogin={
+                            currentBranch.pullRequest?.author?.login
+                        }
+                        pullRequestNumber={currentBranch.pullRequest?.number}
+                        repositoryUrl={currentBranch.repository?.url}
+                    />
+                ) : activeTab === "run" ? (
+                    selectedBranch.hasWorktree ? (
+                        <div className="flex min-h-0 flex-1 flex-col">
                             <Suspense
                                 fallback={
                                     <Surface
-                                        className="grid gap-2 px-3 py-3"
+                                        className="grid gap-2 px-3 py-2"
                                         variant="muted"
                                     >
                                         <Skeleton className="h-4 w-32" />
-                                        <Skeleton className="h-16 w-full" />
-                                        <Skeleton className="h-20 w-full" />
+                                        <Skeleton className="h-7 w-full" />
                                     </Surface>
                                 }
                             >
-                                <BranchDockerPanel
+                                <WorktreeRun
                                     branchName={currentBranch.name}
                                     projectId={project.id}
-                                    onRunDockerCommand={runTerminalCommand}
+                                    onCreateScript={onCreateScript}
+                                    onRunScriptCommand={runTerminalCommand}
                                 />
                             </Suspense>
-                        ) : (
-                            <Surface className="min-h-48" variant="muted">
-                                <EmptyState
-                                    description="Create the worktree before running Docker Compose commands for this branch."
-                                    title="No worktree available"
-                                />
+                        </div>
+                    ) : (
+                        <Surface className="min-h-48" variant="muted">
+                            <EmptyState
+                                description="Create the worktree before running project scripts in a terminal."
+                                title="No worktree available"
+                            />
+                        </Surface>
+                    )
+                ) : activeTab === "changes" ? (
+                    <Suspense
+                        fallback={
+                            <Surface
+                                className="grid gap-2 px-3 py-3"
+                                variant="muted"
+                            >
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-40 w-full" />
                             </Surface>
-                        )
-                    ) : selectedBranch.hasWorktree ? (
+                        }
+                    >
+                        <WorktreeChanges
+                            activity={activityQuery.data}
+                            activityError={activityError}
+                            baseBranchName={currentBranch.compareBranchName}
+                            branchName={currentBranch.name}
+                            projectId={project.id}
+                            pullRequestNumber={
+                                currentBranch.pullRequest?.number
+                            }
+                        />
+                    </Suspense>
+                ) : activeTab === "docker" ? (
+                    selectedBranch.hasWorktree ? (
                         <Suspense
                             fallback={
                                 <Surface
@@ -460,21 +434,47 @@ export function MainPanel({
                                 </Surface>
                             }
                         >
-                            <BranchEnvPanel
+                            <BranchDockerPanel
                                 branchName={currentBranch.name}
                                 projectId={project.id}
+                                onRunDockerCommand={runTerminalCommand}
                             />
                         </Suspense>
                     ) : (
                         <Surface className="min-h-48" variant="muted">
                             <EmptyState
-                                description="Create the worktree before reading env files for this branch."
+                                description="Create the worktree before running Docker Compose commands for this branch."
                                 title="No worktree available"
                             />
                         </Surface>
-                    )}
-                </div>
-            </div>
+                    )
+                ) : selectedBranch.hasWorktree ? (
+                    <Suspense
+                        fallback={
+                            <Surface
+                                className="grid gap-2 px-3 py-3"
+                                variant="muted"
+                            >
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-16 w-full" />
+                                <Skeleton className="h-20 w-full" />
+                            </Surface>
+                        }
+                    >
+                        <BranchEnvPanel
+                            branchName={currentBranch.name}
+                            projectId={project.id}
+                        />
+                    </Suspense>
+                ) : (
+                    <Surface className="min-h-48" variant="muted">
+                        <EmptyState
+                            description="Create the worktree before reading env files for this branch."
+                            title="No worktree available"
+                        />
+                    </Surface>
+                )}
+            </BranchPageLayout>
         </main>
     );
 }

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { cn } from "@/lib/utils/cn";
 
 type ActivityAvatarProps = {
@@ -11,7 +13,9 @@ export function ActivityAvatar({
     imageUrl,
     name,
 }: ActivityAvatarProps) {
-    if (imageUrl) {
+    const [failedImageUrl, setFailedImageUrl] = useState<string>();
+
+    if (imageUrl && failedImageUrl !== imageUrl) {
         return (
             <img
                 alt={`${name}'s avatar`}
@@ -20,6 +24,7 @@ export function ActivityAvatar({
                     className,
                 )}
                 src={imageUrl}
+                onError={() => setFailedImageUrl(imageUrl)}
             />
         );
     }
@@ -34,8 +39,8 @@ export function ActivityAvatar({
         <span
             aria-hidden="true"
             className={cn(
-                `bg-muted text-muted-foreground grid size-8 place-items-center
-                rounded-lg text-[10px] font-semibold`,
+                `bg-muted text-muted-foreground flex size-8 items-center
+                justify-center rounded-lg text-[10px] font-semibold`,
                 className,
             )}
         >

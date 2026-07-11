@@ -10,6 +10,7 @@ import { getCommitHistory } from "@/backend/handlers/git/history";
 import { getOverviewSnapshot } from "@/backend/handlers/git/overview";
 import { validateProjectPath } from "@/backend/handlers/git/helpers";
 import { getWorktreeActivity } from "@/backend/handlers/git/activity";
+import { getGitHubMedia } from "@/backend/handlers/git/github-media";
 import { findGitHubRepository } from "@/backend/handlers/git/github";
 import {
     addPullRequestComment,
@@ -97,6 +98,7 @@ export const gitHandler = {
     discardPendingReview,
     getBranchDiff,
     getCommitHistory,
+    getGitHubMedia,
     getOverviewSnapshot,
     getWorktreeActivity,
     listBranches,
