@@ -52,6 +52,7 @@ type ApiReview = {
 type ApiReviewComment = {
     body?: string;
     created_at?: string;
+    diff_hunk?: string;
     html_url?: string;
     id: number;
     line?: number | null;
@@ -203,6 +204,7 @@ export function normalizeReviewComment(
         author: normalizeApiUser(comment.user),
         body: comment.body ?? "",
         createdAt: comment.created_at ?? new Date(0).toISOString(),
+        diffHunk: comment.diff_hunk ?? "",
         id: comment.id,
         isOutdated: comment.subject_type !== "file" && comment.line == null,
         line: comment.line ?? comment.original_line ?? undefined,

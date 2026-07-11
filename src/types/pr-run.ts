@@ -190,6 +190,7 @@ export type PullRequestReviewComment = {
     author: GitHubUserInfo;
     body: string;
     createdAt: string;
+    diffHunk: string;
     id: number;
     isOutdated: boolean;
     line?: number;

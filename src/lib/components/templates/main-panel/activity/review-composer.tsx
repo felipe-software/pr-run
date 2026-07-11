@@ -1,8 +1,8 @@
 import { Check, MessageSquareText, Send, Trash2, X } from "lucide-react";
 import { useState } from "react";
 
+import { MarkdownComposer } from "@/lib/components/molecules/markdown/markdown-composer";
 import { Button } from "@/lib/components/ui/button";
-import { Textarea } from "@/lib/components/ui/textarea";
 import { toast } from "@/lib/components/ui/toast";
 import { tryPromise } from "@/lib/error";
 import { usePullRequestReviewMutations } from "@/lib/hooks/query/use-pull-request-review-mutations";
@@ -100,28 +100,31 @@ export function ReviewComposer({
                     <h3 className="text-sm font-semibold">
                         Join the discussion
                     </h3>
-                    <span className="text-muted-foreground text-xs">
-                        Markdown supported
-                    </span>
                 </div>
-                <Textarea
-                    aria-label="Pull request comment"
+                <MarkdownComposer
+                    ariaLabel="Pull request comment"
+                    disabled={commentMutation.isPending}
+                    footer={
+                        <div className="flex justify-end">
+                            <Button
+                                disabled={
+                                    !commentBody.trim() ||
+                                    commentMutation.isPending
+                                }
+                                size="sm"
+                                onClick={addComment}
+                            >
+                                <Send className="size-3.5" />
+                                {commentMutation.isPending
+                                    ? "Adding…"
+                                    : "Add comment"}
+                            </Button>
+                        </div>
+                    }
                     placeholder="Add a comment to this pull request…"
                     value={commentBody}
-                    onChange={(event) => setCommentBody(event.target.value)}
+                    onChange={setCommentBody}
                 />
-                <div className="flex justify-end">
-                    <Button
-                        disabled={
-                            !commentBody.trim() || commentMutation.isPending
-                        }
-                        size="sm"
-                        onClick={addComment}
-                    >
-                        <Send className="size-3.5" />
-                        {commentMutation.isPending ? "Adding…" : "Add comment"}
-                    </Button>
-                </div>
             </div>
 
             <div className="border-border/70 grid gap-2 border-t pt-3">
@@ -149,44 +152,47 @@ export function ReviewComposer({
                         </Button>
                     ) : null}
                 </div>
-                <Textarea
-                    aria-label="Review summary"
-                    className="min-h-16"
-                    placeholder="Review summary (optional for comment or approval)…"
+                <MarkdownComposer
+                    ariaLabel="Review summary"
                     disabled={isReviewActionPending}
+                    footer={
+                        <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                                disabled={
+                                    isReviewActionPending ||
+                                    !canSubmitCommentReview
+                                }
+                                size="sm"
+                                variant="outline"
+                                onClick={() => submitReview("COMMENT")}
+                            >
+                                <MessageSquareText className="size-3.5" />
+                                Comment
+                            </Button>
+                            <Button
+                                disabled={isReviewActionPending}
+                                size="sm"
+                                variant="destructive-outline"
+                                onClick={() => submitReview("REQUEST_CHANGES")}
+                            >
+                                <X className="size-3.5" />
+                                Request changes
+                            </Button>
+                            <Button
+                                disabled={isReviewActionPending}
+                                size="sm"
+                                onClick={() => submitReview("APPROVE")}
+                            >
+                                <Check className="size-3.5" />
+                                Approve
+                            </Button>
+                        </div>
+                    }
+                    placeholder="Review summary (optional for comment or approval)…"
+                    textareaClassName="min-h-16"
                     value={reviewBody}
-                    onChange={(event) => setReviewBody(event.target.value)}
+                    onChange={setReviewBody}
                 />
-                <div className="flex flex-wrap justify-end gap-2">
-                    <Button
-                        disabled={
-                            isReviewActionPending || !canSubmitCommentReview
-                        }
-                        size="sm"
-                        variant="outline"
-                        onClick={() => submitReview("COMMENT")}
-                    >
-                        <MessageSquareText className="size-3.5" />
-                        Comment
-                    </Button>
-                    <Button
-                        disabled={isReviewActionPending}
-                        size="sm"
-                        variant="destructive-outline"
-                        onClick={() => submitReview("REQUEST_CHANGES")}
-                    >
-                        <X className="size-3.5" />
-                        Request changes
-                    </Button>
-                    <Button
-                        disabled={isReviewActionPending}
-                        size="sm"
-                        onClick={() => submitReview("APPROVE")}
-                    >
-                        <Check className="size-3.5" />
-                        Approve
-                    </Button>
-                </div>
             </div>
         </section>
     );

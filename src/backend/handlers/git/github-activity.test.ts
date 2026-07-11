@@ -11,6 +11,39 @@ const baseComment = {
 };
 
 describe("normalizeReviewComment", () => {
+    test("preserves diff context and line ranges", () => {
+        expect(
+            normalizeReviewComment(
+                {
+                    ...baseComment,
+                    diff_hunk: "@@ -10,2 +10,3 @@\n context\n+added",
+                    line: 12,
+                    side: "RIGHT",
+                    start_line: 10,
+                    start_side: "RIGHT",
+                    subject_type: "line",
+                },
+                "viewer",
+            ),
+        ).toMatchObject({
+            diffHunk: "@@ -10,2 +10,3 @@\n context\n+added",
+            isOutdated: false,
+            line: 12,
+            side: "RIGHT",
+            startLine: 10,
+            startSide: "RIGHT",
+        });
+    });
+
+    test("normalizes a missing diff hunk to an empty string", () => {
+        expect(
+            normalizeReviewComment(
+                { ...baseComment, line: 12, subject_type: "line" },
+                "viewer",
+            ).diffHunk,
+        ).toBe("");
+    });
+
     test("distinguishes file comments from outdated line comments", () => {
         expect(
             normalizeReviewComment(

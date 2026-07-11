@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { resolveGitHubMarkdownUrl } from "@/lib/components/templates/main-panel/activity/activity-item";
+import { resolveGitHubMarkdownUrl } from "@/lib/components/templates/main-panel/activity/github-markdown-url";
 
 describe("resolveGitHubMarkdownUrl", () => {
     test("resolves repository-relative links", () => {

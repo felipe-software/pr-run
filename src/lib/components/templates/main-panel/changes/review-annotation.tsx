@@ -1,13 +1,14 @@
 import { MessageSquareText, Send, X } from "lucide-react";
 import { useState } from "react";
 
+import { MarkdownComposer } from "@/lib/components/molecules/markdown/markdown-composer";
+import { MarkdownRenderer } from "@/lib/components/molecules/markdown/markdown-renderer";
 import { ActivityAvatar } from "@/lib/components/templates/main-panel/activity/activity-avatar";
 import type {
     DiffCommentDraft,
     DiffReviewAnnotation,
 } from "@/lib/components/templates/main-panel/changes/diff-review-types";
 import { Button } from "@/lib/components/ui/button";
-import { Textarea } from "@/lib/components/ui/textarea";
 import { toast } from "@/lib/components/ui/toast";
 import { tryPromise } from "@/lib/error";
 import { usePullRequestReviewMutations } from "@/lib/hooks/query/use-pull-request-review-mutations";
@@ -46,12 +47,10 @@ export function ReviewAnnotation({
                 />
                 <div className="min-w-0 text-xs">
                     <div className="font-semibold">{comment.author.login}</div>
-                    <div
-                        className="text-foreground/90 mt-0.5
-                            whitespace-pre-wrap"
-                    >
-                        {comment.body}
-                    </div>
+                    <MarkdownRenderer
+                        className="mt-0.5 text-xs leading-5"
+                        markdown={comment.body}
+                    />
                 </div>
             </div>
         );
@@ -137,7 +136,7 @@ function InlineReviewComposer({
                     <MessageSquareText className="size-3.5" />
                     {draft.startLine === draft.endLine
                         ? `Comment on line ${draft.endLine}`
-                        : `Comment on lines ${draft.startLine}–${draft.endLine}`}
+                        : `Comment on lines ${draft.startLine}-${draft.endLine}`}
                 </span>
                 <Button
                     aria-label="Cancel inline comment"
@@ -148,31 +147,39 @@ function InlineReviewComposer({
                     <X className="size-3.5" />
                 </Button>
             </div>
-            <Textarea
+            <MarkdownComposer
+                ariaLabel="Inline review comment"
                 autoFocus
-                className="min-h-16"
+                disabled={reviewCommentMutation.isPending}
+                footer={
+                    <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                            disabled={
+                                !body.trim() || reviewCommentMutation.isPending
+                            }
+                            size="xs"
+                            variant="outline"
+                            onClick={() => submit("immediate")}
+                        >
+                            <Send className="size-3" />
+                            Add now
+                        </Button>
+                        <Button
+                            disabled={
+                                !body.trim() || reviewCommentMutation.isPending
+                            }
+                            size="xs"
+                            onClick={() => submit("pending")}
+                        >
+                            Add to review
+                        </Button>
+                    </div>
+                }
                 placeholder="Leave a review comment…"
+                textareaClassName="min-h-16"
                 value={body}
-                onChange={(event) => setBody(event.target.value)}
+                onChange={setBody}
             />
-            <div className="flex flex-wrap justify-end gap-2">
-                <Button
-                    disabled={!body.trim() || reviewCommentMutation.isPending}
-                    size="xs"
-                    variant="outline"
-                    onClick={() => submit("immediate")}
-                >
-                    <Send className="size-3" />
-                    Add now
-                </Button>
-                <Button
-                    disabled={!body.trim() || reviewCommentMutation.isPending}
-                    size="xs"
-                    onClick={() => submit("pending")}
-                >
-                    Add to review
-                </Button>
-            </div>
         </div>
     );
 }
