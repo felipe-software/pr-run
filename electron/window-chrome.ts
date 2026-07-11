@@ -1,6 +1,7 @@
 import type { BrowserWindowConstructorOptions } from "electron";
 
 export const WORKSPACE_TITLEBAR_HEIGHT = 36;
+const TRANSPARENT_TITLEBAR_COLOR = "#01000000";
 
 export type WindowTheme = "dark" | "light";
 
@@ -31,7 +32,7 @@ export function getWindowChromeOptions(
 
     return {
         titleBarOverlay: {
-            color: windowColors[theme].background,
+            color: TRANSPARENT_TITLEBAR_COLOR,
             height: WORKSPACE_TITLEBAR_HEIGHT,
             symbolColor: windowColors[theme].symbol,
         },

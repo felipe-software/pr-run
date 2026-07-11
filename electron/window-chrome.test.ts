@@ -9,6 +9,7 @@ describe("getWindowChromeOptions", () => {
     test("uses the renderer-owned overlay outside macOS", () => {
         expect(getWindowChromeOptions("win32", "dark")).toMatchObject({
             titleBarOverlay: {
+                color: "#01000000",
                 height: WORKSPACE_TITLEBAR_HEIGHT,
             },
             titleBarStyle: "hidden",

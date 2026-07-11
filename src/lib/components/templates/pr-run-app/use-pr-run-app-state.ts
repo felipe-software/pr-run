@@ -22,10 +22,7 @@ import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 import { useAppStatusSummary } from "@/lib/components/templates/pr-run-app/use-app-status-summary";
 import { useSettingsState } from "@/lib/components/templates/pr-run-app/settings-state";
 import { useWorkspaceState } from "@/lib/components/templates/pr-run-app/workspace-state";
-
-const SIDEBAR_MIN_WIDTH = 256;
-const SIDEBAR_MAX_WIDTH = 560;
-const MAIN_CONTENT_MIN_WIDTH = 640;
+import { sidebarResize } from "@/lib/components/templates/sidebar/sidebar-resize";
 
 export function usePrRunAppState() {
     const settingsState = useSettingsState();
@@ -44,9 +41,8 @@ export function usePrRunAppState() {
     const theme = useUiPreferencesStore((store) => store.theme);
     const setTheme = useUiPreferencesStore((store) => store.setTheme);
     const [sidebarWidth, setSidebarWidth] = useState(() =>
-        clamp(storedSidebarWidth ?? 320, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH),
+        sidebarResize.clamp(storedSidebarWidth ?? sidebarResize.defaultWidth),
     );
-    const [isResizingSidebar, setIsResizingSidebar] = useState(false);
     const configQuery = useConfigQuery();
     const addProjectMutation = useAddProjectMutation();
     const checkoutBranchMutation = useCheckoutBranchMutation();
@@ -97,51 +93,12 @@ export function usePrRunAppState() {
         return () => media.removeEventListener("change", applyTheme);
     }, [theme]);
 
-    useEffect(() => {
-        if (!isResizingSidebar) {
-            return;
-        }
+    function resizeSidebar(width: number) {
+        const nextWidth = sidebarResize.clamp(width);
 
-        const previousCursor = document.body.style.cursor;
-        const previousUserSelect = document.body.style.userSelect;
-
-        function handlePointerMove(event: PointerEvent) {
-            const maxWidth = Math.min(
-                SIDEBAR_MAX_WIDTH,
-                window.innerWidth - MAIN_CONTENT_MIN_WIDTH,
-            );
-
-            setSidebarWidth(
-                clamp(
-                    event.clientX,
-                    SIDEBAR_MIN_WIDTH,
-                    Math.max(SIDEBAR_MIN_WIDTH, maxWidth),
-                ),
-            );
-        }
-
-        function handlePointerUp() {
-            setIsResizingSidebar(false);
-        }
-
-        document.body.style.cursor = "col-resize";
-        document.body.style.userSelect = "none";
-        window.addEventListener("pointermove", handlePointerMove);
-        window.addEventListener("pointerup", handlePointerUp);
-        window.addEventListener("pointercancel", handlePointerUp);
-
-        return () => {
-            document.body.style.cursor = previousCursor;
-            document.body.style.userSelect = previousUserSelect;
-            window.removeEventListener("pointermove", handlePointerMove);
-            window.removeEventListener("pointerup", handlePointerUp);
-            window.removeEventListener("pointercancel", handlePointerUp);
-        };
-    }, [isResizingSidebar]);
-
-    useEffect(() => {
-        setStoredSidebarWidth(sidebarWidth);
-    }, [setStoredSidebarWidth, sidebarWidth]);
+        setSidebarWidth(nextWidth);
+        setStoredSidebarWidth(nextWidth);
+    }
 
     function toggleProject(projectId: string) {
         setCollapsedProjects((current) => {
@@ -303,7 +260,6 @@ export function usePrRunAppState() {
         sidebarWidth,
         statusSummary,
         theme,
-        beginResize: () => setIsResizingSidebar(true),
         closeAddProject: () => setIsAddProjectOpen(false),
         closeCreateScript: () => setIsCreateScriptOpen(false),
         createScript,
@@ -318,6 +274,7 @@ export function usePrRunAppState() {
         openSshPassphrase: () => useSshPassphraseStore.getState().open(null),
         ...settingsState,
         removeWorktree,
+        resizeSidebar,
         setTheme,
         submitAddProject,
         toggleProject,
@@ -353,8 +310,4 @@ function showSuccessToast(message: string) {
     toast.success(message, {
         timeout: 2400,
     });
-}
-
-function clamp(value: number, min: number, max: number) {
-    return Math.min(Math.max(value, min), max);
 }

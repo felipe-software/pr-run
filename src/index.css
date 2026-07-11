@@ -176,22 +176,6 @@
         background: var(--sidebar);
     }
 
-    @media (max-width: 63.999rem) {
-        .workspace-titlebar-brand {
-            width: 3rem !important;
-            padding-inline: 0.5rem;
-        }
-
-        .workspace-titlebar-brand > :not(:first-child) {
-            display: none;
-        }
-
-        .workspace-titlebar-brand-macos {
-            width: 7rem !important;
-            padding-left: 5rem !important;
-        }
-    }
-
     .surface-subheader {
         display: flex;
         height: 2.5rem;

@@ -16,13 +16,12 @@ export type SidebarProps = {
     projectAvatarUris: ProjectAvatarUris;
     selectedBranchName?: string;
     selectedProjectId?: string;
-    sidebarWidth: number;
-    onBeginResize: () => void;
     onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onOpenAddProject: () => void;
     onOpenOverview: () => void;
     onOpenSettings: () => void;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
+    onResize: (width: number) => void;
     onSelectBranch: (project: ProjectConfig, branch: BranchInfo) => void;
     onToggleProject: (projectId: string) => void;
     onUpdateProject: (project: ProjectConfig) => Promise<boolean>;

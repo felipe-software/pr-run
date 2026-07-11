@@ -21,13 +21,12 @@ export function Sidebar({
     projectAvatarUris,
     selectedBranchName,
     selectedProjectId,
-    sidebarWidth,
-    onBeginResize,
     onCheckoutBranch,
     onOpenAddProject,
     onOpenOverview,
     onOpenSettings,
     onRemoveWorktree,
+    onResize,
     onSelectBranch,
     onToggleProject,
     onUpdateProject,
@@ -36,7 +35,6 @@ export function Sidebar({
         <SidebarShell
             isDesktopHidden={isDesktopHidden}
             isMobileOpen={isMobileOpen}
-            sidebarWidth={sidebarWidth}
         >
             <SidebarContent>
                 <SidebarOverviewButton
@@ -70,7 +68,7 @@ export function Sidebar({
                 onOpenSettings={onOpenSettings}
             />
 
-            <SidebarRail onBeginResize={onBeginResize} />
+            <SidebarRail onResize={onResize} />
         </SidebarShell>
     );
 }

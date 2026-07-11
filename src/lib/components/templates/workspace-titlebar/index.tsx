@@ -20,7 +20,6 @@ type WorkspaceTitlebarProps = {
     areWorkspaceShortcutsEnabled: boolean;
     isSidebarOpen: boolean;
     projectAvatarUris: ProjectAvatarUris;
-    sidebarWidth: number;
     onCloseTab: (tabId: string) => void;
     onSelectTab: (tabId: string) => void;
     onToggleSidebar: () => void;
@@ -30,7 +29,6 @@ export function WorkspaceTitlebar({
     areWorkspaceShortcutsEnabled,
     isSidebarOpen,
     projectAvatarUris,
-    sidebarWidth,
     onCloseTab,
     onSelectTab,
     onToggleSidebar,
@@ -84,15 +82,54 @@ export function WorkspaceTitlebar({
     return (
         <header
             className="workspace-titlebar drag-region border-sidebar-border
-                border-b"
+                relative border-b"
         >
             <div
                 className={cn(
                     `workspace-titlebar-brand drag-region border-sidebar-border
-                    flex h-full shrink-0 items-center gap-2 border-r px-3`,
-                    isMac && "workspace-titlebar-brand-macos pl-20",
+                    flex h-full shrink-0 items-center overflow-hidden border-r
+                    transition-[width,border-color] duration-200 ease-out`,
+                    isSidebarOpen
+                        ? "border-sidebar-border"
+                        : "border-transparent",
                 )}
-                style={{ width: `${isSidebarOpen ? sidebarWidth : 48}px` }}
+                data-slot="sidebar-titlebar-gap"
+                style={{
+                    width: isSidebarOpen ? "var(--sidebar-width)" : "0px",
+                }}
+            >
+                {isSidebarOpen ? (
+                    <span
+                        className={cn(
+                            `min-w-0 flex-1 truncate pr-3 text-xs font-semibold
+                                tracking-tight`,
+                            isMac ? "pl-28" : "pl-11",
+                        )}
+                    >
+                        PR Run
+                    </span>
+                ) : null}
+            </div>
+            <div
+                className={cn(
+                    `flex min-w-0 flex-1 items-center transition-[padding]
+                    duration-200 ease-out`,
+                    !isSidebarOpen && (isMac ? "pl-28" : "pl-10"),
+                )}
+            >
+                <WorktreeTabs
+                    projectAvatarUris={projectAvatarUris}
+                    onCloseTab={onCloseTab}
+                    onSelectTab={onSelectTab}
+                />
+                <WindowControlsInset />
+            </div>
+            <div
+                className={cn(
+                    `no-drag absolute top-0 z-20 flex h-full items-center
+                    transition-transform duration-200 ease-out`,
+                    isMac ? "left-20" : "left-[var(--workspace-controls-left)]",
+                )}
             >
                 <Tooltip>
                     <TooltipTrigger
@@ -104,7 +141,7 @@ export function WorkspaceTitlebar({
                                         : "Show sidebar"
                                 }
                                 className="text-muted-foreground
-                                    hover:text-foreground"
+                                    hover:text-foreground active:scale-95"
                                 size="icon-xs"
                                 variant="ghost"
                                 onClick={onToggleSidebar}
@@ -117,22 +154,6 @@ export function WorkspaceTitlebar({
                         {isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
                     </TooltipPopup>
                 </Tooltip>
-                {isSidebarOpen ? (
-                    <span
-                        className="min-w-0 flex-1 truncate text-xs font-semibold
-                            tracking-tight"
-                    >
-                        PR Run
-                    </span>
-                ) : null}
-            </div>
-            <div className="flex min-w-0 flex-1 items-center">
-                <WorktreeTabs
-                    projectAvatarUris={projectAvatarUris}
-                    onCloseTab={onCloseTab}
-                    onSelectTab={onSelectTab}
-                />
-                <WindowControlsInset />
             </div>
         </header>
     );

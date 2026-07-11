@@ -1,5 +1,6 @@
+import { autoAnimate } from "@formkit/auto-animate";
 import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
@@ -57,6 +58,15 @@ export function SidebarProjectItem({
     onToggleProject,
     onUpdateProject,
 }: SidebarProjectItemProps) {
+    const animatedItems = useRef(new WeakSet<HTMLElement>());
+    const attachItemAnimation = useCallback((node: HTMLDivElement | null) => {
+        if (!node || animatedItems.current.has(node)) {
+            return;
+        }
+
+        autoAnimate(node, { duration: 180, easing: "ease-out" });
+        animatedItems.current.add(node);
+    }, []);
     const [areAllRecentBranchesVisible, setAreAllRecentBranchesVisible] =
         useState(false);
     const [areStaleBranchesVisible, setAreStaleBranchesVisible] =
@@ -117,7 +127,7 @@ export function SidebarProjectItem({
           );
 
     return (
-        <div className="group/menu-item relative">
+        <div ref={attachItemAnimation} className="group/menu-item relative">
             <div
                 className="bg-sidebar sticky top-0 isolate z-10 flex h-8
                     items-stretch py-0.5"

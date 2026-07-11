@@ -1,3 +1,6 @@
+import { autoAnimate } from "@formkit/auto-animate";
+import { useCallback, useRef } from "react";
+
 import { SidebarEmptyState } from "@/lib/components/templates/sidebar/sidebar-empty-state";
 import { SidebarProjectItem } from "@/lib/components/templates/sidebar/sidebar-project-item";
 import { sortProjectsByBusyState } from "@/lib/components/templates/sidebar/sidebar-sort";
@@ -44,6 +47,18 @@ export function SidebarGroupSection({
     onToggleProject,
     onUpdateProject,
 }: SidebarGroupSectionProps) {
+    const animatedProjectLists = useRef(new WeakSet<HTMLElement>());
+    const attachProjectListAnimation = useCallback(
+        (node: HTMLDivElement | null) => {
+            if (!node || animatedProjectLists.current.has(node)) {
+                return;
+            }
+
+            autoAnimate(node, { duration: 180, easing: "ease-out" });
+            animatedProjectLists.current.add(node);
+        },
+        [],
+    );
     const sortedProjects = sortProjectsByBusyState(
         group.projects,
         busyProjectIds,
@@ -60,7 +75,10 @@ export function SidebarGroupSection({
                 {group.id === "default" ? "Projects" : group.name}
             </SidebarSectionHeader>
 
-            <div className="relative flex min-w-0 flex-col gap-0.5">
+            <div
+                ref={attachProjectListAnimation}
+                className="relative flex min-w-0 flex-col gap-0.5"
+            >
                 {group.projects.length === 0 ? (
                     <SidebarEmptyState>No projects added.</SidebarEmptyState>
                 ) : null}

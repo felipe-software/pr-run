@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EmptyState } from "@/lib/components/atoms/empty-state";
@@ -301,13 +301,18 @@ export function PrRunApp() {
         <Surface
             className="bg-background text-foreground fixed inset-0 flex min-h-0
                 flex-col overflow-hidden rounded-none border-0 font-sans"
+            data-slot="sidebar-resize-root"
+            style={
+                {
+                    "--sidebar-width": `${state.sidebarWidth}px`,
+                } as CSSProperties
+            }
             variant="plain"
         >
             <WorkspaceTitlebar
                 areWorkspaceShortcutsEnabled={isBranchWorkspaceVisible}
                 isSidebarOpen={isSidebarOpen}
                 projectAvatarUris={state.projectAvatarUris}
-                sidebarWidth={state.sidebarWidth}
                 onCloseTab={state.closeWorktreeTab}
                 onSelectTab={(tabId) => {
                     state.selectWorktreeTab(tabId);
@@ -337,8 +342,6 @@ export function PrRunApp() {
                         state.selectedBranchView.branchName ?? undefined
                     }
                     selectedProjectId={state.selectedBranchView.project?.id}
-                    sidebarWidth={state.sidebarWidth}
-                    onBeginResize={state.beginResize}
                     onCheckoutBranch={state.checkoutBranch}
                     onOpenAddProject={state.openAddProject}
                     onOpenOverview={() => {
@@ -350,6 +353,7 @@ export function PrRunApp() {
                         closeMobileSidebar();
                     }}
                     onRemoveWorktree={state.removeWorktree}
+                    onResize={state.resizeSidebar}
                     onSelectBranch={(project, branch) => {
                         state.selectBranch(project, branch);
                         closeMobileSidebar();
