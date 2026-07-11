@@ -125,7 +125,7 @@ export function WorktreeChanges({
         );
     }
 
-    if (diffQuery.error) {
+    if (diffQuery.error && !diffQuery.data) {
         return (
             <Surface className="px-3 py-2 text-sm" variant="danger">
                 {getErrorMessage(diffQuery.error)}

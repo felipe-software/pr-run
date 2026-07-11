@@ -64,9 +64,10 @@ export function usePrRunAppState() {
     });
     const { selectedBranch, selectedBranchView } = workspaceState;
     const statusSummary = useAppStatusSummary(projects);
-    const configError = configQuery.error
-        ? getErrorMessage(configQuery.error)
-        : undefined;
+    const configError =
+        configQuery.error && !configQuery.data
+            ? getErrorMessage(configQuery.error)
+            : undefined;
 
     useEffect(() => {
         const media = window.matchMedia("(prefers-color-scheme: dark)");

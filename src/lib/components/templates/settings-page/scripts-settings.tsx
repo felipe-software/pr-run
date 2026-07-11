@@ -59,7 +59,7 @@ export function ScriptsSettings({
                     <p className="text-muted-foreground text-sm">
                         Loading scripts...
                     </p>
-                ) : scripts.error ? (
+                ) : scripts.error && !scripts.data ? (
                     <p className="text-destructive text-sm">
                         {getErrorMessage(scripts.error)}
                     </p>

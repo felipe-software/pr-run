@@ -2,6 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { projectBranchesQueryOptions } from "@/lib/hooks/query/use-project-branches-query";
+import { useIsRefreshingCachedData } from "@/lib/hooks/query/use-is-refreshing-cached-data";
 import {
     getBusyTerminalSummary,
     useWorktreeTerminalStore,
@@ -14,6 +15,7 @@ export type AppStatusSummary = {
     busyProjectIds: Set<string>;
     busyTerminalCount: number;
     isLoadingBranchCounts: boolean;
+    isRefreshingCachedData: boolean;
     openPullRequestCount: number;
     staleWorktreeCount: number;
     worktreeCount: number;
@@ -23,6 +25,7 @@ export function useAppStatusSummary(
     projects: ProjectConfig[],
 ): AppStatusSummary {
     const owners = useWorktreeTerminalStore((state) => state.owners);
+    const isRefreshingCachedData = useIsRefreshingCachedData();
     const branchQueries = useQueries({
         queries: projects.map((project) => ({
             ...projectBranchesQueryOptions(project.id),
@@ -64,9 +67,10 @@ export function useAppStatusSummary(
             isLoadingBranchCounts: branchQueries.some(
                 (query) => query.isPending,
             ),
+            isRefreshingCachedData,
             openPullRequestCount,
             staleWorktreeCount,
             worktreeCount,
         };
-    }, [branchQueries, busySummary]);
+    }, [branchQueries, busySummary, isRefreshingCachedData]);
 }

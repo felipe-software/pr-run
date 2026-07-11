@@ -223,7 +223,9 @@ export function MainPanel({
     }
 
     const activityError =
-        activityQuery.error && !isAwaitingActivityPassphrase
+        activityQuery.error &&
+        !activityQuery.data &&
+        !isAwaitingActivityPassphrase
             ? getErrorMessage(activityQuery.error)
             : undefined;
     const currentBranch = selectedBranch;

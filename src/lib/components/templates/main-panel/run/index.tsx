@@ -174,7 +174,7 @@ export function WorktreeRun({
                             <Skeleton className="h-12" key={index} />
                         ))}
                     </div>
-                ) : packageScriptsQuery.error ? (
+                ) : packageScriptsQuery.error && !catalog ? (
                     <div className="text-danger px-3 pb-2.5 text-xs">
                         {getErrorMessage(packageScriptsQuery.error)} Custom
                         actions and the terminal are still available.

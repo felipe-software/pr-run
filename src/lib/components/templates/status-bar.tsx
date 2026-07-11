@@ -1,4 +1,4 @@
-import { GitBranch, GitPullRequest, Terminal } from "lucide-react";
+import { GitBranch, GitPullRequest, RefreshCw, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { WorktreeIndicator } from "@/lib/components/atoms/worktree-indicator";
@@ -31,6 +31,15 @@ export function StatusBar({ summary, onOpenBusyTerminals }: StatusBarProps) {
                 className="flex h-full w-max min-w-full items-center gap-1 px-2
                     whitespace-nowrap"
             >
+                {summary.isRefreshingCachedData ? (
+                    <span
+                        className="text-muted-foreground inline-flex h-6
+                            items-center gap-1 px-1.5"
+                    >
+                        <RefreshCw className="size-3 animate-spin" />
+                        Refreshing cached data…
+                    </span>
+                ) : null}
                 <StatusBarItem
                     icon={
                         <StatusBarIcon className="text-warning">
