@@ -1,6 +1,6 @@
 # PR-run (Work in progress)
 
-The app made for people who review multiple Pull Requests every day
+The app made for people who review multiple Pull Requests every day. Think Github PRs + Worktrees integrated into one place.
 
 <img height="560" alt="image" src="https://github.com/user-attachments/assets/e3d92fe1-a51e-4f9b-8762-55ee692da27b" />
 
