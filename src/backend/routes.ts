@@ -267,6 +267,9 @@ export function registerRoutes(app: Elysia) {
             const baseBranch = query.baseBranch
                 ? String(query.baseBranch)
                 : undefined;
+            const pullRequestNumber = query.pullRequestNumber
+                ? Number(query.pullRequestNumber)
+                : undefined;
 
             if (!branch) {
                 throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
@@ -277,8 +280,31 @@ export function registerRoutes(app: Elysia) {
             );
             return success(
                 "Commit history loaded.",
-                await gitHandler.getCommitHistory(project, branch, baseBranch),
+                await gitHandler.getCommitHistory(
+                    project,
+                    branch,
+                    baseBranch,
+                    pullRequestNumber,
+                ),
             );
+        })
+        .get("/projects/:projectId/commits/:hash/diff", async ({ params }) => {
+            const hash = String(params.hash ?? "");
+
+            if (!/^[0-9a-f]{7,64}$/i.test(hash)) {
+                throw new ApiError(
+                    "BAD_REQUEST",
+                    "Enter a valid commit hash.",
+                    400,
+                );
+            }
+
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            return success("Commit diff loaded.", [
+                await gitHandler.getCommitDiff(project, hash),
+            ]);
         })
         .get("/projects/:projectId/activity", async ({ params, query }) => {
             const branch = String(query.branch ?? "");
@@ -458,6 +484,9 @@ export function registerRoutes(app: Elysia) {
             const baseBranch = query.baseBranch
                 ? String(query.baseBranch)
                 : undefined;
+            const pullRequestNumber = query.pullRequestNumber
+                ? Number(query.pullRequestNumber)
+                : undefined;
 
             if (!branch) {
                 throw new ApiError("BAD_REQUEST", "Enter a branch.", 400);
@@ -467,7 +496,31 @@ export function registerRoutes(app: Elysia) {
                 params.projectId,
             );
             return success("Branch diff loaded.", [
-                await gitHandler.getBranchDiff(project, branch, baseBranch),
+                await gitHandler.getBranchDiff(
+                    project,
+                    branch,
+                    baseBranch,
+                    pullRequestNumber,
+                ),
+            ]);
+        })
+        .get("/projects/:projectId/file", async ({ params, query }) => {
+            const branch = String(query.branch ?? "");
+            const path = String(query.path ?? "");
+
+            if (!branch || !path) {
+                throw new ApiError(
+                    "BAD_REQUEST",
+                    "Choose a branch and file.",
+                    400,
+                );
+            }
+
+            const project = await projectConfigHandler.findProject(
+                params.projectId,
+            );
+            return success("Branch file loaded.", [
+                await gitHandler.getBranchFileContent(project, branch, path),
             ]);
         })
         .get(

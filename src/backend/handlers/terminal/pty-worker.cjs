@@ -2,6 +2,7 @@ const { execFile } = require("node:child_process");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const os = require("node:os");
 const readline = require("node:readline");
 
 const pty = require("node-pty");
@@ -87,7 +88,7 @@ async function handleRequest(request) {
 }
 
 function createSession(options) {
-    const cwd = path.resolve(options.cwd);
+    const cwd = path.resolve(options.cwd === "~" ? os.homedir() : options.cwd);
     const stat = fs.statSync(cwd);
 
     if (!stat.isDirectory()) {

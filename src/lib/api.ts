@@ -3,6 +3,7 @@ import ky, { type AfterResponseState, type Options } from "ky";
 import type {
     ApiEnvelope,
     BranchDiffResult,
+    BranchFileContent,
     BranchInfo,
     CheckoutResult,
     CommitInfo,
@@ -392,15 +393,29 @@ export const prRunApi = {
             { method: "DELETE" },
         );
     },
-    getCommitHistory(projectId: string, branch: string, baseBranch?: string) {
+    getCommitHistory(
+        projectId: string,
+        branch: string,
+        baseBranch?: string,
+        pullRequestNumber?: number,
+    ) {
         const params = new URLSearchParams({ branch });
 
         if (baseBranch) {
             params.set("baseBranch", baseBranch);
         }
 
+        if (pullRequestNumber) {
+            params.set("pullRequestNumber", String(pullRequestNumber));
+        }
+
         return requestMany<CommitInfo>(
             `/projects/${encodeURIComponent(projectId)}/commits?${params.toString()}`,
+        );
+    },
+    getCommitDiff(projectId: string, hash: string) {
+        return requestOne<BranchDiffResult>(
+            `/projects/${encodeURIComponent(projectId)}/commits/${encodeURIComponent(hash)}/diff`,
         );
     },
     getWorktreeActivity(
@@ -423,15 +438,31 @@ export const prRunApi = {
             `/projects/${encodeURIComponent(projectId)}/activity?${params.toString()}`,
         );
     },
-    getBranchDiff(projectId: string, branch: string, baseBranch?: string) {
+    getBranchDiff(
+        projectId: string,
+        branch: string,
+        baseBranch?: string,
+        pullRequestNumber?: number,
+    ) {
         const params = new URLSearchParams({ branch });
 
         if (baseBranch) {
             params.set("baseBranch", baseBranch);
         }
 
+        if (pullRequestNumber) {
+            params.set("pullRequestNumber", String(pullRequestNumber));
+        }
+
         return requestOne<BranchDiffResult>(
             `/projects/${encodeURIComponent(projectId)}/diff?${params.toString()}`,
+        );
+    },
+    getBranchFile(projectId: string, branch: string, path: string) {
+        const params = new URLSearchParams({ branch, path });
+
+        return requestOne<BranchFileContent>(
+            `/projects/${encodeURIComponent(projectId)}/file?${params.toString()}`,
         );
     },
     getDockerOverview(projectId: string, branch: string) {

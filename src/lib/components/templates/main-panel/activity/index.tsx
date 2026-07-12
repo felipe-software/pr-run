@@ -16,10 +16,12 @@ type WorktreeActivityProps = {
     data?: WorktreeActivityResult;
     error?: string;
     isLoading: boolean;
+    isReviewComposerOpen: boolean;
     projectId: string;
     pullRequestAuthorLogin?: string;
     pullRequestNumber?: number;
     repositoryUrl?: string;
+    onCloseReview: () => void;
 };
 
 export function WorktreeActivity({
@@ -28,10 +30,12 @@ export function WorktreeActivity({
     data,
     error,
     isLoading,
+    isReviewComposerOpen,
     projectId,
     pullRequestAuthorLogin,
     pullRequestNumber,
     repositoryUrl,
+    onCloseReview,
 }: WorktreeActivityProps) {
     if (isLoading) {
         return (
@@ -53,7 +57,8 @@ export function WorktreeActivity({
         !data ||
         (data.baseCommits.length === 0 &&
             data.items.length === 0 &&
-            !data.pendingReview)
+            !data.pendingReview &&
+            !isReviewComposerOpen)
     ) {
         return (
             <div className="min-h-48">
@@ -86,10 +91,13 @@ export function WorktreeActivity({
                 branchName={branchName}
                 items={data.items}
                 pullRequestAuthorLogin={pullRequestAuthorLogin}
+                projectId={projectId}
                 repositoryUrl={repositoryUrl}
             />
 
-            {pullRequestNumber && data.integration.status === "available" ? (
+            {pullRequestNumber &&
+            data.integration.status === "available" &&
+            isReviewComposerOpen ? (
                 <ReviewComposer
                     key={`${projectId}:${pullRequestNumber}`}
                     baseBranchName={baseBranchName}
@@ -97,6 +105,7 @@ export function WorktreeActivity({
                     pendingReview={data.pendingReview}
                     projectId={projectId}
                     pullRequestNumber={pullRequestNumber}
+                    onClose={onCloseReview}
                 />
             ) : null}
         </div>

@@ -1,6 +1,12 @@
 import { autoAnimate, type AutoAnimationPlugin } from "@formkit/auto-animate";
 import { ArrowDown } from "lucide-react";
-import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import {
+    type ReactNode,
+    type UIEvent,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from "react";
 
 import {
     isActivityNearBottom,
@@ -12,6 +18,7 @@ import { Button } from "@/lib/components/ui/button";
 type BranchPageLayoutProps = {
     children: ReactNode;
     contentVersion?: string;
+    isHeaderCompactable: boolean;
     isReading: boolean;
     isReadingReady: boolean;
     renderHeader: (isCompact: boolean) => ReactNode;
@@ -50,6 +57,7 @@ const activityHeaderAnimation: AutoAnimationPlugin = (element, action) => {
 export function BranchPageLayout({
     children,
     contentVersion,
+    isHeaderCompactable,
     isReading,
     isReadingReady,
     renderHeader,
@@ -65,7 +73,7 @@ export function BranchPageLayout({
     const [isCompact, setIsCompact] = useState(false);
 
     useLayoutEffect(() => {
-        if (isReading) {
+        if (isHeaderCompactable) {
             return;
         }
 
@@ -74,7 +82,7 @@ export function BranchPageLayout({
         wasNearBottomRef.current = true;
         setHasNewActivity(false);
         setIsCompact(false);
-    }, [isReading]);
+    }, [isHeaderCompactable]);
 
     useLayoutEffect(() => {
         if (!isReading || !isReadingReady || !viewportRef.current) {
@@ -158,14 +166,49 @@ export function BranchPageLayout({
         setHasNewActivity(false);
     }
 
+    function handleNestedScroll(event: UIEvent<HTMLDivElement>) {
+        if (isReading || !isHeaderCompactable) {
+            return;
+        }
+
+        const target = event.target;
+
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+
+        const primaryScroll = target.closest<HTMLElement>(
+            "[data-branch-page-primary-scroll]",
+        );
+
+        if (
+            !primaryScroll ||
+            (target !== primaryScroll &&
+                target !== primaryScroll.firstElementChild)
+        ) {
+            return;
+        }
+
+        setIsCompact((current) =>
+            resolveActivityHeaderCompact(current, target.scrollTop),
+        );
+    }
+
     if (!isReading) {
         return (
             <div
                 className="flex min-h-0 w-full flex-1 flex-col gap-3
                     max-[500px]:min-h-[500px]"
+                onScrollCapture={handleNestedScroll}
             >
                 <div className="flex shrink-0 flex-col gap-0">
-                    {renderHeader(false)}
+                    {isHeaderCompactable ? (
+                        <AnimatedHeader isCompact={isCompact}>
+                            {renderHeader(isCompact)}
+                        </AnimatedHeader>
+                    ) : (
+                        renderHeader(false)
+                    )}
                     {tabs}
                 </div>
                 <div className="flex min-h-0 flex-1 flex-col">{children}</div>
@@ -178,6 +221,7 @@ export function BranchPageLayout({
             <div
                 className="relative min-h-0 w-full flex-1 overflow-y-auto
                     [overflow-anchor:none]"
+                data-activity-viewport=""
                 ref={viewportRef}
                 onScroll={handleScroll}
             >

@@ -13,6 +13,7 @@ import type {
     DiffReviewAnnotation,
 } from "@/lib/components/templates/main-panel/changes/diff-review-types";
 import { ReviewAnnotation } from "@/lib/components/templates/main-panel/changes/review-annotation";
+import { FileCommitStack } from "@/lib/components/templates/main-panel/changes/file-commit-stack";
 import type { BranchDiffFile, PullRequestReviewComment } from "@/types/pr-run";
 
 type ContinuousDiffProps = {
@@ -81,96 +82,105 @@ export function ContinuousDiff({
     }, [targetPath]);
 
     return (
-        <CodeView<DiffReviewAnnotation>
-            ref={codeViewRef}
-            className="h-full min-h-0"
-            disableWorkerPool
-            items={items}
-            options={{
-                diffIndicators: "bars",
-                diffStyle: isUnified ? "unified" : "split",
-                enableGutterUtility: Boolean(pullRequestNumber),
-                enableLineSelection: Boolean(pullRequestNumber),
-                hunkSeparators: "line-info-basic",
-                layout: { gap: 10, paddingBottom: 12, paddingTop: 8 },
-                lineDiffType: "word",
-                lineHoverHighlight: "both",
-                overflow: shouldWrap ? "wrap" : "scroll",
-                stickyHeaders: true,
-                themeType: "system",
-            }}
-            renderAnnotation={(annotation) =>
-                annotation.metadata && pullRequestNumber ? (
-                    <ReviewAnnotation
-                        annotation={annotation.metadata}
-                        baseBranchName={baseBranchName}
-                        branchName={branchName}
-                        projectId={projectId}
-                        pullRequestNumber={pullRequestNumber}
-                        onCloseDraft={() => onChangeDraft(undefined)}
-                    />
-                ) : null
-            }
-            renderGutterUtility={(getHoveredLine, item) => (
-                <button
-                    aria-label="Add line comment"
-                    className="bg-primary text-primary-foreground grid size-5
-                        place-items-center rounded shadow-sm"
-                    type="button"
-                    onClick={() => {
-                        const line = getHoveredLine() as
-                            | {
-                                  lineNumber: number;
-                                  side?: "additions" | "deletions";
-                              }
-                            | undefined;
-
-                        if (!line || item.type !== "diff") {
-                            return;
-                        }
-
-                        onChangeDraft({
-                            endLine: line.lineNumber,
-                            endSide: line.side ?? "additions",
-                            path: item.id,
-                            startLine: line.lineNumber,
-                            startSide: line.side ?? "additions",
-                        });
-                    }}
-                >
-                    <MessageSquarePlus className="size-3" />
-                </button>
-            )}
-            renderHeaderMetadata={(item) => {
-                if (item.type !== "diff") {
-                    return null;
+        <div className="h-full min-h-0" data-branch-page-primary-scroll="">
+            <CodeView<DiffReviewAnnotation>
+                ref={codeViewRef}
+                className="h-full min-h-0 overflow-auto overscroll-contain"
+                disableWorkerPool
+                items={items}
+                options={{
+                    diffIndicators: "bars",
+                    diffStyle: isUnified ? "unified" : "split",
+                    enableGutterUtility: Boolean(pullRequestNumber),
+                    enableLineSelection: Boolean(pullRequestNumber),
+                    hunkSeparators: "line-info-basic",
+                    layout: { gap: 10, paddingBottom: 12, paddingTop: 8 },
+                    lineDiffType: "word",
+                    lineHoverHighlight: "both",
+                    overflow: shouldWrap ? "wrap" : "scroll",
+                    stickyHeaders: true,
+                    themeType: "system",
+                }}
+                renderAnnotation={(annotation) =>
+                    annotation.metadata && pullRequestNumber ? (
+                        <ReviewAnnotation
+                            annotation={annotation.metadata}
+                            baseBranchName={baseBranchName}
+                            branchName={branchName}
+                            projectId={projectId}
+                            pullRequestNumber={pullRequestNumber}
+                            onCloseDraft={() => onChangeDraft(undefined)}
+                        />
+                    ) : null
                 }
+                renderGutterUtility={(getHoveredLine, item) => (
+                    <button
+                        aria-label="Add line comment"
+                        className="bg-primary text-primary-foreground grid
+                            size-5 place-items-center rounded shadow-sm"
+                        type="button"
+                        onClick={() => {
+                            const line = getHoveredLine() as
+                                | {
+                                      lineNumber: number;
+                                      side?: "additions" | "deletions";
+                                  }
+                                | undefined;
 
-                const file = fileByPath.get(item.id);
-                return file ? (
-                    <span className="font-mono text-[10px] tabular-nums">
-                        <span className="text-success">+{file.additions}</span>{" "}
-                        <span className="text-danger">−{file.deletions}</span>
-                    </span>
-                ) : null;
-            }}
-            onSelectedLinesChange={(selection) => {
-                if (!selection || !pullRequestNumber) {
-                    return;
-                }
+                            if (!line || item.type !== "diff") {
+                                return;
+                            }
 
-                onChangeDraft({
-                    endLine: selection.range.end,
-                    endSide:
-                        selection.range.endSide ??
-                        selection.range.side ??
-                        "additions",
-                    path: selection.id,
-                    startLine: selection.range.start,
-                    startSide: selection.range.side ?? "additions",
-                });
-            }}
-        />
+                            onChangeDraft({
+                                endLine: line.lineNumber,
+                                endSide: line.side ?? "additions",
+                                path: item.id,
+                                startLine: line.lineNumber,
+                                startSide: line.side ?? "additions",
+                            });
+                        }}
+                    >
+                        <MessageSquarePlus className="size-3" />
+                    </button>
+                )}
+                renderHeaderMetadata={(item) => {
+                    if (item.type !== "diff") {
+                        return null;
+                    }
+
+                    const file = fileByPath.get(item.id);
+                    return file ? (
+                        <span className="flex items-center gap-2">
+                            <FileCommitStack commits={file.commits} compact />
+                            <span className="font-mono text-[10px] tabular-nums">
+                                <span className="text-success">
+                                    +{file.additions}
+                                </span>{" "}
+                                <span className="text-danger">
+                                    −{file.deletions}
+                                </span>
+                            </span>
+                        </span>
+                    ) : null;
+                }}
+                onSelectedLinesChange={(selection) => {
+                    if (!selection || !pullRequestNumber) {
+                        return;
+                    }
+
+                    onChangeDraft({
+                        endLine: selection.range.end,
+                        endSide:
+                            selection.range.endSide ??
+                            selection.range.side ??
+                            "additions",
+                        path: selection.id,
+                        startLine: selection.range.start,
+                        startSide: selection.range.side ?? "additions",
+                    });
+                }}
+            />
+        </div>
     );
 }
 

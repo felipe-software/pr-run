@@ -1,4 +1,4 @@
-import { Box, Search } from "lucide-react";
+import { Box, Search, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -10,19 +10,25 @@ import {
     DialogTitle,
 } from "@/lib/components/ui/dialog";
 import { Input } from "@/lib/components/ui/input";
+import { Button } from "@/lib/components/ui/button";
+import { getPackageScriptKey } from "@/lib/hooks/store/use-package-script-favorites-store";
 import type { PackageScriptCatalog, PackageScriptInfo } from "@/types/pr-run";
 
 type PackageScriptPickerProps = {
     catalog: PackageScriptCatalog;
+    favoriteScriptKeys: Set<string>;
     onOpenChange: (open: boolean) => void;
     onRun: (script: PackageScriptInfo) => void;
+    onToggleFavorite: (script: PackageScriptInfo) => void;
     open: boolean;
 };
 
 export function PackageScriptPicker({
     catalog,
+    favoriteScriptKeys,
     onOpenChange,
     onRun,
+    onToggleFavorite,
     open,
 }: PackageScriptPickerProps) {
     const [search, setSearch] = useState("");
@@ -52,7 +58,7 @@ export function PackageScriptPicker({
                         workspaces. Commands run with {catalog.manager}.
                     </DialogDescription>
                 </DialogHeader>
-                <DialogPanel className="grid min-h-0 gap-3">
+                <DialogPanel className="flex min-h-0 flex-col gap-3">
                     <div className="relative">
                         <Search
                             className="text-muted-foreground pointer-events-none
@@ -69,7 +75,7 @@ export function PackageScriptPicker({
                     </div>
                     <div className="max-h-[26rem] overflow-y-auto pr-1">
                         {groups.length > 0 ? (
-                            <div className="grid gap-4">
+                            <div className="flex flex-col gap-4">
                                 {groups.map((group) => (
                                     <section key={group.path}>
                                         <div
@@ -86,39 +92,93 @@ export function PackageScriptPicker({
                                                 {group.path}
                                             </span>
                                         </div>
-                                        <div className="grid gap-0.5">
-                                            {group.scripts.map((script) => (
-                                                <button
-                                                    className="hover:bg-muted/40
-                                                        focus-visible:ring-ring
-                                                        grid min-w-0
-                                                        grid-cols-[minmax(0,10rem)_1fr]
-                                                        items-center gap-3
-                                                        rounded-md px-2 py-1.5
-                                                        text-left outline-none
-                                                        focus-visible:ring-2"
-                                                    key={`${script.packagePath}:${script.name}`}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        onRun(script);
-                                                        onOpenChange(false);
-                                                    }}
-                                                >
-                                                    <span
-                                                        className="truncate
-                                                            text-sm font-medium"
+                                        <div className="flex flex-col gap-0.5">
+                                            {group.scripts.map((script) => {
+                                                const isFavorite =
+                                                    favoriteScriptKeys.has(
+                                                        getPackageScriptKey(
+                                                            script,
+                                                        ),
+                                                    );
+
+                                                return (
+                                                    <div
+                                                        className="group/script
+                                                            hover:bg-muted/40
+                                                            flex min-w-0
+                                                            items-center
+                                                            rounded-md
+                                                            transition-colors"
+                                                        key={`${script.packagePath}:${script.name}`}
                                                     >
-                                                        {script.name}
-                                                    </span>
-                                                    <span
-                                                        className="text-muted-foreground
-                                                            truncate font-mono
-                                                            text-[11px]"
-                                                    >
-                                                        {script.command}
-                                                    </span>
-                                                </button>
-                                            ))}
+                                                        <button
+                                                            className="focus-visible:ring-ring
+                                                                flex h-9 min-w-0
+                                                                flex-1
+                                                                items-center
+                                                                gap-3 rounded-md
+                                                                px-2 text-left
+                                                                outline-none
+                                                                focus-visible:ring-2"
+                                                            type="button"
+                                                            onClick={() => {
+                                                                onRun(script);
+                                                                onOpenChange(
+                                                                    false,
+                                                                );
+                                                            }}
+                                                        >
+                                                            <span
+                                                                className="w-32
+                                                                    shrink-0
+                                                                    truncate
+                                                                    text-sm
+                                                                    font-medium"
+                                                            >
+                                                                {script.name}
+                                                            </span>
+                                                            <span
+                                                                className="text-muted-foreground
+                                                                    min-w-0
+                                                                    flex-1
+                                                                    truncate
+                                                                    font-mono
+                                                                    text-[11px]"
+                                                            >
+                                                                {script.command}
+                                                            </span>
+                                                        </button>
+                                                        <Button
+                                                            aria-label={`${isFavorite ? "Remove" : "Add"} ${script.name} ${isFavorite ? "from" : "to"} favorites`}
+                                                            className={
+                                                                isFavorite
+                                                                    ? `text-warning
+                                                                        opacity-100`
+                                                                    : `text-muted-foreground
+                                                                        opacity-0
+                                                                        group-focus-within/script:opacity-100
+                                                                        group-hover/script:opacity-100`
+                                                            }
+                                                            size="icon-xs"
+                                                            variant="ghost"
+                                                            onClick={() =>
+                                                                onToggleFavorite(
+                                                                    script,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Star
+                                                                className="size-3.5"
+                                                                fill={
+                                                                    isFavorite
+                                                                        ? "currentColor"
+                                                                        : "none"
+                                                                }
+                                                            />
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </section>
                                 ))}

@@ -11,6 +11,7 @@ import {
     TooltipTrigger,
 } from "@/lib/components/ui/tooltip";
 import { cn } from "@/lib/utils/cn";
+import { useUiPreferencesStore } from "@/lib/hooks/store/use-ui-preferences-store";
 
 type ActivityTimeProps = {
     className?: string;
@@ -19,8 +20,9 @@ type ActivityTimeProps = {
 
 export function ActivityTime({ className, value }: ActivityTimeProps) {
     const [now, setNow] = useState(Date.now());
+    const dateFormat = useUiPreferencesStore((store) => store.dateFormat);
     const relativeTime = formatActivityRelativeTime(value, now);
-    const absoluteTime = formatActivityAbsoluteTime(value);
+    const absoluteTime = formatActivityAbsoluteTime(value, dateFormat);
 
     useEffect(() => {
         const delay = getActivityTimeRefreshDelay(value, now);

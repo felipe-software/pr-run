@@ -42,6 +42,14 @@ export async function listBranches(
     project: ProjectConfig,
     existingInventory?: WorktreeInventory,
 ): Promise<BranchInfo[]> {
+    return (await listBranchesWithPullRequests(project, existingInventory))
+        .branches;
+}
+
+export async function listBranchesWithPullRequests(
+    project: ProjectConfig,
+    existingInventory?: WorktreeInventory,
+) {
     const [repository, inventory] = await Promise.all([
         findGitHubRepository(project),
         existingInventory ?? listWorktreeInventory(project),
@@ -52,16 +60,19 @@ export async function listBranches(
     ]);
 
     if (!repository || pullRequests === undefined) {
-        return branches;
+        return { branches, pullRequests: [] };
     }
 
-    return pullRequestBranchHandler.mergeWithBranches({
-        branches,
-        inventory,
-        project,
+    return {
+        branches: pullRequestBranchHandler.mergeWithBranches({
+            branches,
+            inventory,
+            project,
+            pullRequests,
+            repository,
+        }),
         pullRequests,
-        repository,
-    });
+    };
 }
 
 async function listRemoteBranches(

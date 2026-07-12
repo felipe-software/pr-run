@@ -7,9 +7,14 @@ import type { CommitInfo } from "@/types/pr-run";
 type BaseHistoryProps = {
     baseBranchName?: string;
     commits: CommitInfo[];
+    projectId: string;
 };
 
-export function BaseHistory({ baseBranchName, commits }: BaseHistoryProps) {
+export function BaseHistory({
+    baseBranchName,
+    commits,
+    projectId,
+}: BaseHistoryProps) {
     if (commits.length === 0) {
         return null;
     }
@@ -60,6 +65,7 @@ export function BaseHistory({ baseBranchName, commits }: BaseHistoryProps) {
                             compact
                             key={commit.hash}
                             muted
+                            projectId={projectId}
                         />
                     ))}
                 </div>

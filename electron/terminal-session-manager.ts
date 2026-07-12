@@ -7,6 +7,7 @@ import { type WebContents, webContents } from "electron";
 import * as pty from "node-pty";
 
 import { getUnixTerminalBusyState } from "./terminal-busy.js";
+import { resolveTerminalCwd } from "./terminal-path.js";
 import type {
     TerminalBusyState,
     TerminalCreateOptions,
@@ -49,7 +50,7 @@ export class TerminalSessionManager {
         sender: WebContents,
         options: TerminalCreateOptions,
     ): TerminalSession {
-        const cwd = path.resolve(options.cwd);
+        const cwd = resolveTerminalCwd(options.cwd);
         const stat = fs.statSync(cwd);
 
         if (!stat.isDirectory()) {

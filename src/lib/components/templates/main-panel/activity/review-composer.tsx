@@ -15,6 +15,7 @@ type ReviewComposerProps = {
     pendingReview?: PendingPullRequestReview;
     projectId: string;
     pullRequestNumber: number;
+    onClose: () => void;
 };
 
 export function ReviewComposer({
@@ -23,6 +24,7 @@ export function ReviewComposer({
     pendingReview,
     projectId,
     pullRequestNumber,
+    onClose,
 }: ReviewComposerProps) {
     const [commentBody, setCommentBody] = useState("");
     const [reviewBody, setReviewBody] = useState(pendingReview?.body ?? "");
@@ -95,6 +97,18 @@ export function ReviewComposer({
 
     return (
         <section className="border-border/70 grid gap-3 border-t px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <h2 className="text-sm font-semibold">Review changes</h2>
+                    <p className="text-muted-foreground text-xs">
+                        Comment, approve, or request changes on this pull
+                        request.
+                    </p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={onClose}>
+                    Close
+                </Button>
+            </div>
             <div className="grid gap-2">
                 <div className="flex items-center justify-between gap-3">
                     <h3 className="text-sm font-semibold">

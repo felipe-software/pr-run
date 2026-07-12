@@ -1,11 +1,9 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { isHandledSshPromptError } from "@/lib/api";
-import { EmptyState } from "@/lib/components/atoms/empty-state";
-import { Skeleton } from "@/lib/components/atoms/skeleton";
-import { Surface } from "@/lib/components/atoms/surface";
 import { useWorktreeTerminalOwner } from "@/lib/components/molecules/worktree-terminal/use-worktree-terminal-owner";
+import { BranchPageContent } from "@/lib/components/templates/main-panel/branch-page-content";
 import { BranchPageHeader } from "@/lib/components/templates/main-panel/branch-page-header";
 import {
     BranchPageTabs,
@@ -17,7 +15,6 @@ import {
     MainPanelLoadingState,
     MainPanelState,
 } from "@/lib/components/templates/main-panel/main-panel-state";
-import { WorktreeActivity } from "@/lib/components/templates/main-panel/activity";
 import { useWorktreeActivityQuery } from "@/lib/hooks/query/use-worktree-activity-query";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
 import { prRunQueryKeys } from "@/lib/hooks/query/query-keys";
@@ -29,31 +26,12 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { tryPromise } from "@/lib/error";
+import {
+    APP_NAVIGATION_EVENT,
+    navigateToAppRoute,
+    readAppRoute,
+} from "@/lib/navigation";
 import type { ProjectConfig } from "@/types/pr-run";
-
-const WorktreeRun = lazy(() =>
-    import("@/lib/components/templates/main-panel/run").then((module) => ({
-        default: module.WorktreeRun,
-    })),
-);
-
-const WorktreeChanges = lazy(() =>
-    import("@/lib/components/templates/main-panel/changes").then((module) => ({
-        default: module.WorktreeChanges,
-    })),
-);
-
-const BranchDockerPanel = lazy(() =>
-    import("@/lib/components/templates/branch-docker-panel").then((module) => ({
-        default: module.BranchDockerPanel,
-    })),
-);
-
-const BranchEnvPanel = lazy(() =>
-    import("@/lib/components/templates/branch-env-panel").then((module) => ({
-        default: module.BranchEnvPanel,
-    })),
-);
 
 type MainPanelProps = {
     actionError?: string;
@@ -83,7 +61,13 @@ export function MainPanel({
     onCreateScript,
     onRunTerminalContextChange,
 }: MainPanelProps) {
-    const [activeTab, setActiveTab] = useState<BranchPageTab>("activity");
+    const [activeTab, setActiveTab] = useState<BranchPageTab>(() => {
+        const route = readAppRoute();
+        return route.type === "branch"
+            ? (route.page ?? "activity")
+            : "activity";
+    });
+    const [isReviewComposerOpen, setIsReviewComposerOpen] = useState(false);
     const [isRefreshingActiveTab, setIsRefreshingActiveTab] = useState(false);
     const queryClient = useQueryClient();
     const selectedKey =
@@ -155,8 +139,37 @@ export function MainPanel({
     });
 
     useEffect(() => {
-        setActiveTab("activity");
-    }, [selectedKey]);
+        const route = readAppRoute();
+        setActiveTab(
+            route.type === "branch" &&
+                route.projectId === project?.id &&
+                route.branchName === branchName
+                ? (route.page ?? "activity")
+                : "activity",
+        );
+        setIsReviewComposerOpen(false);
+    }, [branchName, project?.id, selectedKey]);
+
+    useEffect(() => {
+        function handlePopState() {
+            const route = readAppRoute();
+
+            if (
+                route.type === "branch" &&
+                route.projectId === project?.id &&
+                route.branchName === branchName
+            ) {
+                setActiveTab(route.page ?? "activity");
+            }
+        }
+
+        window.addEventListener("popstate", handlePopState);
+        window.addEventListener(APP_NAVIGATION_EVENT, handlePopState);
+        return () => {
+            window.removeEventListener("popstate", handlePopState);
+            window.removeEventListener(APP_NAVIGATION_EVENT, handlePopState);
+        };
+    }, [branchName, project?.id]);
 
     useEffect(() => {
         onRunTerminalContextChange(runTerminalContext);
@@ -264,6 +277,7 @@ export function MainPanel({
                         currentProjectId,
                         currentBranch.name,
                         currentBranch.compareBranchName ?? "default",
+                        currentBranch.pullRequest?.number,
                     ),
                 }),
             );
@@ -303,6 +317,21 @@ export function MainPanel({
         setIsRefreshingActiveTab(false);
     }
 
+    function selectBranchPage(page: BranchPageTab) {
+        setActiveTab(page);
+
+        if (activeTab === page) {
+            return;
+        }
+
+        navigateToAppRoute({
+            branchName: currentBranch.name,
+            page,
+            projectId: currentProjectId,
+            type: "branch",
+        });
+    }
+
     const isRefreshing =
         isRefreshingActiveTab ||
         branchesQuery.isFetching ||
@@ -328,6 +357,9 @@ export function MainPanel({
         >
             <BranchPageLayout
                 contentVersion={activityContentVersion}
+                isHeaderCompactable={
+                    activeTab === "activity" || activeTab === "changes"
+                }
                 isReading={activeTab === "activity"}
                 isReadingReady={!activityQuery.isPending}
                 renderHeader={(isCompact) => (
@@ -339,6 +371,10 @@ export function MainPanel({
                         isRefreshing={isRefreshing}
                         project={project}
                         onCheckoutBranch={onCheckoutBranch}
+                        onOpenReview={() => {
+                            selectBranchPage("activity");
+                            setIsReviewComposerOpen(true);
+                        }}
                         onRefresh={refreshActiveTab}
                     />
                 )}
@@ -347,135 +383,23 @@ export function MainPanel({
                     <BranchPageTabs
                         activeTab={activeTab}
                         isRunTabBusy={isRunTabBusy}
-                        onSelectTab={setActiveTab}
+                        onSelectTab={selectBranchPage}
                     />
                 }
             >
-                {activeTab === "activity" ? (
-                    <WorktreeActivity
-                        baseBranchName={currentBranch.compareBranchName}
-                        branchName={currentBranch.name}
-                        data={activityQuery.data}
-                        error={
-                            isAwaitingActivityPassphrase
-                                ? "Waiting for SSH passphrase..."
-                                : activityError
-                        }
-                        isLoading={activityQuery.isPending}
-                        projectId={project.id}
-                        pullRequestAuthorLogin={
-                            currentBranch.pullRequest?.author?.login
-                        }
-                        pullRequestNumber={currentBranch.pullRequest?.number}
-                        repositoryUrl={currentBranch.repository?.url}
-                    />
-                ) : activeTab === "run" ? (
-                    selectedBranch.hasWorktree ? (
-                        <div className="flex min-h-0 flex-1 flex-col">
-                            <Suspense
-                                fallback={
-                                    <Surface
-                                        className="grid gap-2 px-3 py-2"
-                                        variant="muted"
-                                    >
-                                        <Skeleton className="h-4 w-32" />
-                                        <Skeleton className="h-7 w-full" />
-                                    </Surface>
-                                }
-                            >
-                                <WorktreeRun
-                                    branchName={currentBranch.name}
-                                    projectId={project.id}
-                                    onCreateScript={onCreateScript}
-                                    onRunScriptCommand={runTerminalCommand}
-                                />
-                            </Suspense>
-                        </div>
-                    ) : (
-                        <Surface className="min-h-48" variant="muted">
-                            <EmptyState
-                                description="Create the worktree before running project scripts in a terminal."
-                                title="No worktree available"
-                            />
-                        </Surface>
-                    )
-                ) : activeTab === "changes" ? (
-                    <Suspense
-                        fallback={
-                            <Surface
-                                className="grid gap-2 px-3 py-3"
-                                variant="muted"
-                            >
-                                <Skeleton className="h-4 w-32" />
-                                <Skeleton className="h-40 w-full" />
-                            </Surface>
-                        }
-                    >
-                        <WorktreeChanges
-                            activity={activityQuery.data}
-                            activityError={activityError}
-                            baseBranchName={currentBranch.compareBranchName}
-                            branchName={currentBranch.name}
-                            projectId={project.id}
-                            pullRequestNumber={
-                                currentBranch.pullRequest?.number
-                            }
-                        />
-                    </Suspense>
-                ) : activeTab === "docker" ? (
-                    selectedBranch.hasWorktree ? (
-                        <Suspense
-                            fallback={
-                                <Surface
-                                    className="grid gap-2 px-3 py-3"
-                                    variant="muted"
-                                >
-                                    <Skeleton className="h-4 w-32" />
-                                    <Skeleton className="h-16 w-full" />
-                                    <Skeleton className="h-20 w-full" />
-                                </Surface>
-                            }
-                        >
-                            <BranchDockerPanel
-                                branchName={currentBranch.name}
-                                projectId={project.id}
-                                onRunDockerCommand={runTerminalCommand}
-                            />
-                        </Suspense>
-                    ) : (
-                        <Surface className="min-h-48" variant="muted">
-                            <EmptyState
-                                description="Create the worktree before running Docker Compose commands for this branch."
-                                title="No worktree available"
-                            />
-                        </Surface>
-                    )
-                ) : selectedBranch.hasWorktree ? (
-                    <Suspense
-                        fallback={
-                            <Surface
-                                className="grid gap-2 px-3 py-3"
-                                variant="muted"
-                            >
-                                <Skeleton className="h-4 w-32" />
-                                <Skeleton className="h-16 w-full" />
-                                <Skeleton className="h-20 w-full" />
-                            </Surface>
-                        }
-                    >
-                        <BranchEnvPanel
-                            branchName={currentBranch.name}
-                            projectId={project.id}
-                        />
-                    </Suspense>
-                ) : (
-                    <Surface className="min-h-48" variant="muted">
-                        <EmptyState
-                            description="Create the worktree before reading env files for this branch."
-                            title="No worktree available"
-                        />
-                    </Surface>
-                )}
+                <BranchPageContent
+                    activeTab={activeTab}
+                    activity={activityQuery.data}
+                    activityError={activityError}
+                    branch={currentBranch}
+                    isActivityLoading={activityQuery.isPending}
+                    isAwaitingActivityPassphrase={isAwaitingActivityPassphrase}
+                    isReviewComposerOpen={isReviewComposerOpen}
+                    project={project}
+                    onCloseReview={() => setIsReviewComposerOpen(false)}
+                    onCreateScript={onCreateScript}
+                    onRunTerminalCommand={runTerminalCommand}
+                />
             </BranchPageLayout>
         </main>
     );

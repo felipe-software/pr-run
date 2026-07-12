@@ -32,6 +32,12 @@ describe("activity dates", () => {
             "not-a-date",
         );
         expect(formatActivityAbsoluteTime("not-a-date")).toBe("not-a-date");
+        expect(
+            formatActivityAbsoluteTime(
+                "2026-07-11T12:00:05.000Z",
+                "mm-dd-yyyy",
+            ),
+        ).toContain("07-11-2026");
     });
 
     test("schedules refreshes at meaningful boundaries", () => {

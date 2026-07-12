@@ -25,7 +25,9 @@ export type OverviewPullRequestChange = {
     number: number;
     projectId: string;
     projectName: string;
+    state: "CLOSED" | "MERGED" | "OPEN";
     title: string;
+    updatedAt: string | null;
     url: string;
 };
 
@@ -39,6 +41,7 @@ export type OverviewSnapshot = {
     generatedAt: string;
     projects: OverviewProjectSummary[];
     pullRequests: OverviewPullRequestChange[];
+    recentPullRequests: OverviewPullRequestChange[];
     scope: OverviewScope;
     totals: OverviewTotals;
     unavailableProjects: OverviewUnavailableProject[];

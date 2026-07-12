@@ -20,7 +20,12 @@ export async function getWorktreeActivity(
     baseBranch?: string,
     pullRequestNumber?: number,
 ): Promise<WorktreeActivityResult> {
-    const commits = await getCommitHistory(project, branch, baseBranch);
+    const commits = await getCommitHistory(
+        project,
+        branch,
+        baseBranch,
+        pullRequestNumber,
+    );
     let { baseCommits, branchItems } = partitionActivityCommits(commits);
 
     if (!pullRequestNumber) {

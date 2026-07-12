@@ -17,6 +17,8 @@ export const prRunQueryKeys = {
             baseBranchName,
             "commits",
         ] as const,
+    commitDiff: (projectId: string, hash: string) =>
+        [...prRunQueryKeys.project(projectId), "commit", hash, "diff"] as const,
     activity: (
         projectId: string,
         branchName: string,
@@ -32,7 +34,12 @@ export const prRunQueryKeys = {
             "activity",
             pullRequestNumber ?? "branch",
         ] as const,
-    diff: (projectId: string, branchName: string, baseBranchName: string) =>
+    diff: (
+        projectId: string,
+        branchName: string,
+        baseBranchName: string,
+        pullRequestNumber?: number,
+    ) =>
         [
             ...prRunQueryKeys.project(projectId),
             "branch",
@@ -40,6 +47,15 @@ export const prRunQueryKeys = {
             "base",
             baseBranchName,
             "diff",
+            pullRequestNumber ?? "branch",
+        ] as const,
+    file: (projectId: string, branchName: string, path: string) =>
+        [
+            ...prRunQueryKeys.project(projectId),
+            "branch",
+            branchName,
+            "file",
+            path,
         ] as const,
     docker: (projectId: string, branchName: string) =>
         [

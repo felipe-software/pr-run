@@ -1,6 +1,7 @@
 import { AppearanceSettings } from "@/lib/components/templates/settings-page/appearance-settings";
 import { DiagnosticsSettings } from "@/lib/components/templates/settings-page/diagnostics-settings";
 import { GeneralSettings } from "@/lib/components/templates/settings-page/general-settings";
+import { HotkeysSettings } from "@/lib/components/templates/settings-page/hotkeys-settings";
 import { ProjectsSettings } from "@/lib/components/templates/settings-page/projects-settings";
 import { ScriptsSettings } from "@/lib/components/templates/settings-page/scripts-settings";
 import { SettingsLayout } from "@/lib/components/templates/settings-page/settings-layout";
@@ -23,6 +24,7 @@ export function SettingsPage(props: SettingsPageProps) {
                 onRefreshProject={props.onRefreshProject}
             />
         ),
+        hotkeys: <HotkeysSettings />,
         projects: (
             <ProjectsSettings
                 groups={props.groups}

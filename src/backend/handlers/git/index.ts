@@ -5,7 +5,11 @@ import {
     updateProjectWorktrees,
     updateWorktree,
 } from "@/backend/handlers/git/worktrees";
-import { getBranchDiff } from "@/backend/handlers/git/diff";
+import {
+    getBranchDiff,
+    getBranchFileContent,
+    getCommitDiff,
+} from "@/backend/handlers/git/diff";
 import { getCommitHistory } from "@/backend/handlers/git/history";
 import { getOverviewSnapshot } from "@/backend/handlers/git/overview";
 import { validateProjectPath } from "@/backend/handlers/git/helpers";
@@ -97,7 +101,9 @@ export const gitHandler = {
     checkoutBranch,
     discardPendingReview,
     getBranchDiff,
+    getBranchFileContent,
     getCommitHistory,
+    getCommitDiff,
     getGitHubMedia,
     getOverviewSnapshot,
     getWorktreeActivity,

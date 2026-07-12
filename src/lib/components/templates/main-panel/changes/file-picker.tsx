@@ -1,4 +1,4 @@
-import { File, Search } from "lucide-react";
+import { File, GitCommitHorizontal, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -109,9 +109,19 @@ export function FilePicker({
                                         ) : null}
                                     </span>
                                     <span
-                                        className="font-mono text-[10px]
-                                            tabular-nums"
+                                        className="flex items-center gap-2
+                                            font-mono text-[10px] tabular-nums"
                                     >
+                                        {file.commits.length > 0 ? (
+                                            <span
+                                                className="text-muted-foreground
+                                                    inline-flex items-center
+                                                    gap-1"
+                                            >
+                                                <GitCommitHorizontal className="size-3" />
+                                                {file.commits.length}
+                                            </span>
+                                        ) : null}
                                         <span className="text-success">
                                             +{file.additions}
                                         </span>{" "}

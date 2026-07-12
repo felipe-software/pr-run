@@ -5,6 +5,8 @@ export type SelectedBranchState = {
     projectId: string;
 };
 
+export type BranchPageTab = "activity" | "run" | "changes" | "docker" | "env";
+
 export type SelectedBranchView = {
     branchName: string | null;
     project: ProjectConfig | null;
@@ -13,6 +15,7 @@ export type SelectedBranchView = {
 export type SettingsSection =
     | "general"
     | "appearance"
+    | "hotkeys"
     | "projects"
     | "scripts"
     | "ssh"

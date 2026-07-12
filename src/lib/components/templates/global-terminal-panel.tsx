@@ -193,7 +193,8 @@ export function GlobalTerminalPanel({
                             />
                         ) : (
                             <Surface
-                                className="grid h-full place-items-center"
+                                className="flex h-full items-center
+                                    justify-center"
                                 variant="muted"
                             >
                                 <EmptyState
@@ -399,7 +400,9 @@ function buildTerminalTree(
             ownerKey,
             branchName,
             projectId,
-            `${projectName} - ${branchName}`,
+            ownerKey === "global:home"
+                ? "Home"
+                : `${projectName} - ${branchName}`,
         );
 
         group.terminals.push(

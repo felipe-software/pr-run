@@ -14,6 +14,8 @@ import { ContinuousDiff } from "@/lib/components/templates/main-panel/changes/co
 import type { DiffCommentDraft } from "@/lib/components/templates/main-panel/changes/diff-review-types";
 import { FilePicker } from "@/lib/components/templates/main-panel/changes/file-picker";
 import { FocusedDiff } from "@/lib/components/templates/main-panel/changes/focused-diff";
+import { FocusedDiffSidebar } from "@/lib/components/templates/main-panel/changes/focused-diff-sidebar";
+import { WholeFileDialog } from "@/lib/components/templates/main-panel/changes/whole-file-dialog";
 import { useBranchDiffQuery } from "@/lib/hooks/query/use-branch-diff-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -56,17 +58,24 @@ export function WorktreeChanges({
     const [draft, setDraft] = useState<DiffCommentDraft>();
     const [isFilePickerOpen, setIsFilePickerOpen] = useState(false);
     const [isReviewOpen, setIsReviewOpen] = useState(false);
-    const diffQuery = useBranchDiffQuery(projectId, branchName, baseBranchName);
+    const [isWholeFileOpen, setIsWholeFileOpen] = useState(false);
+    const diffQuery = useBranchDiffQuery(
+        projectId,
+        branchName,
+        baseBranchName,
+        pullRequestNumber,
+    );
     const isAwaitingSshPassphrase = isHandledSshPromptError(diffQuery.error);
     const fileDiffs = useMemo(
         () => parseFileDiffs(diffQuery.data?.patch ?? "", branchName),
         [branchName, diffQuery.data?.patch],
     );
-    const selectedIndex = Math.max(
-        0,
-        fileDiffs.findIndex((file) => file.name === selectedPath),
+    const selectedFileDiff = fileDiffs.find(
+        (file) => file.name === selectedPath,
     );
-    const selectedFileDiff = fileDiffs[selectedIndex];
+    const selectedFile = diffQuery.data?.files.find(
+        (file) => file.path === selectedPath,
+    );
 
     useEffect(() => {
         setSelectedPath(undefined);
@@ -74,16 +83,16 @@ export function WorktreeChanges({
     }, [branchName, projectId]);
 
     useEffect(() => {
-        const firstPath = fileDiffs[0]?.name;
-        const selectionExists = fileDiffs.some(
-            (file) => file.name === selectedPath,
+        const firstPath = fileDiffs[0]?.name ?? diffQuery.data?.files[0]?.path;
+        const selectionExists = diffQuery.data?.files.some(
+            (file) => file.path === selectedPath,
         );
 
         if (firstPath && (!selectedPath || !selectionExists)) {
             setSelectedPath(firstPath);
             setDraft(undefined);
         }
-    }, [fileDiffs, selectedPath]);
+    }, [diffQuery.data?.files, fileDiffs, selectedPath]);
 
     useEffect(() => {
         localStorage.setItem(REVIEW_MODE_KEY, mode);
@@ -149,6 +158,11 @@ export function WorktreeChanges({
         setDraft(undefined);
 
         if (mode === "continuous") {
+            if (!fileDiffs.some((fileDiff) => fileDiff.name === path)) {
+                setMode("focused");
+                return;
+            }
+
             setContinuousTargetPath(undefined);
             requestAnimationFrame(() => setContinuousTargetPath(path));
         }
@@ -164,6 +178,11 @@ export function WorktreeChanges({
         >
             <ChangesToolbar
                 additions={diffQuery.data.additions}
+                canOpenWholeFile={Boolean(
+                    selectedFile &&
+                    selectedFile.status !== "binary" &&
+                    (selectedFile.status !== "deleted" || baseBranchName),
+                )}
                 deletions={diffQuery.data.deletions}
                 fileCount={diffQuery.data.files.length}
                 isUnified={isUnified}
@@ -176,6 +195,7 @@ export function WorktreeChanges({
                     setDraft(undefined);
                 }}
                 onOpenFiles={() => setIsFilePickerOpen(true)}
+                onOpenWholeFile={() => setIsWholeFileOpen(true)}
                 onOpenReview={() => setIsReviewOpen((open) => !open)}
                 onToggleUnified={() => setIsUnified((value) => !value)}
                 onToggleWrap={() => setShouldWrap((value) => !value)}
@@ -206,30 +226,42 @@ export function WorktreeChanges({
                         targetPath={continuousTargetPath}
                         onChangeDraft={setDraft}
                     />
-                ) : selectedFileDiff ? (
-                    <FocusedDiff
-                        baseBranchName={baseBranchName}
-                        branchName={branchName}
-                        comments={reviewComments}
-                        draft={draft}
-                        fileDiff={selectedFileDiff}
-                        hasNext={selectedIndex < fileDiffs.length - 1}
-                        hasPrevious={selectedIndex > 0}
-                        isUnified={isUnified}
-                        projectId={projectId}
-                        pullRequestNumber={pullRequestNumber}
-                        shouldWrap={shouldWrap}
-                        onChangeDraft={setDraft}
-                        onNext={() => {
-                            const path = fileDiffs[selectedIndex + 1]?.name;
-                            if (path) selectFile(path);
-                        }}
-                        onPrevious={() => {
-                            const path = fileDiffs[selectedIndex - 1]?.name;
-                            if (path) selectFile(path);
-                        }}
-                    />
-                ) : null}
+                ) : (
+                    <div className="flex h-full min-h-0">
+                        <FocusedDiffSidebar
+                            files={diffQuery.data.files}
+                            selectedPath={selectedPath}
+                            onSelect={selectFile}
+                        />
+                        <div className="min-w-0 flex-1">
+                            {selectedFileDiff ? (
+                                <FocusedDiff
+                                    baseBranchName={baseBranchName}
+                                    branchName={branchName}
+                                    comments={reviewComments}
+                                    draft={draft}
+                                    fileDiff={selectedFileDiff}
+                                    file={selectedFile}
+                                    isUnified={isUnified}
+                                    projectId={projectId}
+                                    pullRequestNumber={pullRequestNumber}
+                                    shouldWrap={shouldWrap}
+                                    onChangeDraft={setDraft}
+                                />
+                            ) : (
+                                <div
+                                    className="flex h-full items-center
+                                        justify-center p-4"
+                                >
+                                    <EmptyState
+                                        description="Pierre cannot render line-level changes for this binary or metadata-only file, but its change statistics remain available in the sidebar."
+                                        title="No text diff available"
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {isReviewOpen &&
@@ -243,6 +275,7 @@ export function WorktreeChanges({
                         pendingReview={activity.pendingReview}
                         projectId={projectId}
                         pullRequestNumber={pullRequestNumber}
+                        onClose={() => setIsReviewOpen(false)}
                     />
                 </div>
             ) : null}
@@ -253,6 +286,15 @@ export function WorktreeChanges({
                 onSelect={selectFile}
                 open={isFilePickerOpen}
                 selectedPath={selectedPath}
+            />
+            <WholeFileDialog
+                baseBranchName={baseBranchName}
+                branchName={branchName}
+                file={selectedFile}
+                open={isWholeFileOpen}
+                projectId={projectId}
+                shouldWrap={shouldWrap}
+                onOpenChange={setIsWholeFileOpen}
             />
         </section>
     );

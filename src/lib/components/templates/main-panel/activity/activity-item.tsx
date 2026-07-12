@@ -16,6 +16,7 @@ import type {
 type ActivityItemProps = {
     branchName: string;
     item: WorktreeActivityItemType;
+    projectId: string;
     repositoryUrl?: string;
     side: ActivitySide;
 };
@@ -23,11 +24,14 @@ type ActivityItemProps = {
 export function ActivityItem({
     branchName,
     item,
+    projectId,
     repositoryUrl,
     side,
 }: ActivityItemProps) {
     if (item.type === "commit") {
-        return <CommitRow commit={item.commit} side={side} />;
+        return (
+            <CommitRow commit={item.commit} projectId={projectId} side={side} />
+        );
     }
 
     const content = item.type === "comment" ? item.comment : item.review;
@@ -83,7 +87,16 @@ export function ActivityItem({
                     <span
                         className={cn(
                             `text-muted-foreground inline-flex items-center
-                            gap-1 text-[11px] leading-3.5 whitespace-nowrap`,
+                            gap-1 text-xs leading-4 font-medium
+                            whitespace-nowrap`,
+                            item.type === "review" &&
+                                "bg-muted/55 mt-0.5 rounded-md px-1.5 py-0.5",
+                            item.type === "review" &&
+                                item.review.state === "CHANGES_REQUESTED" &&
+                                "bg-danger/10 text-danger",
+                            item.type === "review" &&
+                                item.review.state === "APPROVED" &&
+                                "bg-success/10 text-success",
                             side === "right" && "justify-end",
                         )}
                     >
@@ -115,13 +128,20 @@ export function ActivityItem({
                         self-stretch"
                 >
                     {item.review.comments.map((comment) => (
-                        <ReviewCommentCard
-                            branchName={branchName}
-                            comment={comment}
+                        <div
+                            className="[contain-intrinsic-size:auto_12rem]
+                                [content-visibility:auto]"
                             key={comment.id}
-                            mediaAlignment={side === "right" ? "right" : "left"}
-                            repositoryUrl={repositoryUrl}
-                        />
+                        >
+                            <ReviewCommentCard
+                                branchName={branchName}
+                                comment={comment}
+                                mediaAlignment={
+                                    side === "right" ? "right" : "left"
+                                }
+                                repositoryUrl={repositoryUrl}
+                            />
+                        </div>
                     ))}
                 </div>
             ) : null}

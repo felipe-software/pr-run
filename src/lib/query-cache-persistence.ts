@@ -8,7 +8,7 @@ import { del, get, set } from "idb-keyval";
 import { prRunQueryKeys } from "@/lib/hooks/query/query-keys";
 
 export const QUERY_CACHE_MAX_AGE = 24 * 60 * 60 * 1_000;
-export const QUERY_CACHE_BUSTER = "pr-run-query-cache-v1";
+export const QUERY_CACHE_BUSTER = "pr-run-query-cache-v2";
 const QUERY_CACHE_STORAGE_KEY = "pr-run:query-cache:v1";
 
 type QueryCacheStorage = {
@@ -105,7 +105,19 @@ export function shouldPersistQuery(queryKey: QueryKey) {
         typeof queryKey[4] === "string" &&
         queryKey[5] === "base" &&
         typeof queryKey[6] === "string" &&
-        (queryKey[7] === "commits" || queryKey[7] === "diff")
+        queryKey[7] === "commits"
+    ) {
+        return true;
+    }
+
+    if (
+        queryKey.length === 9 &&
+        queryKey[3] === "branch" &&
+        typeof queryKey[4] === "string" &&
+        queryKey[5] === "base" &&
+        typeof queryKey[6] === "string" &&
+        queryKey[7] === "diff" &&
+        (typeof queryKey[8] === "number" || queryKey[8] === "branch")
     ) {
         return true;
     }

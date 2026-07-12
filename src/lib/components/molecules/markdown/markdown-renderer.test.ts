@@ -62,4 +62,17 @@ describe("markdown helpers", () => {
         expect(html).not.toContain("<script");
         expect(html).toContain("<strong>Safe</strong>");
     });
+
+    test("reserves a stable frame while an image loads", () => {
+        const html = renderToStaticMarkup(
+            createElement(MarkdownRenderer, {
+                markdown: "![Diff preview](https://example.com/diff.png)",
+            }),
+        );
+
+        expect(html).toContain("data-markdown-image-frame");
+        expect(html).toContain("aspect-video");
+        expect(html).toContain("w-[36rem]");
+        expect(html).toContain("Loading image: Diff preview");
+    });
 });

@@ -18,10 +18,23 @@ export function GeneralSettings({
     const [backendUrl, setBackendUrl] = useState(
         "Loading local backend URL...",
     );
+    const [backendError, setBackendError] = useState<string>();
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
-        getBackendUrl().then(setBackendUrl);
+        async function loadBackendUrl() {
+            const [error, url] = await tryPromise(getBackendUrl());
+
+            if (error) {
+                setBackendError(getErrorMessage(error));
+                setBackendUrl("Unavailable");
+                return;
+            }
+
+            setBackendUrl(url);
+        }
+
+        loadBackendUrl();
     }, []);
 
     async function refreshAll() {
@@ -49,6 +62,11 @@ export function GeneralSettings({
                 <div>
                     <dt className="text-muted-foreground">Backend URL</dt>
                     <dd className="mt-1 font-mono text-xs">{backendUrl}</dd>
+                    {backendError ? (
+                        <dd className="text-danger mt-1 text-xs">
+                            {backendError}
+                        </dd>
+                    ) : null}
                 </div>
                 <div>
                     <dt className="text-muted-foreground">

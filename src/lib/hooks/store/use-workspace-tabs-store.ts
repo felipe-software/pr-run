@@ -20,6 +20,7 @@ type WorkspaceTabsStore = PersistedWorkspaceTabs & {
     cycleTabs: (direction: "next" | "previous") => void;
     openTab: (tab: Omit<WorktreeTab, "id">) => void;
     pruneTabs: (validTabIds: Set<string>) => void;
+    reorderTab: (tabId: string, targetTabId: string) => void;
 };
 
 export function getWorktreeTabId(projectId: string, branchName: string) {
@@ -61,6 +62,33 @@ export function cycleWorkspaceTabs(
     const nextIndex = (index + offset + state.tabs.length) % state.tabs.length;
 
     return state.tabs[nextIndex]?.id ?? null;
+}
+
+export function reorderWorkspaceTabs(
+    tabs: WorktreeTab[],
+    tabId: string,
+    targetTabId: string,
+) {
+    const sourceIndex = tabs.findIndex((tab) => tab.id === tabId);
+    const targetIndex = tabs.findIndex((tab) => tab.id === targetTabId);
+
+    if (
+        sourceIndex === -1 ||
+        targetIndex === -1 ||
+        sourceIndex === targetIndex
+    ) {
+        return tabs;
+    }
+
+    const next = [...tabs];
+    const [tab] = next.splice(sourceIndex, 1);
+
+    if (!tab) {
+        return tabs;
+    }
+
+    next.splice(targetIndex, 0, tab);
+    return next;
 }
 
 function readSession(): PersistedWorkspaceTabs {
@@ -158,6 +186,17 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>((set, get) => ({
             : (tabs[0]?.id ?? null);
         const next = { activeTabId, tabs };
 
+        persistSession(next);
+        set(next);
+    },
+    reorderTab(tabId, targetTabId) {
+        const tabs = reorderWorkspaceTabs(get().tabs, tabId, targetTabId);
+
+        if (tabs === get().tabs) {
+            return;
+        }
+
+        const next = { activeTabId: get().activeTabId, tabs };
         persistSession(next);
         set(next);
     },

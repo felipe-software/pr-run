@@ -1,22 +1,19 @@
-import { AlertTriangle } from "lucide-react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { EmptyState } from "@/lib/components/atoms/empty-state";
-import { Skeleton } from "@/lib/components/atoms/skeleton";
 import { Surface } from "@/lib/components/atoms/surface";
-import { AddProjectDialog } from "@/lib/components/templates/add-project-dialog";
-import { CreateScriptDialog } from "@/lib/components/templates/create-script-dialog";
 import { GlobalTerminalPanel } from "@/lib/components/templates/global-terminal-panel";
 import { MainPanel } from "@/lib/components/templates/main-panel";
 import { Overview } from "@/lib/components/templates/overview";
 import type { RunTerminalContext } from "@/lib/components/templates/main-panel";
 import { Sidebar } from "@/lib/components/templates/sidebar";
-import { SshPassphraseDialog } from "@/lib/components/templates/ssh-passphrase-dialog";
 import { StatusBar } from "@/lib/components/templates/status-bar";
 import { WorkspaceTitlebar } from "@/lib/components/templates/workspace-titlebar";
 import { SettingsPage } from "@/lib/components/templates/settings-page";
 import { usePrRunAppState } from "@/lib/components/templates/pr-run-app/use-pr-run-app-state";
+import { AppDialogs } from "@/lib/components/templates/pr-run-app/app-dialogs";
+import { AppInitialState } from "@/lib/components/templates/pr-run-app/app-initial-state";
+import { useAppHotkeys } from "@/lib/components/templates/pr-run-app/use-app-hotkeys";
 import {
     clamp,
     getActiveOwnerTerminalKey,
@@ -24,6 +21,13 @@ import {
 } from "@/lib/components/templates/pr-run-app/terminal-state";
 import { useUiPreferencesStore } from "@/lib/hooks/store/use-ui-preferences-store";
 import { useWorktreeTerminalStore } from "@/lib/hooks/store/use-worktree-terminal-store";
+import {
+    cycleWorkspaceTabs,
+    useWorkspaceTabsStore,
+} from "@/lib/hooks/store/use-workspace-tabs-store";
+import { tryPromise } from "@/lib/error";
+import { toast } from "@/lib/components/ui/toast";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 const TERMINAL_PANEL_DEFAULT_HEIGHT = 320;
 const TERMINAL_PANEL_MIN_HEIGHT = 180;
@@ -31,6 +35,7 @@ const TERMINAL_PANEL_SIDEBAR_DEFAULT_WIDTH = 180;
 const TERMINAL_PANEL_SIDEBAR_MIN_WIDTH = 132;
 const TERMINAL_PANEL_SIDEBAR_MAX_WIDTH = 360;
 const TERMINAL_RESIZE_BUSY_SYNC_DELAY_MS = 800;
+const GLOBAL_TERMINAL_OWNER_KEY = "global:home";
 
 export function PrRunApp() {
     const state = usePrRunAppState();
@@ -96,6 +101,20 @@ export function PrRunApp() {
         : isMobileSidebarOpen;
     const isBranchWorkspaceVisible =
         state.workspaceView.type !== "settings" && !state.isOverviewOpen;
+    useAppHotkeys({
+        isBranchWorkspaceVisible,
+        onCloseActiveTab: () => {
+            const activeTabId = useWorkspaceTabsStore.getState().activeTabId;
+
+            if (activeTabId) {
+                state.closeWorktreeTab(activeTabId);
+            }
+        },
+        onOpenGlobalTerminal: openGlobalTerminalPanel,
+        onSelectNextTab: () => selectAdjacentTab("next"),
+        onSelectPreviousTab: () => selectAdjacentTab("previous"),
+        onToggleSidebar: toggleSidebar,
+    });
 
     useEffect(() => {
         const media = window.matchMedia("(min-width: 64rem)");
@@ -170,12 +189,41 @@ export function PrRunApp() {
         }, TERMINAL_RESIZE_BUSY_SYNC_DELAY_MS);
     }
 
-    function openGlobalTerminalPanel() {
-        setIsTerminalPanelAutoHeight(false);
-        setSelectedGlobalTerminalKey(
-            (current) => current ?? preferredGlobalTerminalKey,
+    function selectAdjacentTab(direction: "next" | "previous") {
+        const nextTabId = cycleWorkspaceTabs(
+            useWorkspaceTabsStore.getState(),
+            direction,
         );
+
+        if (nextTabId) {
+            state.selectWorktreeTab(nextTabId);
+        }
+    }
+
+    async function openGlobalTerminalPanel() {
+        setIsTerminalPanelAutoHeight(false);
         setIsTerminalPanelOpen(true);
+
+        if (preferredGlobalTerminalKey) {
+            setSelectedGlobalTerminalKey(
+                (current) => current ?? preferredGlobalTerminalKey,
+            );
+            return;
+        }
+
+        const terminalStore = useWorktreeTerminalStore.getState();
+        const [error, tab] = await tryPromise(
+            terminalStore.createTerminal(GLOBAL_TERMINAL_OWNER_KEY, "~", {
+                type: "manual",
+            }),
+        );
+
+        if (error) {
+            toast.error(getErrorMessage(error), { timeout: 3200 });
+            return;
+        }
+
+        setSelectedGlobalTerminalKey(`${GLOBAL_TERMINAL_OWNER_KEY}::${tab.id}`);
     }
 
     function toggleSidebar() {
@@ -263,38 +311,11 @@ export function PrRunApp() {
     }
 
     if (state.configError) {
-        return (
-            <div
-                className="bg-background text-foreground fixed inset-0 grid
-                    place-items-center overflow-hidden p-8 font-sans"
-            >
-                <Surface
-                    className="max-w-lg px-4 py-3 text-sm"
-                    variant="danger"
-                >
-                    <div className="flex gap-3">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                        <span>{state.configError}</span>
-                    </div>
-                </Surface>
-            </div>
-        );
+        return <AppInitialState error={state.configError} />;
     }
 
     if (state.isLoadingConfig) {
-        return (
-            <Surface
-                className="bg-background fixed inset-0 grid place-items-center
-                    overflow-hidden rounded-none border-0 font-sans"
-                variant="plain"
-            >
-                <EmptyState
-                    description="Loading projects, branches, and saved scripts."
-                    icon={<Skeleton className="size-4 rounded-sm" />}
-                    title="Opening PR Run"
-                />
-            </Surface>
-        );
+        return <AppInitialState isLoading />;
     }
 
     return (
@@ -310,7 +331,6 @@ export function PrRunApp() {
             variant="plain"
         >
             <WorkspaceTitlebar
-                areWorkspaceShortcutsEnabled={isBranchWorkspaceVisible}
                 isSidebarOpen={isSidebarOpen}
                 projectAvatarUris={state.projectAvatarUris}
                 onCloseTab={state.closeWorktreeTab}
@@ -348,6 +368,10 @@ export function PrRunApp() {
                         state.openOverview();
                         closeMobileSidebar();
                     }}
+                    onOpenProject={(projectId) => {
+                        state.openProjectOverview(projectId);
+                        closeMobileSidebar();
+                    }}
                     onOpenSettings={() => {
                         state.openSettings();
                         closeMobileSidebar();
@@ -375,9 +399,15 @@ export function PrRunApp() {
                         />
                     ) : state.isOverviewOpen ? (
                         <Overview
+                            projectId={state.overviewProjectId}
                             projects={state.groups.flatMap(
                                 (group) => group.projects,
                             )}
+                            onProjectChange={(projectId) =>
+                                projectId
+                                    ? state.openProjectOverview(projectId)
+                                    : state.openOverview()
+                            }
                         />
                     ) : null}
                     {state.selectedBranchView.project &&
@@ -410,23 +440,6 @@ export function PrRunApp() {
                                     handleRunTerminalContextChange
                                 }
                             />
-                            <GlobalTerminalPanel
-                                groups={state.groups}
-                                height={terminalPanelHeight}
-                                isAutoHeight={isTerminalPanelAutoHeight}
-                                isOpen={isTerminalPanelOpen}
-                                preferredOwnerKey={
-                                    runTerminalContext?.ownerKey ?? null
-                                }
-                                sidebarWidth={terminalPanelSidebarWidth}
-                                selectedTerminalKey={selectedGlobalTerminalKey}
-                                onBeginSidebarResize={
-                                    beginTerminalPanelSidebarResize
-                                }
-                                onBeginResize={beginTerminalPanelResize}
-                                onClose={() => setIsTerminalPanelOpen(false)}
-                                onSelectTerminal={setSelectedGlobalTerminalKey}
-                            />
                         </div>
                     ) : state.workspaceView.type !== "settings" &&
                       !state.isOverviewOpen ? (
@@ -444,27 +457,26 @@ export function PrRunApp() {
                             }
                         />
                     ) : null}
+                    <GlobalTerminalPanel
+                        groups={state.groups}
+                        height={terminalPanelHeight}
+                        isAutoHeight={isTerminalPanelAutoHeight}
+                        isOpen={isTerminalPanelOpen}
+                        preferredOwnerKey={runTerminalContext?.ownerKey ?? null}
+                        sidebarWidth={terminalPanelSidebarWidth}
+                        selectedTerminalKey={selectedGlobalTerminalKey}
+                        onBeginSidebarResize={beginTerminalPanelSidebarResize}
+                        onBeginResize={beginTerminalPanelResize}
+                        onClose={() => setIsTerminalPanelOpen(false)}
+                        onSelectTerminal={setSelectedGlobalTerminalKey}
+                    />
                     <StatusBar
                         summary={state.statusSummary}
                         onOpenBusyTerminals={openGlobalTerminalPanel}
                     />
                 </div>
             </div>
-            <AddProjectDialog
-                error={state.addProjectError}
-                isOpen={state.isAddProjectOpen}
-                isSubmitting={state.isAddingProject}
-                onClose={state.closeAddProject}
-                onSubmit={state.submitAddProject}
-            />
-            <CreateScriptDialog
-                error={state.createScriptError}
-                isOpen={state.isCreateScriptOpen}
-                isSubmitting={state.isCreatingScript}
-                onClose={state.closeCreateScript}
-                onSubmit={state.createScript}
-            />
-            <SshPassphraseDialog />
+            <AppDialogs state={state} />
         </Surface>
     );
 }

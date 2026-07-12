@@ -3,6 +3,7 @@ import {
     Columns2,
     Files,
     List,
+    Maximize2,
     MessageSquareText,
     Rows3,
     WrapText,
@@ -15,6 +16,7 @@ export type DiffReviewMode = "continuous" | "focused";
 
 type ChangesToolbarProps = {
     additions: number;
+    canOpenWholeFile: boolean;
     deletions: number;
     fileCount: number;
     isUnified: boolean;
@@ -24,6 +26,7 @@ type ChangesToolbarProps = {
     shouldWrap: boolean;
     onChangeMode: (mode: DiffReviewMode) => void;
     onOpenFiles: () => void;
+    onOpenWholeFile: () => void;
     onOpenReview: () => void;
     onToggleUnified: () => void;
     onToggleWrap: () => void;
@@ -31,6 +34,7 @@ type ChangesToolbarProps = {
 
 export function ChangesToolbar({
     additions,
+    canOpenWholeFile,
     deletions,
     fileCount,
     isUnified,
@@ -40,6 +44,7 @@ export function ChangesToolbar({
     shouldWrap,
     onChangeMode,
     onOpenFiles,
+    onOpenWholeFile,
     onOpenReview,
     onToggleUnified,
     onToggleWrap,
@@ -97,6 +102,16 @@ export function ChangesToolbar({
                     onClick={onToggleUnified}
                 >
                     <Columns2 className="size-3.5" />
+                </Button>
+                <Button
+                    aria-label="Open the whole file in fullscreen"
+                    disabled={!canOpenWholeFile}
+                    size="icon-sm"
+                    title="Open whole file"
+                    variant="ghost"
+                    onClick={onOpenWholeFile}
+                >
+                    <Maximize2 className="size-3.5" />
                 </Button>
                 <Button
                     aria-label={

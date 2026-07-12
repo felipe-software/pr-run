@@ -65,9 +65,24 @@ export type PullRequestLatestReview = {
 export type BranchDiffFile = {
     path: string;
     additions: number;
+    commits: FileCommitInfo[];
     deletions: number;
     previousPath?: string;
     status: "added" | "binary" | "deleted" | "modified" | "renamed";
+};
+
+export type FileCommitInfo = {
+    authorName: string;
+    date: string;
+    hash: string;
+    shortHash: string;
+    subject: string;
+};
+
+export type BranchFileContent = {
+    branch: string;
+    contents: string;
+    path: string;
 };
 
 export type BranchDiffResult = {

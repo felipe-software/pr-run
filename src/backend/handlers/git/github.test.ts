@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import { normalizeGitHubPullRequests } from "@/backend/handlers/git/github";
+import {
+    normalizeGitHubPullRequestCommits,
+    normalizeGitHubPullRequests,
+} from "@/backend/handlers/git/github";
 
 describe("normalizeGitHubPullRequests", () => {
     test("normalizes PR identity and review workflow people", () => {
@@ -152,5 +155,39 @@ describe("normalizeGitHubPullRequests", () => {
         ]);
 
         expect(pullRequests).toEqual([]);
+    });
+});
+
+describe("normalizeGitHubPullRequestCommits", () => {
+    test("normalizes REST author avatar and profile fields", () => {
+        const [commit] = normalizeGitHubPullRequestCommits(
+            [
+                {
+                    author: {
+                        avatar_url: "https://avatars.example/ada.png",
+                        html_url: "https://github.com/ada",
+                        login: "ada",
+                    },
+                    commit: {
+                        author: {
+                            date: "2026-07-12T10:00:00Z",
+                            email: "ada@example.com",
+                            name: "Ada",
+                        },
+                        message: "Improve activity commits\n\nDetails",
+                    },
+                    sha: "1234567890abcdef",
+                },
+            ],
+            "https://github.com/example/repository",
+        );
+
+        expect(commit).toMatchObject({
+            authorAvatarUrl: "https://avatars.example/ada.png",
+            authorLogin: "ada",
+            authorUrl: "https://github.com/ada",
+            shortHash: "1234567",
+            subject: "Improve activity commits",
+        });
     });
 });

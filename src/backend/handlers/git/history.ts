@@ -8,6 +8,7 @@ import {
 import {
     findGitHubRepository,
     getGitHubCommit,
+    getGitHubPullRequestCommits,
 } from "@/backend/handlers/git/github";
 import { ApiError, type CommitInfo, type ProjectConfig } from "@/backend/types";
 
@@ -81,7 +82,21 @@ export async function getCommitHistory(
     project: ProjectConfig,
     branch: string,
     baseBranch?: string,
+    pullRequestNumber?: number,
 ): Promise<CommitInfo[]> {
+    if (pullRequestNumber) {
+        const repository = await findGitHubRepository(project);
+
+        if (repository) {
+            const commits = await getGitHubPullRequestCommits(
+                project,
+                repository,
+                pullRequestNumber,
+            );
+
+            return await attachLocalCommitStats(project.path, commits);
+        }
+    }
     const { remoteName } = remoteBranch(branch);
 
     let output = "";
@@ -138,6 +153,45 @@ export async function getCommitHistory(
     }));
 
     return await enrichCommitsWithGitHub(project, commits);
+}
+
+async function attachLocalCommitStats(
+    projectPath: string,
+    commits: CommitInfo[],
+) {
+    if (commits.length === 0) {
+        return commits;
+    }
+
+    const [error, output] = await tryPromise(
+        gitText(projectPath, [
+            "show",
+            "--numstat",
+            "--format=%x1e%H%x1f%h%x1f%s%x1f%an%x1f%ae%x1f%cI",
+            ...commits.map((commit) => commit.hash),
+        ]),
+    );
+
+    if (error) {
+        return commits;
+    }
+
+    const localCommits = new Map(
+        parseCommitHistory(output).map((commit) => [commit.hash, commit]),
+    );
+
+    return commits.map((commit) => {
+        const localCommit = localCommits.get(commit.hash);
+
+        return localCommit
+            ? {
+                  ...commit,
+                  additions: localCommit.additions,
+                  deletions: localCommit.deletions,
+                  hasBinaryChanges: localCommit.hasBinaryChanges,
+              }
+            : commit;
+    });
 }
 
 export function parseCommitHistory(output: string): CommitInfo[] {

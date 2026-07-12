@@ -1,6 +1,7 @@
 import {
     Activity,
     FolderGit2,
+    Keyboard,
     KeyRound,
     Palette,
     ScrollText,
@@ -19,6 +20,7 @@ const sections: Array<{
 }> = [
     { icon: Settings, id: "general", label: "General" },
     { icon: Palette, id: "appearance", label: "Appearance" },
+    { icon: Keyboard, id: "hotkeys", label: "Hotkeys" },
     { icon: FolderGit2, id: "projects", label: "Projects" },
     { icon: ScrollText, id: "scripts", label: "Scripts" },
     { icon: KeyRound, id: "ssh", label: "SSH" },

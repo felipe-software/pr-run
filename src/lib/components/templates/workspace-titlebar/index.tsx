@@ -1,13 +1,8 @@
 import { PanelLeft } from "lucide-react";
-import { useEffect } from "react";
 
 import { WindowControlsInset } from "@/lib/components/templates/workspace-titlebar/window-controls";
 import { WorktreeTabs } from "@/lib/components/templates/workspace-titlebar/worktree-tabs";
 import { Button } from "@/lib/components/ui/button";
-import {
-    cycleWorkspaceTabs,
-    useWorkspaceTabsStore,
-} from "@/lib/hooks/store/use-workspace-tabs-store";
 import {
     Tooltip,
     TooltipPopup,
@@ -17,7 +12,6 @@ import { cn } from "@/lib/utils/cn";
 import type { ProjectAvatarUris } from "@/lib/project-avatar";
 
 type WorkspaceTitlebarProps = {
-    areWorkspaceShortcutsEnabled: boolean;
     isSidebarOpen: boolean;
     projectAvatarUris: ProjectAvatarUris;
     onCloseTab: (tabId: string) => void;
@@ -26,58 +20,13 @@ type WorkspaceTitlebarProps = {
 };
 
 export function WorkspaceTitlebar({
-    areWorkspaceShortcutsEnabled,
     isSidebarOpen,
     projectAvatarUris,
     onCloseTab,
     onSelectTab,
     onToggleSidebar,
 }: WorkspaceTitlebarProps) {
-    const activeTabId = useWorkspaceTabsStore((store) => store.activeTabId);
     const isMac = window.prRun?.platform === "darwin";
-
-    useEffect(() => {
-        function handleKeyDown(event: KeyboardEvent) {
-            if (
-                event.defaultPrevented ||
-                (!event.metaKey && !event.ctrlKey) ||
-                isTypingTarget(event.target)
-            ) {
-                return;
-            }
-
-            if (event.key === "Tab") {
-                event.preventDefault();
-
-                if (!areWorkspaceShortcutsEnabled) {
-                    return;
-                }
-
-                const nextTabId = cycleWorkspaceTabs(
-                    useWorkspaceTabsStore.getState(),
-                    event.shiftKey ? "previous" : "next",
-                );
-
-                if (!nextTabId) {
-                    return;
-                }
-
-                onSelectTab(nextTabId);
-                return;
-            }
-
-            if (event.key.toLowerCase() === "w") {
-                event.preventDefault();
-
-                if (areWorkspaceShortcutsEnabled && activeTabId) {
-                    onCloseTab(activeTabId);
-                }
-            }
-        }
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [activeTabId, areWorkspaceShortcutsEnabled, onCloseTab, onSelectTab]);
 
     return (
         <header
@@ -156,18 +105,5 @@ export function WorkspaceTitlebar({
                 </Tooltip>
             </div>
         </header>
-    );
-}
-
-function isTypingTarget(target: EventTarget | null) {
-    if (!(target instanceof HTMLElement)) {
-        return false;
-    }
-
-    return (
-        target.isContentEditable ||
-        target.tagName === "INPUT" ||
-        target.tagName === "SELECT" ||
-        target.tagName === "TEXTAREA"
     );
 }

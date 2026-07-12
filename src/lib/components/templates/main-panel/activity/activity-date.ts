@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import type { DateFormatPreference } from "@/lib/hooks/store/use-ui-preferences-store";
 
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
@@ -27,14 +28,24 @@ export function formatActivityRelativeTime(value: string, now = Date.now()) {
     return difference > 0 ? `in ${label}` : `${label} ago`;
 }
 
-export function formatActivityAbsoluteTime(value: string) {
+export function formatActivityAbsoluteTime(
+    value: string,
+    format: DateFormatPreference = "dd/mm/yyyy",
+) {
     const date = dayjs(value);
 
     if (!date.isValid()) {
         return value;
     }
 
-    return date.format("MMM D, YYYY [at] h:mm:ss A");
+    const datePattern = {
+        "dd/mm/yyyy": "DD/MM/YYYY",
+        "mm/dd/yyyy": "MM/DD/YYYY",
+        "mm-dd-yyyy": "MM-DD-YYYY",
+        "yyyy-mm-dd": "YYYY-MM-DD",
+    }[format];
+
+    return date.format(`${datePattern} [at] HH:mm:ss`);
 }
 
 export function getActivityTimeRefreshDelay(

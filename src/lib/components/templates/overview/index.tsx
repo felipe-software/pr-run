@@ -1,9 +1,9 @@
 import { RefreshCw, TriangleAlert } from "lucide-react";
-import { useState } from "react";
 
 import { OverviewCharts } from "@/lib/components/templates/overview/overview-charts";
 import { OverviewMetrics } from "@/lib/components/templates/overview/overview-metrics";
 import { OverviewPrList } from "@/lib/components/templates/overview/overview-pr-list";
+import { OverviewRecentPrList } from "@/lib/components/templates/overview/overview-recent-pr-list";
 import {
     OverviewEmptyState,
     OverviewErrorState,
@@ -18,16 +18,33 @@ import {
 } from "@/lib/components/ui/select";
 import { useOverviewQuery } from "@/lib/hooks/query/use-overview-query";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { formatDate } from "@/lib/format";
+import { useUiPreferencesStore } from "@/lib/hooks/store/use-ui-preferences-store";
 import type { ProjectConfig } from "@/types/pr-run";
 
 type OverviewProps = {
+    onProjectChange: (projectId?: string) => void;
+    projectId?: string;
     projects: ProjectConfig[];
 };
 
-export function Overview({ projects }: OverviewProps) {
-    const [projectId, setProjectId] = useState<string | undefined>();
+const allProjectsItem = { label: "All projects", value: "all" };
+
+export function Overview({
+    onProjectChange,
+    projectId,
+    projects,
+}: OverviewProps) {
     const overviewQuery = useOverviewQuery(projectId);
     const snapshot = overviewQuery.data;
+    const dateFormat = useUiPreferencesStore((store) => store.dateFormat);
+    const projectItems = [
+        allProjectsItem,
+        ...projects.map((project) => ({
+            label: project.name,
+            value: project.id,
+        })),
+    ];
 
     return (
         <main className="bg-background min-h-0 flex-1 overflow-auto">
@@ -63,9 +80,10 @@ export function Overview({ projects }: OverviewProps) {
                     <div className="flex items-center gap-2">
                         <div className="w-44">
                             <Select
+                                items={projectItems}
                                 value={projectId ?? "all"}
                                 onValueChange={(value) =>
-                                    setProjectId(
+                                    onProjectChange(
                                         value === "all" || !value
                                             ? undefined
                                             : value,
@@ -121,8 +139,7 @@ export function Overview({ projects }: OverviewProps) {
                         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
                         <span>
                             Refresh failed. Showing the last successful snapshot
-                            from{" "}
-                            {new Date(snapshot.generatedAt).toLocaleString()}.
+                            from {formatDate(snapshot.generatedAt, dateFormat)}.
                         </span>
                     </div>
                 ) : null}
@@ -166,6 +183,9 @@ export function Overview({ projects }: OverviewProps) {
                                         pullRequests={snapshot.pullRequests}
                                     />
                                 </div>
+                                <OverviewRecentPrList
+                                    pullRequests={snapshot.recentPullRequests}
+                                />
                             </>
                         )}
                     </>

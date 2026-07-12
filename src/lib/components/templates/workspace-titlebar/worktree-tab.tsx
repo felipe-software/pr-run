@@ -30,6 +30,12 @@ export function WorktreeTab({
                     : `text-muted-foreground hover:bg-sidebar-accent/65
                         hover:text-sidebar-accent-foreground`,
             )}
+            onAuxClick={(event) => {
+                if (event.button === 1) {
+                    event.preventDefault();
+                    onClose();
+                }
+            }}
         >
             <button
                 aria-selected={isActive}

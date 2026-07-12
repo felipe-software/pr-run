@@ -23,6 +23,7 @@ import { useAppStatusSummary } from "@/lib/components/templates/pr-run-app/use-a
 import { useSettingsState } from "@/lib/components/templates/pr-run-app/settings-state";
 import { useWorkspaceState } from "@/lib/components/templates/pr-run-app/workspace-state";
 import { sidebarResize } from "@/lib/components/templates/sidebar/sidebar-resize";
+import { navigateToAppRoute } from "@/lib/navigation";
 
 export function usePrRunAppState() {
     const settingsState = useSettingsState();
@@ -113,6 +114,17 @@ export function usePrRunAppState() {
 
             return next;
         });
+    }
+
+    function closeSettings() {
+        settingsState.closeSettings();
+
+        if (selectedBranch) {
+            navigateToAppRoute({ ...selectedBranch, type: "branch" });
+            return;
+        }
+
+        navigateToAppRoute({ type: "overview" });
     }
 
     async function submitAddProject(projectPath: string) {
@@ -274,6 +286,7 @@ export function usePrRunAppState() {
         },
         openSshPassphrase: () => useSshPassphraseStore.getState().open(null),
         ...settingsState,
+        closeSettings,
         removeWorktree,
         resizeSidebar,
         setTheme,
@@ -287,6 +300,11 @@ export function usePrRunAppState() {
             setActionError(undefined);
             workspaceState.openOverview();
         },
+        openProjectOverview: (projectId: string) => {
+            setActionError(undefined);
+            workspaceState.openOverview(projectId);
+        },
+        overviewProjectId: workspaceState.overviewProjectId,
         selectBranch: (project: ProjectConfig, branch: BranchInfo) => {
             setActionError(undefined);
             workspaceState.selectBranch(project, branch);

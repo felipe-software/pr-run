@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { WorktreeTab } from "@/lib/components/templates/workspace-titlebar/worktree-tab";
 import { ScrollArea } from "@/lib/components/ui/scroll-area";
@@ -18,7 +18,9 @@ export function WorktreeTabs({
 }: WorktreeTabsProps) {
     const activeTabId = useWorkspaceTabsStore((store) => store.activeTabId);
     const tabs = useWorkspaceTabsStore((store) => store.tabs);
+    const reorderTab = useWorkspaceTabsStore((store) => store.reorderTab);
     const activeTabRef = useRef<HTMLDivElement | null>(null);
+    const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
 
     useEffect(() => {
         activeTabRef.current?.scrollIntoView({
@@ -38,8 +40,29 @@ export function WorktreeTabs({
             >
                 {tabs.map((tab) => (
                     <div
+                        className="cursor-grab active:cursor-grabbing"
+                        draggable
                         key={tab.id}
                         ref={tab.id === activeTabId ? activeTabRef : undefined}
+                        onDragEnd={() => setDraggedTabId(null)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDragStart={(event) => {
+                            setDraggedTabId(tab.id);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", tab.id);
+                        }}
+                        onDrop={(event) => {
+                            event.preventDefault();
+                            const sourceId =
+                                draggedTabId ||
+                                event.dataTransfer.getData("text/plain");
+
+                            if (sourceId) {
+                                reorderTab(sourceId, tab.id);
+                            }
+
+                            setDraggedTabId(null);
+                        }}
                     >
                         <WorktreeTab
                             isActive={tab.id === activeTabId}

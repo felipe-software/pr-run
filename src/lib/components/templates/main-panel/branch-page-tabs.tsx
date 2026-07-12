@@ -1,4 +1,5 @@
 import { BusyIcon } from "@/lib/components/atoms/busy-icon";
+import type { BranchPageTab } from "@/lib/components/templates/pr-run-app/types";
 import { cn } from "@/lib/utils/cn";
 import {
     Container,
@@ -8,8 +9,6 @@ import {
     Play,
     type LucideIcon,
 } from "lucide-react";
-
-type BranchPageTab = "activity" | "run" | "changes" | "docker" | "env";
 
 type BranchPageTabsProps = {
     activeTab: BranchPageTab;
@@ -71,4 +70,4 @@ export function BranchPageTabs({
     );
 }
 
-export type { BranchPageTab };
+export type { BranchPageTab } from "@/lib/components/templates/pr-run-app/types";

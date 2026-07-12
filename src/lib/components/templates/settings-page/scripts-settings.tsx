@@ -64,7 +64,7 @@ export function ScriptsSettings({
                         {getErrorMessage(scripts.error)}
                     </p>
                 ) : (
-                    <div className="grid gap-2">
+                    <div className="flex flex-col gap-2">
                         {(scripts.data ?? []).map((script) => (
                             <article
                                 className="bg-card flex items-center
@@ -106,6 +106,34 @@ export function ScriptsSettings({
                                 </div>
                             </article>
                         ))}
+                        {scripts.data?.length === 0 ? (
+                            <div
+                                className="border-border/70 bg-muted/20 flex
+                                    min-h-20 items-center justify-between gap-3
+                                    rounded-lg border border-dashed px-3 py-2"
+                            >
+                                <div>
+                                    <p className="text-sm font-medium">
+                                        No global scripts yet
+                                    </p>
+                                    <p
+                                        className="text-muted-foreground mt-0.5
+                                            text-xs"
+                                    >
+                                        Create an action that can be reused from
+                                        every branch Run page.
+                                    </p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={onCreateScript}
+                                >
+                                    <Plus className="size-3.5" />
+                                    Create script
+                                </Button>
+                            </div>
+                        ) : null}
                     </div>
                 )}
             </SettingsSection>

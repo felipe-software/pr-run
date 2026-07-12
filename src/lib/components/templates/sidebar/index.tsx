@@ -24,6 +24,7 @@ export function Sidebar({
     onCheckoutBranch,
     onOpenAddProject,
     onOpenOverview,
+    onOpenProject,
     onOpenSettings,
     onRemoveWorktree,
     onResize,
@@ -56,6 +57,7 @@ export function Sidebar({
                         selectedProjectId={selectedProjectId}
                         onCheckoutBranch={onCheckoutBranch}
                         onOpenAddProject={onOpenAddProject}
+                        onOpenProject={onOpenProject}
                         onRemoveWorktree={onRemoveWorktree}
                         onSelectBranch={onSelectBranch}
                         onToggleProject={onToggleProject}

@@ -1,4 +1,5 @@
 import { Binary } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
 
 import { ActivityAvatar } from "@/lib/components/templates/main-panel/activity/activity-avatar";
 import type { ActivitySide } from "@/lib/components/templates/main-panel/activity/activity-side";
@@ -10,15 +11,24 @@ type CommitRowProps = {
     commit: CommitInfo;
     compact?: boolean;
     muted?: boolean;
+    projectId: string;
     side?: ActivitySide;
 };
+
+const CommitDiffDialog = lazy(() =>
+    import("@/lib/components/templates/main-panel/changes/commit-diff-dialog").then(
+        (module) => ({ default: module.CommitDiffDialog }),
+    ),
+);
 
 export function CommitRow({
     commit,
     compact = false,
     muted = false,
+    projectId,
     side = "neutral",
 }: CommitRowProps) {
+    const [isDiffOpen, setIsDiffOpen] = useState(false);
     const authorName = commit.authorLogin ?? commit.authorName;
     const hashContent = (
         <span className="font-mono text-[11px] tracking-tight">
@@ -108,15 +118,25 @@ export function CommitRow({
                     side === "right" && "justify-end",
                 )}
             >
-                {commit.additions !== undefined ? (
-                    <span className="font-mono tabular-nums">
+                {commit.additions !== undefined || commit.hasBinaryChanges ? (
+                    <button
+                        aria-label={`View changes in commit ${commit.shortHash}`}
+                        className="border-border/70 bg-muted/30
+                            hover:bg-muted/60 focus-visible:ring-ring
+                            inline-flex items-center gap-1.5 rounded border
+                            px-1.5 py-0.5 font-mono tabular-nums
+                            transition-colors outline-none focus-visible:ring-2"
+                        title="View commit changes"
+                        type="button"
+                        onClick={() => setIsDiffOpen(true)}
+                    >
                         <span className="text-success">
-                            +{commit.additions}
+                            +{commit.additions ?? 0}
                         </span>{" "}
                         <span className="text-danger">
                             −{commit.deletions ?? 0}
                         </span>
-                    </span>
+                    </button>
                 ) : null}
                 {commit.hasBinaryChanges ? (
                     <span className="inline-flex items-center gap-1">
@@ -139,6 +159,16 @@ export function CommitRow({
                     hashContent
                 )}
             </div>
+            {isDiffOpen ? (
+                <Suspense fallback={null}>
+                    <CommitDiffDialog
+                        commit={commit}
+                        open={isDiffOpen}
+                        projectId={projectId}
+                        onOpenChange={setIsDiffOpen}
+                    />
+                </Suspense>
+            ) : null}
         </article>
     );
 }

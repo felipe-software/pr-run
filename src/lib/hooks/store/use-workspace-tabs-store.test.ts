@@ -4,6 +4,7 @@ import {
     closeWorkspaceTab,
     cycleWorkspaceTabs,
     getWorktreeTabId,
+    reorderWorkspaceTabs,
 } from "@/lib/hooks/store/use-workspace-tabs-store";
 
 const tabs = [
@@ -46,5 +47,13 @@ describe("workspace tab state", () => {
 
         expect(cycleWorkspaceTabs(state, "previous")).toBe(tabs[2]!.id);
         expect(cycleWorkspaceTabs(state, "next")).toBe(tabs[1]!.id);
+    });
+
+    test("reorders tabs around a drop target", () => {
+        expect(
+            reorderWorkspaceTabs(tabs, tabs[2]!.id, tabs[0]!.id).map(
+                (tab) => tab.branchName,
+            ),
+        ).toEqual(["third", "first", "second"]);
     });
 });

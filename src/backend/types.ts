@@ -65,9 +65,24 @@ export type PullRequestLatestReview = {
 export type BranchDiffFile = {
     path: string;
     additions: number;
+    commits: FileCommitInfo[];
     deletions: number;
     previousPath?: string;
     status: "added" | "binary" | "deleted" | "modified" | "renamed";
+};
+
+export type FileCommitInfo = {
+    authorName: string;
+    date: string;
+    hash: string;
+    shortHash: string;
+    subject: string;
+};
+
+export type BranchFileContent = {
+    branch: string;
+    contents: string;
+    path: string;
 };
 
 export type BranchDiffResult = {
@@ -408,6 +423,8 @@ export type ApiErrorCode =
     | "NOT_A_GIT_REPOSITORY"
     | "ORIGIN_NOT_FOUND"
     | "BRANCH_NOT_FOUND"
+    | "COMMIT_NOT_FOUND"
+    | "FILE_NOT_FOUND"
     | "WORKTREE_NOT_FOUND"
     | "WORKTREE_EXISTS_INVALID"
     | "SSHPASS_NOT_FOUND"

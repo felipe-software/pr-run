@@ -1,6 +1,6 @@
 import { tryPromise } from "@/backend/handlers/error";
 import { gitQuiet } from "@/backend/handlers/git/command";
-import { listBranches } from "@/backend/handlers/git/worktrees";
+import { listBranchesWithPullRequests } from "@/backend/handlers/git/worktrees";
 import type { ProjectConfig } from "@/backend/types";
 import type {
     OverviewProjectSummary,
@@ -12,7 +12,6 @@ import type {
 } from "@/types/overview";
 
 const PROJECT_CONCURRENCY = 3;
-const PULL_REQUEST_CONCURRENCY = 4;
 
 const emptyTotals = (): OverviewTotals => ({
     additions: 0,
@@ -49,6 +48,7 @@ export async function getOverviewSnapshot(
     const totals = emptyTotals();
     const projectSummaries: OverviewProjectSummary[] = [];
     const pullRequests: OverviewPullRequestChange[] = [];
+    const recentPullRequests: OverviewPullRequestChange[] = [];
     const unavailableProjects: OverviewUnavailableProject[] = [];
 
     for (const result of results) {
@@ -59,6 +59,7 @@ export async function getOverviewSnapshot(
 
         projectSummaries.push(result.value.summary);
         pullRequests.push(...result.value.pullRequests);
+        recentPullRequests.push(...result.value.recentPullRequests);
         addTotals(totals, result.value.summary);
     }
 
@@ -75,6 +76,13 @@ export async function getOverviewSnapshot(
             left.projectName.localeCompare(right.projectName),
         ),
         pullRequests,
+        recentPullRequests: recentPullRequests
+            .sort(
+                (left, right) =>
+                    Date.parse(right.updatedAt ?? "") -
+                    Date.parse(left.updatedAt ?? ""),
+            )
+            .slice(0, 12),
         scope,
         totals,
         unavailableProjects,
@@ -84,28 +92,23 @@ export async function getOverviewSnapshot(
 async function getProjectOverview(project: ProjectConfig) {
     await gitQuiet(project.path, ["fetch", "origin"]);
 
-    const branches = await listBranches(project);
-    const pullRequestBranches = branches.filter(
-        (branch) => branch.pullRequest?.state === "OPEN",
+    const { branches, pullRequests: githubPullRequests } =
+        await listBranchesWithPullRequests(project);
+    const openPullRequests = githubPullRequests.filter(
+        (pullRequest) => pullRequest.state === "OPEN",
     );
-    const pullRequests = await mapWithConcurrency(
-        pullRequestBranches,
-        PULL_REQUEST_CONCURRENCY,
-        async (branch) => {
-            const pullRequest = branch.pullRequest!;
-            return {
-                additions: pullRequest.additions ?? 0,
-                branchName: branch.name,
-                changedFiles: pullRequest.changedFiles ?? 0,
-                deletions: pullRequest.deletions ?? 0,
-                number: pullRequest.number,
-                projectId: project.id,
-                projectName: project.name,
-                title: pullRequest.title,
-                url: pullRequest.url,
-            } satisfies OverviewPullRequestChange;
-        },
+    const pullRequests = openPullRequests.map((pullRequest) =>
+        overviewPullRequest(project, pullRequest),
     );
+    const recentPullRequests = githubPullRequests
+        .filter((pullRequest) => pullRequest.state !== "OPEN")
+        .sort(
+            (left, right) =>
+                Date.parse(right.updatedAt ?? "") -
+                Date.parse(left.updatedAt ?? ""),
+        )
+        .slice(0, 8)
+        .map((pullRequest) => overviewPullRequest(project, pullRequest));
     const summary: OverviewProjectSummary = {
         additions: sumBy(pullRequests, (pullRequest) => pullRequest.additions),
         branches: branches.length,
@@ -114,14 +117,35 @@ async function getProjectOverview(project: ProjectConfig) {
             (pullRequest) => pullRequest.changedFiles,
         ),
         deletions: sumBy(pullRequests, (pullRequest) => pullRequest.deletions),
-        openPullRequests: pullRequestBranches.length,
+        openPullRequests: openPullRequests.length,
         projectId: project.id,
         projectName: project.name,
         staleBranches: branches.filter((branch) => branch.isStale).length,
         worktrees: branches.filter((branch) => branch.hasWorktree).length,
     };
 
-    return { pullRequests, summary };
+    return { pullRequests, recentPullRequests, summary };
+}
+
+function overviewPullRequest(
+    project: ProjectConfig,
+    pullRequest: Awaited<
+        ReturnType<typeof listBranchesWithPullRequests>
+    >["pullRequests"][number],
+): OverviewPullRequestChange {
+    return {
+        additions: pullRequest.additions,
+        branchName: pullRequest.branchName,
+        changedFiles: pullRequest.changedFiles,
+        deletions: pullRequest.deletions,
+        number: pullRequest.number,
+        projectId: project.id,
+        projectName: project.name,
+        state: pullRequest.state,
+        title: pullRequest.title,
+        updatedAt: pullRequest.updatedAt,
+        url: pullRequest.url,
+    };
 }
 
 export function parseOverviewDiffStats(output: string) {

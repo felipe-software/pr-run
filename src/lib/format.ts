@@ -1,14 +1,32 @@
-export function formatDate(value: string) {
+import type { DateFormatPreference } from "@/lib/hooks/store/use-ui-preferences-store";
+
+export function formatDate(
+    value: string,
+    format: DateFormatPreference = "dd/mm/yyyy",
+) {
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
         return value;
     }
 
-    return new Intl.DateTimeFormat("en-US", {
-        dateStyle: "short",
-        timeStyle: "short",
+    const parts = {
+        day: String(date.getDate()).padStart(2, "0"),
+        month: String(date.getMonth() + 1).padStart(2, "0"),
+        year: String(date.getFullYear()),
+    };
+    const formattedDate = {
+        "dd/mm/yyyy": `${parts.day}/${parts.month}/${parts.year}`,
+        "mm/dd/yyyy": `${parts.month}/${parts.day}/${parts.year}`,
+        "mm-dd-yyyy": `${parts.month}-${parts.day}-${parts.year}`,
+        "yyyy-mm-dd": `${parts.year}-${parts.month}-${parts.day}`,
+    }[format];
+    const time = new Intl.DateTimeFormat("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
     }).format(date);
+
+    return `${formattedDate}, ${time}`;
 }
 
 export function shortenPath(value: string) {

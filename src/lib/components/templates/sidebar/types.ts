@@ -19,6 +19,7 @@ export type SidebarProps = {
     onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onOpenAddProject: () => void;
     onOpenOverview: () => void;
+    onOpenProject: (projectId: string) => void;
     onOpenSettings: () => void;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
     onResize: (width: number) => void;

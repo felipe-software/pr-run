@@ -21,6 +21,7 @@ type SidebarGroupSectionProps = Pick<
     | "selectedProjectId"
     | "onCheckoutBranch"
     | "onOpenAddProject"
+    | "onOpenProject"
     | "onRemoveWorktree"
     | "onSelectBranch"
     | "onToggleProject"
@@ -42,6 +43,7 @@ export function SidebarGroupSection({
     selectedProjectId,
     onCheckoutBranch,
     onOpenAddProject,
+    onOpenProject,
     onRemoveWorktree,
     onSelectBranch,
     onToggleProject,
@@ -104,6 +106,7 @@ export function SidebarGroupSection({
                         }
                         onCheckoutBranch={onCheckoutBranch}
                         onRemoveWorktree={onRemoveWorktree}
+                        onOpenProject={onOpenProject}
                         onSelectBranch={onSelectBranch}
                         onToggleProject={onToggleProject}
                         onUpdateProject={onUpdateProject}

@@ -1,5 +1,5 @@
 import { autoAnimate } from "@formkit/auto-animate";
-import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, Eye, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
@@ -34,6 +34,7 @@ type SidebarProjectItemProps = {
     selectedBranchName?: string;
     onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
     onRemoveWorktree: (projectId: string, branchName: string) => Promise<void>;
+    onOpenProject: (projectId: string) => void;
     onSelectBranch: (project: ProjectConfig, branch: BranchInfo) => void;
     onToggleProject: (projectId: string) => void;
     onUpdateProject: (project: ProjectConfig) => Promise<boolean>;
@@ -54,6 +55,7 @@ export function SidebarProjectItem({
     selectedBranchName,
     onCheckoutBranch,
     onRemoveWorktree,
+    onOpenProject,
     onSelectBranch,
     onToggleProject,
     onUpdateProject,
@@ -73,7 +75,7 @@ export function SidebarProjectItem({
         useState(false);
     const branchesQuery = useProjectBranchesQuery(
         project.id,
-        isExpanded || isBusy,
+        isExpanded || isBusy || isSelected,
     );
     const isAwaitingSshPassphrase = isHandledSshPromptError(
         branchesQuery.error,
@@ -122,8 +124,12 @@ export function SidebarProjectItem({
     const isActionVisible = isUpdatingProject;
     const displayedBranches = isExpanded
         ? visibleBranches
-        : visibleBranches.filter((branch) =>
-              busyOwnerKeys.has(getWorktreeOwnerKey(project.id, branch.name)),
+        : sortedBranches.filter(
+              (branch) =>
+                  branch.name === selectedBranchName ||
+                  busyOwnerKeys.has(
+                      getWorktreeOwnerKey(project.id, branch.name),
+                  ),
           );
 
     return (
@@ -224,6 +230,16 @@ export function SidebarProjectItem({
                                 "pointer-events-auto opacity-100",
                         )}
                     >
+                        <Button
+                            aria-label={`Open ${project.name} overview`}
+                            className="text-muted-foreground/65"
+                            size="icon-xs"
+                            type="button"
+                            variant="ghost"
+                            onClick={() => onOpenProject(project.id)}
+                        >
+                            <Eye className="h-3.5 w-3.5" />
+                        </Button>
                         <Button
                             aria-label={`Reload ${project.name} worktrees`}
                             className="text-muted-foreground/65"

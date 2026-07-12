@@ -7,6 +7,7 @@ export function useBranchDiffQuery(
     projectId: string | undefined,
     branchName: string | undefined,
     baseBranchName: string | undefined,
+    pullRequestNumber?: number,
     enabled = true,
 ) {
     return useQuery({
@@ -14,9 +15,15 @@ export function useBranchDiffQuery(
             projectId ?? "unknown",
             branchName ?? "unknown",
             baseBranchName ?? "default",
+            pullRequestNumber,
         ),
         queryFn: () =>
-            prRunApi.getBranchDiff(projectId!, branchName!, baseBranchName),
+            prRunApi.getBranchDiff(
+                projectId!,
+                branchName!,
+                baseBranchName,
+                pullRequestNumber,
+            ),
         enabled: Boolean(projectId) && Boolean(branchName) && enabled,
     });
 }

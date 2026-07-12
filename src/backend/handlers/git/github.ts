@@ -67,6 +67,32 @@ export type GitHubPullRequest = {
     url: string;
 };
 
+type GitHubPullRequestCommitPayload = {
+    author?: {
+        avatar_url?: string | null;
+        html_url?: string | null;
+        login?: string | null;
+    } | null;
+    commit?: {
+        author?: { date?: string; email?: string; name?: string } | null;
+        message?: string;
+    } | null;
+    sha?: string;
+};
+
+type GitHubPullRequestFilePayload = {
+    additions?: number;
+    deletions?: number;
+    filename?: string;
+    patch?: string;
+    previous_filename?: string;
+    status?: string;
+};
+
+type GitHubCommitDiffPayload = {
+    files?: GitHubPullRequestFilePayload[];
+};
+
 type GhCommandOptions = {
     cwd?: string;
 };
@@ -154,6 +180,158 @@ export async function getGitHubPullRequestIdentity(
         { cwd: project.path },
     );
     return await parseJson<GitHubPullRequestIdentity>(output);
+}
+
+export async function getGitHubPullRequestCommits(
+    project: ProjectConfig,
+    repository: GitHubRepositoryInfo,
+    pullRequestNumber: number,
+) {
+    const output = await ghText(
+        [
+            "api",
+            `repos/${repository.nameWithOwner}/pulls/${pullRequestNumber}/commits`,
+            "--paginate",
+            "--slurp",
+        ],
+        { cwd: project.path },
+    );
+    const pages = await parseJson<GitHubPullRequestCommitPayload[][]>(output);
+
+    return normalizeGitHubPullRequestCommits(pages.flat(), repository.url);
+}
+
+export function normalizeGitHubPullRequestCommits(
+    commits: GitHubPullRequestCommitPayload[],
+    repositoryUrl: string,
+) {
+    return commits.flatMap((item) => {
+        const hash = item.sha;
+        const author = item.commit?.author;
+        const login = item.author?.login ?? undefined;
+
+        if (!hash) {
+            return [];
+        }
+
+        return [
+            {
+                authorAvatarUrl:
+                    item.author?.avatar_url ??
+                    (login
+                        ? `https://github.com/${encodeURIComponent(login)}.png?size=64`
+                        : undefined),
+                authorEmail: author?.email ?? "",
+                authorLogin: login,
+                authorName: author?.name ?? login ?? "Unknown",
+                authorUrl:
+                    item.author?.html_url ??
+                    (login
+                        ? `https://github.com/${encodeURIComponent(login)}`
+                        : undefined),
+                date: author?.date ?? "",
+                hasBinaryChanges: false,
+                hash,
+                isInSelectedBranch: true,
+                shortHash: hash.slice(0, 7),
+                subject: item.commit?.message?.split("\n")[0] ?? hash,
+                url: `${repositoryUrl.replace(/\/$/, "")}/commit/${hash}`,
+            },
+        ];
+    });
+}
+
+export async function getGitHubPullRequestDiff(
+    project: ProjectConfig,
+    repository: GitHubRepositoryInfo,
+    pullRequestNumber: number,
+    branch: string,
+) {
+    const output = await ghText(
+        [
+            "api",
+            `repos/${repository.nameWithOwner}/pulls/${pullRequestNumber}/files`,
+            "--paginate",
+            "--slurp",
+        ],
+        { cwd: project.path },
+    );
+    const pages = await parseJson<GitHubPullRequestFilePayload[][]>(output);
+    return normalizeGitHubDiff(pages.flat(), branch);
+}
+
+export async function getGitHubCommitDiff(
+    project: ProjectConfig,
+    repository: GitHubRepositoryInfo,
+    hash: string,
+) {
+    const output = await ghText(
+        ["api", `repos/${repository.nameWithOwner}/commits/${hash}`],
+        { cwd: project.path },
+    );
+    const payload = await parseJson<GitHubCommitDiffPayload>(output);
+
+    return normalizeGitHubDiff(payload.files ?? [], hash);
+}
+
+function normalizeGitHubDiff(
+    githubFiles: GitHubPullRequestFilePayload[],
+    branch: string,
+) {
+    const files = githubFiles.flatMap((item) => {
+        if (!item.filename) {
+            return [];
+        }
+
+        return [
+            {
+                additions: item.additions ?? 0,
+                commits: [],
+                deletions: item.deletions ?? 0,
+                path: item.filename,
+                previousPath: item.previous_filename,
+                status:
+                    item.status === "added"
+                        ? ("added" as const)
+                        : item.status === "removed"
+                          ? ("deleted" as const)
+                          : item.status === "renamed"
+                            ? ("renamed" as const)
+                            : ("modified" as const),
+            },
+        ];
+    });
+    const patch = githubFiles
+        .flatMap((item) => {
+            if (!item.filename || !item.patch) {
+                return [];
+            }
+
+            const oldPath =
+                item.status === "added"
+                    ? "/dev/null"
+                    : `a/${item.previous_filename ?? item.filename}`;
+            const newPath =
+                item.status === "removed" ? "/dev/null" : `b/${item.filename}`;
+
+            return [
+                [
+                    `diff --git a/${item.previous_filename ?? item.filename} b/${item.filename}`,
+                    `--- ${oldPath}`,
+                    `+++ ${newPath}`,
+                    item.patch,
+                ].join("\n"),
+            ];
+        })
+        .join("\n");
+
+    return {
+        additions: files.reduce((total, file) => total + file.additions, 0),
+        branch,
+        deletions: files.reduce((total, file) => total + file.deletions, 0),
+        files,
+        patch,
+    };
 }
 
 export async function parseJson<T>(value: string): Promise<T> {

@@ -1,8 +1,8 @@
 import {
     Copy,
     ExternalLink,
-    FolderPlus,
     GitBranch,
+    MessageSquareText,
     RefreshCw,
 } from "lucide-react";
 
@@ -22,6 +22,7 @@ type BranchPageHeaderProps = {
     isRefreshing: boolean;
     project: ProjectConfig;
     onCheckoutBranch: (projectId: string, branchName: string) => Promise<void>;
+    onOpenReview: () => void;
     onRefresh: () => Promise<unknown>;
 };
 
@@ -33,6 +34,7 @@ export function BranchPageHeader({
     isRefreshing,
     project,
     onCheckoutBranch,
+    onOpenReview,
     onRefresh,
 }: BranchPageHeaderProps) {
     const baseBranchName = branch.compareBranchName ?? "default branch";
@@ -90,6 +92,16 @@ export function BranchPageHeader({
                         </h1>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
+                        {pullRequest ? (
+                            <Button
+                                aria-label="Add a pull request review"
+                                size="icon-xs"
+                                variant="ghost"
+                                onClick={onOpenReview}
+                            >
+                                <MessageSquareText className="size-3.5" />
+                            </Button>
+                        ) : null}
                         {pullRequest ? (
                             <Button
                                 aria-label="Open pull request on GitHub"
@@ -241,6 +253,12 @@ export function BranchPageHeader({
 
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
                     {pullRequest ? (
+                        <Button size="sm" onClick={onOpenReview}>
+                            <MessageSquareText className="size-3.5" />
+                            Add review
+                        </Button>
+                    ) : null}
+                    {pullRequest ? (
                         <Button
                             render={
                                 <a
@@ -267,7 +285,7 @@ export function BranchPageHeader({
                             {isCheckingOutWorktree ? (
                                 <RefreshCw className="size-3.5 animate-spin" />
                             ) : (
-                                <FolderPlus className="size-3.5" />
+                                <WorktreeIndicator aria-hidden="true" />
                             )}
                             Create worktree
                         </Button>
