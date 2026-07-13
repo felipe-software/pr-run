@@ -38,6 +38,7 @@
         "electron": "bun run build && electron .",
         "electron:dev": "sh -c 'trap \"kill 0\" EXIT; bun run backend:dev & bun run renderer:dev & bun run build:electron && ELECTRON_BACKEND_URL=http://localhost:33134 ELECTRON_RENDERER_URL=http://localhost:33133 ELECTRON_SKIP_BACKEND_HEALTHCHECK=1 electron .'",
         "format": "prettier --write .",
+        "prepare": "husky",
         "prepack": "bun run build:npm",
         "preview": "vite preview",
         "release": "semantic-release",
@@ -93,6 +94,8 @@
         "@vitejs/plugin-react": "^6.0.2",
         "conventional-changelog-conventionalcommits": "^10.2.1",
         "electron": "^42.4.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^17.0.7",
         "prettier": "^3.8.4",
         "prettier-plugin-classnames": "^0.10.2",
         "prettier-plugin-merge": "^0.10.1",
@@ -101,5 +104,8 @@
         "tailwindcss": "^4.3.0",
         "typescript": "^6.0.3",
         "vite": "^8.0.16"
+    },
+    "lint-staged": {
+        "*.{ts,tsx,js,cjs,mjs,json,md,yaml,yml,html,css}": "prettier --write"
     }
 }

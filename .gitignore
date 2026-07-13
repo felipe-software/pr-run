@@ -11,3 +11,4 @@ review.sh
 AGENTS.md
 .pr-run-data/
 .pr-run
+.husky/_
