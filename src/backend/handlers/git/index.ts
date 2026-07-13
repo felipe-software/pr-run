@@ -28,7 +28,7 @@ import {
     type ProjectConfig,
     type ReviewEvent,
 } from "@/backend/types";
-//
+
 async function requireGitHubRepository(project: ProjectConfig) {
     const repository = await findGitHubRepository(project);
 
