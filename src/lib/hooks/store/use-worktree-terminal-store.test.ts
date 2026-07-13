@@ -4,6 +4,7 @@ import {
     appendWorktreeTerminalTab,
     createWorktreeTerminalOwnerState,
     getBusyTerminalSummary,
+    getWorktreeOwnerKey,
     removeWorktreeTerminalTab,
     resolveScriptExecutionMode,
     useWorktreeTerminalStore,
@@ -53,9 +54,47 @@ describe("resolveScriptExecutionMode", () => {
             }),
         ).toBe("create");
     });
+
+    it("creates a tab for missing, exited, dead, or unknown sessions", () => {
+        const aliveTab = createTab("tab-1", "idle", "alive");
+
+        expect(resolveScriptExecutionMode({})).toBe("create");
+        expect(
+            resolveScriptExecutionMode({
+                activeTab: { ...aliveTab, status: "exited" },
+                activeSessionState: { busyState: "idle", isAlive: true },
+            }),
+        ).toBe("create");
+        expect(
+            resolveScriptExecutionMode({
+                activeTab: aliveTab,
+                activeSessionState: { busyState: "idle", isAlive: false },
+            }),
+        ).toBe("create");
+        expect(
+            resolveScriptExecutionMode({
+                activeTab: aliveTab,
+                activeSessionState: { busyState: "unknown", isAlive: true },
+            }),
+        ).toBe("create");
+    });
 });
 
 describe("worktree terminal owner state", () => {
+    it("creates stable owner keys and an empty owner state", () => {
+        expect(getWorktreeOwnerKey("project", "feature/a")).toBe(
+            "project:feature/a",
+        );
+        expect(createWorktreeTerminalOwnerState("/tmp/project")).toEqual({
+            activeTabId: null,
+            defaultTerminalState: "idle",
+            nextScriptLabelCounts: {},
+            nextTerminalNumber: 1,
+            tabs: [],
+            worktreePath: "/tmp/project",
+        });
+    });
+
     it("preserves tabs per owner", () => {
         const firstOwner = appendWorktreeTerminalTab(
             createWorktreeTerminalOwnerState("/tmp/one"),
@@ -125,6 +164,28 @@ describe("worktree terminal owner state", () => {
 
         expect(nextOwner.activeTabId).toBe("tab-2");
         expect(nextOwner.tabs.map((tab) => tab.id)).toEqual(["tab-1", "tab-2"]);
+    });
+
+    it("keeps inactive selection, selects the next first tab, and ignores missing tabs", () => {
+        const owner = {
+            ...createWorktreeTerminalOwnerState("/tmp/one"),
+            activeTabId: "tab-1",
+            tabs: [
+                createTab("tab-1", "idle", "alive"),
+                createTab("tab-2", "idle", "alive"),
+            ],
+        };
+
+        expect(removeWorktreeTerminalTab(owner, "tab-2")).toMatchObject({
+            activeTabId: "tab-1",
+        });
+        expect(
+            removeWorktreeTerminalTab(
+                { ...owner, activeTabId: "tab-1" },
+                "tab-1",
+            ),
+        ).toMatchObject({ activeTabId: "tab-2" });
+        expect(removeWorktreeTerminalTab(owner, "missing")).toBe(owner);
     });
 });
 
@@ -270,6 +331,244 @@ describe("terminal snapshot synchronization", () => {
             busyState: "busy",
             label: "bun",
         });
+    });
+
+    it("preserves a known busy state while a live snapshot is unknown", () => {
+        const store = useWorktreeTerminalStore.getState();
+        store.addSession(
+            "project:branch",
+            "/tmp/project",
+            { scriptTitle: "Test", type: "script" },
+            {
+                busyState: "busy",
+                currentProcess: "zsh",
+                cwd: "/tmp/project",
+                id: "session-1",
+                isAlive: true,
+                sequence: 0,
+                shell: "zsh",
+            },
+        );
+
+        useWorktreeTerminalStore
+            .getState()
+            .syncTabSnapshot("project:branch", "session-1", {
+                busyState: "unknown",
+                currentProcess: "Test",
+                id: "session-1",
+                isAlive: true,
+            });
+
+        expect(
+            useWorktreeTerminalStore.getState().owners["project:branch"]
+                ?.tabs[0],
+        ).toMatchObject({
+            busyState: "busy",
+            label: "Test",
+            scriptTitleOverride: "Test",
+            status: "alive",
+        });
+    });
+
+    it("restores a process label after a script returns to the shell", () => {
+        const store = useWorktreeTerminalStore.getState();
+        const tab = store.addSession(
+            "project:branch",
+            "/tmp/project",
+            { scriptTitle: "Build", type: "script" },
+            {
+                busyState: "busy",
+                currentProcess: "zsh",
+                cwd: "/tmp/project",
+                id: "session-1",
+                isAlive: true,
+                sequence: 0,
+                shell: "zsh",
+            },
+        );
+        store.markScriptRunning("project:branch", tab.id, "Build");
+
+        useWorktreeTerminalStore
+            .getState()
+            .syncTabSnapshot("project:branch", "session-1", {
+                busyState: "idle",
+                currentProcess: "zsh",
+                id: "session-1",
+                isAlive: true,
+            });
+
+        expect(
+            useWorktreeTerminalStore.getState().owners["project:branch"]
+                ?.tabs[0],
+        ).toMatchObject({
+            busyState: "idle",
+            label: "zsh",
+            scriptTitleOverride: undefined,
+        });
+    });
+
+    it("marks dead sessions as exited", () => {
+        const store = useWorktreeTerminalStore.getState();
+        store.addSession(
+            "project:branch",
+            "/tmp/project",
+            { type: "default" },
+            {
+                busyState: "idle",
+                currentProcess: "zsh",
+                cwd: "/tmp/project",
+                id: "session-1",
+                isAlive: true,
+                sequence: 0,
+                shell: "zsh",
+            },
+        );
+
+        store.syncTabSnapshot("project:branch", "session-1", {
+            busyState: "unknown",
+            currentProcess: "",
+            id: "session-1",
+            isAlive: false,
+        });
+
+        expect(
+            useWorktreeTerminalStore.getState().owners["project:branch"]
+                ?.tabs[0],
+        ).toMatchObject({ busyState: "unknown", status: "exited" });
+    });
+});
+
+describe("worktree terminal store actions", () => {
+    it("ensures and refreshes an owner path and default state", () => {
+        const store = useWorktreeTerminalStore.getState();
+        store.ensureOwner("project:branch", "/tmp/old");
+        useWorktreeTerminalStore
+            .getState()
+            .ensureOwner("project:branch", "/tmp/new");
+        useWorktreeTerminalStore
+            .getState()
+            .setDefaultTerminalState("project:branch", "/tmp/new", "done");
+        useWorktreeTerminalStore
+            .getState()
+            .setDefaultTerminalState("new:branch", "/tmp/created", "pending");
+
+        expect(useWorktreeTerminalStore.getState().owners).toMatchObject({
+            "new:branch": {
+                defaultTerminalState: "pending",
+                worktreePath: "/tmp/created",
+            },
+            "project:branch": {
+                defaultTerminalState: "done",
+                worktreePath: "/tmp/new",
+            },
+        });
+    });
+
+    it("numbers manual and repeated script sessions independently", () => {
+        const store = useWorktreeTerminalStore.getState();
+        const session = {
+            busyState: "idle" as const,
+            currentProcess: "zsh",
+            cwd: "/tmp/project",
+            isAlive: true,
+            sequence: 0,
+            shell: "zsh",
+        };
+
+        const manual = store.addSession(
+            "project:branch",
+            "/tmp/project",
+            { type: "manual" },
+            { ...session, id: "manual-1" },
+        );
+        const secondManual = useWorktreeTerminalStore
+            .getState()
+            .addSession(
+                "project:branch",
+                "/tmp/project",
+                { type: "default" },
+                { ...session, id: "manual-2" },
+            );
+        const firstScript = useWorktreeTerminalStore
+            .getState()
+            .addSession(
+                "project:branch",
+                "/tmp/project",
+                { scriptTitle: "Test", type: "script" },
+                { ...session, id: "script-1" },
+            );
+        const secondScript = useWorktreeTerminalStore
+            .getState()
+            .addSession(
+                "project:branch",
+                "/tmp/project",
+                { scriptTitle: "Test", type: "script" },
+                { ...session, id: "script-2" },
+            );
+
+        expect([
+            manual.label,
+            secondManual.label,
+            firstScript.label,
+            secondScript.label,
+        ]).toEqual(["Terminal 1", "Terminal 2", "Test", "Test 2"]);
+    });
+
+    it("marks input and script execution, selects tabs, and removes owners", () => {
+        const store = useWorktreeTerminalStore.getState();
+        store.addSession(
+            "project:branch",
+            "/tmp/project",
+            { scriptTitle: "Build", type: "script" },
+            {
+                busyState: "idle",
+                currentProcess: "zsh",
+                cwd: "/tmp/project",
+                id: "session-1",
+                isAlive: true,
+                sequence: 0,
+                shell: "zsh",
+            },
+        );
+
+        store.markScriptRunning("project:branch", "session-1", "Build");
+        expect(
+            useWorktreeTerminalStore.getState().owners["project:branch"]
+                ?.tabs[0],
+        ).toMatchObject({
+            busyState: "busy",
+            hasManualInput: false,
+            label: "Build",
+        });
+
+        useWorktreeTerminalStore
+            .getState()
+            .markManualInput("project:branch", "session-1");
+        expect(
+            useWorktreeTerminalStore.getState().owners["project:branch"]
+                ?.tabs[0],
+        ).toMatchObject({
+            hasManualInput: true,
+            scriptTitleOverride: undefined,
+        });
+
+        const previous = useWorktreeTerminalStore.getState();
+        previous.setActiveTab("missing", "tab");
+        previous.removeTab("missing", "tab");
+        expect(useWorktreeTerminalStore.getState()).toBe(previous);
+
+        previous.setActiveTab("project:branch", "session-1");
+        useWorktreeTerminalStore
+            .getState()
+            .removeTab("project:branch", "session-1");
+        expect(
+            useWorktreeTerminalStore.getState().owners["project:branch"]?.tabs,
+        ).toEqual([]);
+
+        useWorktreeTerminalStore.getState().removeOwner("project:branch");
+        expect(
+            useWorktreeTerminalStore.getState().owners["project:branch"],
+        ).toBeUndefined();
     });
 });
 

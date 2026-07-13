@@ -5,10 +5,7 @@ export const tryPromise = async <T, E = Error>(
         const result = await promise;
         return [null, result];
     } catch (error: any) {
-        console.warn({
-            msg: "Try promise error",
-            error: { message: error.message },
-        });
+        console.warn(error);
 
         const typedError =
             error instanceof Error

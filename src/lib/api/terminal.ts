@@ -46,7 +46,10 @@ export const terminalApi = {
     ) {
         const fiber = clientRuntime.runFork(
             Stream.runForEach(terminalEventStream(sessionId), (message) =>
-                Effect.sync(() => onMessage(message)),
+                Effect.try({
+                    catch: (error) => error,
+                    try: () => onMessage(message),
+                }),
             ).pipe(
                 Effect.catchAll((error) => Effect.sync(() => onError(error))),
             ),

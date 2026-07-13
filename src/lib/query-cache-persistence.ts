@@ -5,6 +5,7 @@ import type {
 import type { Query, QueryKey } from "@tanstack/react-query";
 import { del, get, set } from "idb-keyval";
 
+import { tryPromise } from "@/lib/error";
 import { prRunQueryKeys } from "@/lib/hooks/query/query-keys";
 
 export const QUERY_CACHE_MAX_AGE = 24 * 60 * 60 * 1_000;
@@ -17,6 +18,62 @@ type QueryCacheStorage = {
     set: (key: string, value: PersistedClient) => Promise<void>;
 };
 
+type QueryKeySegmentMatcher = (segment: unknown) => boolean;
+type QueryKeyPatternSegment = string | number | QueryKeySegmentMatcher;
+type QueryKeyPattern = readonly QueryKeyPatternSegment[];
+
+const isStringSegment: QueryKeySegmentMatcher = (segment) =>
+    typeof segment === "string";
+const isBranchTargetSegment: QueryKeySegmentMatcher = (segment) =>
+    segment === "branch" || typeof segment === "number";
+
+const persistedQueryKeyPatterns = [
+    prRunQueryKeys.config,
+    prRunQueryKeys.scripts,
+    ["pr-run", "overview", isStringSegment],
+    ["pr-run", "project", isStringSegment, "branches"],
+    [
+        "pr-run",
+        "project",
+        isStringSegment,
+        "branch",
+        isStringSegment,
+        "package-scripts",
+    ],
+    [
+        "pr-run",
+        "project",
+        isStringSegment,
+        "branch",
+        isStringSegment,
+        "base",
+        isStringSegment,
+        "commits",
+    ],
+    [
+        "pr-run",
+        "project",
+        isStringSegment,
+        "branch",
+        isStringSegment,
+        "base",
+        isStringSegment,
+        "diff",
+        isBranchTargetSegment,
+    ],
+    [
+        "pr-run",
+        "project",
+        isStringSegment,
+        "branch",
+        isStringSegment,
+        "base",
+        isStringSegment,
+        "activity",
+        isBranchTargetSegment,
+    ],
+] satisfies readonly QueryKeyPattern[];
+
 const indexedDbStorage: QueryCacheStorage = {
     delete: (key) => del(key),
     get: (key) => get(key),
@@ -28,33 +85,16 @@ export function createQueryCachePersister(
 ): Persister {
     return {
         async persistClient(client) {
-            try {
-                await storage.set(QUERY_CACHE_STORAGE_KEY, client);
-            } catch (error) {
-                console.warn("Failed to persist the query cache.", error);
-            }
+            await tryPromise(storage.set(QUERY_CACHE_STORAGE_KEY, client));
         },
         async removeClient() {
-            try {
-                await storage.delete(QUERY_CACHE_STORAGE_KEY);
-            } catch (error) {
-                console.warn(
-                    "Failed to remove the persisted query cache.",
-                    error,
-                );
-            }
+            await tryPromise(storage.delete(QUERY_CACHE_STORAGE_KEY));
         },
         async restoreClient() {
-            try {
-                const client = await storage.get(QUERY_CACHE_STORAGE_KEY);
-                return isPersistedClient(client) ? client : undefined;
-            } catch (error) {
-                console.warn(
-                    "Failed to restore the persisted query cache.",
-                    error,
-                );
-                return undefined;
-            }
+            const [, client] = await tryPromise(
+                storage.get(QUERY_CACHE_STORAGE_KEY),
+            );
+            return isPersistedClient(client) ? client : undefined;
         },
     };
 }
@@ -62,74 +102,8 @@ export function createQueryCachePersister(
 export const queryCachePersister = createQueryCachePersister();
 
 export function shouldPersistQuery(queryKey: QueryKey) {
-    if (sameQueryKey(queryKey, prRunQueryKeys.config)) {
-        return true;
-    }
-
-    if (sameQueryKey(queryKey, prRunQueryKeys.scripts)) {
-        return true;
-    }
-
-    if (
-        queryKey.length === 3 &&
-        queryKey[0] === "pr-run" &&
-        queryKey[1] === "overview"
-    ) {
-        return true;
-    }
-
-    if (
-        queryKey[0] !== "pr-run" ||
-        queryKey[1] !== "project" ||
-        typeof queryKey[2] !== "string"
-    ) {
-        return false;
-    }
-
-    if (queryKey.length === 4 && queryKey[3] === "branches") {
-        return true;
-    }
-
-    if (
-        queryKey.length === 6 &&
-        queryKey[3] === "branch" &&
-        typeof queryKey[4] === "string" &&
-        queryKey[5] === "package-scripts"
-    ) {
-        return true;
-    }
-
-    if (
-        queryKey.length === 8 &&
-        queryKey[3] === "branch" &&
-        typeof queryKey[4] === "string" &&
-        queryKey[5] === "base" &&
-        typeof queryKey[6] === "string" &&
-        queryKey[7] === "commits"
-    ) {
-        return true;
-    }
-
-    if (
-        queryKey.length === 9 &&
-        queryKey[3] === "branch" &&
-        typeof queryKey[4] === "string" &&
-        queryKey[5] === "base" &&
-        typeof queryKey[6] === "string" &&
-        queryKey[7] === "diff" &&
-        (typeof queryKey[8] === "number" || queryKey[8] === "branch")
-    ) {
-        return true;
-    }
-
-    return (
-        queryKey.length === 9 &&
-        queryKey[3] === "branch" &&
-        typeof queryKey[4] === "string" &&
-        queryKey[5] === "base" &&
-        typeof queryKey[6] === "string" &&
-        queryKey[7] === "activity" &&
-        (typeof queryKey[8] === "number" || queryKey[8] === "branch")
+    return persistedQueryKeyPatterns.some((pattern) =>
+        matchesQueryKeyPattern(queryKey, pattern),
     );
 }
 
@@ -147,30 +121,28 @@ export function shouldDehydratePrRunQuery(query: Query) {
     );
 }
 
-function sameQueryKey(queryKey: QueryKey, expected: QueryKey) {
+function matchesQueryKeyPattern(queryKey: QueryKey, pattern: QueryKeyPattern) {
     return (
-        queryKey.length === expected.length &&
-        queryKey.every((value, index) => value === expected[index])
+        queryKey.length === pattern.length &&
+        pattern.every((segmentMatcher, index) =>
+            typeof segmentMatcher === "function"
+                ? segmentMatcher(queryKey[index])
+                : segmentMatcher === queryKey[index],
+        )
     );
 }
 
 function isPersistedClient(value: unknown): value is PersistedClient {
-    if (!value || typeof value !== "object") {
-        return false;
-    }
+    return (
+        isRecord(value) &&
+        typeof value.timestamp === "number" &&
+        typeof value.buster === "string" &&
+        isRecord(value.clientState) &&
+        Array.isArray(value.clientState.mutations) &&
+        Array.isArray(value.clientState.queries)
+    );
+}
 
-    const client = value as Partial<PersistedClient>;
-    if (
-        typeof client.timestamp === "number" &&
-        typeof client.buster === "string" &&
-        Boolean(client.clientState) &&
-        typeof client.clientState === "object"
-    ) {
-        const state = client.clientState as Partial<
-            PersistedClient["clientState"]
-        >;
-        return Array.isArray(state.mutations) && Array.isArray(state.queries);
-    }
-
-    return false;
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
 }

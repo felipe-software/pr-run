@@ -25,6 +25,8 @@ describe("shouldPersistQuery", () => {
             prRunQueryKeys.branches("project-1"),
             prRunQueryKeys.commits("project-1", "feature", "main"),
             prRunQueryKeys.diff("project-1", "feature", "main"),
+            prRunQueryKeys.diff("project-1", "feature", "main", 42),
+            prRunQueryKeys.activity("project-1", "feature", "main"),
             prRunQueryKeys.activity("project-1", "feature", "main", 42),
             prRunQueryKeys.packageScripts("project-1", "feature"),
         ];
@@ -34,11 +36,74 @@ describe("shouldPersistQuery", () => {
         }
     });
 
+    test("requires exact key shapes", () => {
+        const malformedKeys = [
+            [...prRunQueryKeys.config, "extra"],
+            [...prRunQueryKeys.scripts, "extra"],
+            ["pr-run", "overview"],
+            ["pr-run", "overview", 42],
+            ["pr-run", "overview", "project-1", "extra"],
+            ["pr-run", "project", 42, "branches"],
+            ["pr-run", "project", "project-1", "branches", "extra"],
+            ["pr-run", "project", "project-1", "branch", 42, "package-scripts"],
+            [
+                "pr-run",
+                "project",
+                "project-1",
+                "branch",
+                "feature",
+                "base",
+                42,
+                "commits",
+            ],
+            [
+                "pr-run",
+                "project",
+                "project-1",
+                "branch",
+                "feature",
+                "base",
+                "main",
+                "diff",
+            ],
+            [
+                "pr-run",
+                "project",
+                "project-1",
+                "branch",
+                "feature",
+                "base",
+                "main",
+                "diff",
+                "pull-request",
+            ],
+            [
+                "pr-run",
+                "project",
+                "project-1",
+                "branch",
+                "feature",
+                "base",
+                "main",
+                "activity",
+                {},
+            ],
+        ];
+
+        for (const queryKey of malformedKeys) {
+            expect(shouldPersistQuery(queryKey)).toBe(false);
+        }
+    });
+
     test("rejects secrets, live state, script source, and unknown keys", () => {
         const rejectedKeys = [
             prRunQueryKeys.env("project-1", "feature"),
             prRunQueryKeys.docker("project-1", "feature"),
             prRunQueryKeys.scriptSource("script-1"),
+            prRunQueryKeys.terminal("session-1"),
+            prRunQueryKeys.terminalState("session-1"),
+            prRunQueryKeys.file("project-1", "feature", "src/main.ts"),
+            prRunQueryKeys.commitDiff("project-1", "abc123"),
             ["pr-run", "unknown"],
             ["another-app", "config"],
         ];
@@ -112,15 +177,45 @@ describe("query cache persister", () => {
         expect(await persister.restoreClient()).toEqual(client);
     });
 
-    test("ignores corrupt and unavailable storage", async () => {
+    test("ignores malformed persisted clients", async () => {
+        const validClient = createPersistedClient();
+        const malformedClients = [
+            null,
+            {},
+            { ...validClient, timestamp: "invalid" },
+            { ...validClient, buster: 42 },
+            { ...validClient, clientState: null },
+            {
+                ...validClient,
+                clientState: {
+                    ...validClient.clientState,
+                    mutations: {},
+                },
+            },
+            {
+                ...validClient,
+                clientState: {
+                    ...validClient.clientState,
+                    queries: {},
+                },
+            },
+        ];
+
+        for (const client of malformedClients) {
+            const persister = createQueryCachePersister({
+                delete: async () => undefined,
+                get: async () => client,
+                set: async () => undefined,
+            });
+
+            expect(await persister.restoreClient()).toBeUndefined();
+        }
+    });
+
+    test("ignores unavailable storage", async () => {
         const warning = vi
             .spyOn(console, "warn")
             .mockImplementation(() => undefined);
-        const corruptPersister = createQueryCachePersister({
-            delete: async () => undefined,
-            get: async () => ({ timestamp: "invalid" }),
-            set: async () => undefined,
-        });
         const unavailablePersister = createQueryCachePersister({
             delete: async () => {
                 throw new Error("IndexedDB unavailable");
@@ -133,7 +228,6 @@ describe("query cache persister", () => {
             },
         });
 
-        expect(await corruptPersister.restoreClient()).toBeUndefined();
         expect(await unavailablePersister.restoreClient()).toBeUndefined();
         await expect(
             unavailablePersister.persistClient(createPersistedClient()),

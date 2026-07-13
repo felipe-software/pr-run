@@ -1,4 +1,6 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import childProcess, {
+    type ChildProcessWithoutNullStreams,
+} from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { effectTask } from "@/backend/runtime";
@@ -234,7 +236,7 @@ function ensureWorker() {
         return workerProcess;
     }
 
-    workerProcess = spawn("node", [workerPath], {
+    workerProcess = childProcess.spawn("node", [workerPath], {
         cwd: process.cwd(),
         env: process.env,
     });

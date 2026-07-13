@@ -59,12 +59,81 @@ describe("ProjectRepository", () => {
         ).toEqual(["first", "second"]);
     });
 
+    test("returns an existing project when the canonical path is added twice", async () => {
+        const projectPath = path.join(temporaryDirectory, "project");
+        await mkdir(projectPath);
+
+        const first = await projectConfigHandler.addProject(projectPath);
+        const second = await projectConfigHandler.addProject(
+            path.join(projectPath, "."),
+        );
+
+        expect(second).toEqual(first);
+        expect(
+            (await projectConfigHandler.readConfig()).groups.flatMap(
+                (group) => group.projects,
+            ),
+        ).toHaveLength(1);
+        expect(await projectConfigHandler.findProject(first.id)).toEqual(first);
+    });
+
+    test("creates the default group when a valid config does not contain it", async () => {
+        const projectPath = path.join(temporaryDirectory, "project");
+        await mkdir(projectPath);
+        await writeFile(
+            path.join(temporaryDirectory, "projects.json"),
+            JSON.stringify({
+                groups: [
+                    {
+                        collapsed: true,
+                        id: "other",
+                        name: "Other",
+                        projects: [],
+                    },
+                ],
+            }),
+        );
+
+        await projectConfigHandler.addProject(projectPath);
+        const config = await projectConfigHandler.readConfig();
+
+        expect(config.groups.map((group) => group.id)).toEqual([
+            "default",
+            "other",
+        ]);
+        expect(config.groups[0]?.projects[0]?.name).toBe("project");
+    });
+
+    test("rejects missing project paths and unknown project ids", async () => {
+        await expect(
+            projectConfigHandler.addProject(
+                path.join(temporaryDirectory, "missing"),
+            ),
+        ).rejects.toMatchObject({ code: "PROJECT_NOT_FOUND", status: 404 });
+        await expect(
+            projectConfigHandler.findProject("missing"),
+        ).rejects.toMatchObject({ code: "PROJECT_NOT_FOUND", status: 404 });
+    });
+
     test("rejects persisted configuration that does not match the schema", async () => {
         await writeFile(
             path.join(temporaryDirectory, "projects.json"),
             JSON.stringify({ groups: [{ id: "missing-fields" }] }),
         );
 
+        await expect(projectConfigHandler.readConfig()).rejects.toMatchObject({
+            code: "CONFIG_READ_FAILED",
+        });
+    });
+
+    test("rejects malformed JSON and unreadable config paths", async () => {
+        await writeFile(path.join(temporaryDirectory, "projects.json"), "{");
+        await expect(projectConfigHandler.readConfig()).rejects.toMatchObject({
+            code: "CONFIG_READ_FAILED",
+        });
+
+        await rm(path.join(temporaryDirectory, "projects.json"));
+        await mkdir(path.join(temporaryDirectory, "projects.json"));
         await expect(projectConfigHandler.readConfig()).rejects.toMatchObject({
             code: "CONFIG_READ_FAILED",
         });

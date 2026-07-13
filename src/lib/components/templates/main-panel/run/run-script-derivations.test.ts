@@ -80,18 +80,74 @@ describe("deriveRunScriptLists", () => {
         expect(result.scriptCount).toBe(0);
         expect(result.customActions).toHaveLength(1);
     });
+
+    test("keeps non-favorite suggestions and counts empty package groups", () => {
+        const result = deriveRunScriptLists(
+            {
+                ...catalog,
+                packages: [
+                    ...catalog.packages,
+                    { name: "empty", path: "packages/empty", scripts: [] },
+                ],
+            },
+            [customScript("hidden", false)],
+            [getPackageScriptKey(testScript), getPackageScriptKey(testScript)],
+        );
+
+        expect(result.favoriteScripts).toEqual([testScript, testScript]);
+        expect(result.suggestedScripts).toEqual([lint]);
+        expect(result.customActions).toEqual([]);
+        expect(result.scriptCount).toBe(3);
+    });
 });
 
 describe("filterPackageScriptGroups", () => {
-    test("filters by script name, command, and package name without empty groups", () => {
+    test("filters by package name case-insensitively", () => {
         expect(
             filterPackageScriptGroups(catalog.packages, "WORKSPACE"),
         ).toEqual([catalog.packages[1]]);
+    });
+
+    test("filters by command after trimming whitespace", () => {
         expect(filterPackageScriptGroups(catalog.packages, "run lint")).toEqual(
             [catalog.packages[0]],
         );
+        expect(
+            filterPackageScriptGroups(catalog.packages, "  RUN LINT  "),
+        ).toEqual([catalog.packages[0]]);
+    });
+
+    test("filters by partial script name while preserving script order", () => {
+        expect(filterPackageScriptGroups(catalog.packages, "build")).toEqual([
+            {
+                ...catalog.packages[1]!,
+                scripts: [build],
+            },
+        ]);
+    });
+
+    test("returns every script and preserves group metadata for an empty search", () => {
+        expect(filterPackageScriptGroups(catalog.packages, " \n ")).toEqual(
+            catalog.packages,
+        );
+    });
+
+    test("removes empty groups and returns no groups for an absent match", () => {
         expect(filterPackageScriptGroups(catalog.packages, "missing")).toEqual(
             [],
         );
+        expect(
+            filterPackageScriptGroups(
+                [
+                    {
+                        name: "empty",
+                        path: "packages/empty",
+                        scripts: [],
+                    },
+                    ...catalog.packages,
+                ],
+                "lint",
+            ),
+        ).toEqual([catalog.packages[0]]);
     });
 });

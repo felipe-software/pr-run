@@ -151,11 +151,11 @@ function mergeDiffFileMetadata(
 function normalizeNumstatPath(path: string) {
     const renameMatch = path.match(/^(.*?)\{(.*?) => (.*?)\}(.*)$/);
 
-    if (!renameMatch) {
-        return path;
+    if (renameMatch) {
+        return `${renameMatch[1]}${renameMatch[3]}${renameMatch[4]}`;
     }
 
-    return `${renameMatch[1]}${renameMatch[3]}${renameMatch[4]}`;
+    return path.match(/^.*? => (.*)$/)?.[1] ?? path;
 }
 
 async function getBranchDiffPatch(

@@ -35,7 +35,62 @@ describe("markdown helpers", () => {
         expect(safeMarkdownUrl("https://example.com")).toBe(
             "https://example.com",
         );
+        expect(safeMarkdownUrl("http://example.com/path")).toBe(
+            "http://example.com/path",
+        );
+        expect(safeMarkdownUrl("mailto:dev@example.com")).toBe(
+            "mailto:dev@example.com",
+        );
+        expect(safeMarkdownUrl("../relative/path")).toBe("../relative/path");
+        expect(safeMarkdownUrl("#review")).toBe("#review");
         expect(safeMarkdownUrl("javascript:alert(1)")).toBe("");
+        expect(safeMarkdownUrl("data:text/html,unsafe")).toBe("");
+    });
+
+    test("renders the empty state and caller styling", () => {
+        const html = renderToStaticMarkup(
+            createElement(MarkdownRenderer, {
+                className: "review-markdown",
+                emptyMessage: "No review yet.",
+                markdown: "\n\t",
+            }),
+        );
+
+        expect(html).toContain("No review yet.");
+        expect(html).not.toContain("review-markdown");
+    });
+
+    test("renders GFM structure with safe link behavior", () => {
+        const html = renderToStaticMarkup(
+            createElement(MarkdownRenderer, {
+                className: "review-markdown",
+                markdown: [
+                    "# Review",
+                    "",
+                    "- [x] tested",
+                    "- [ ] documented",
+                    "",
+                    "| File | State |",
+                    "| --- | --- |",
+                    "| `app.ts` | ready |",
+                    "",
+                    "[Section](#details) [Docs](https://example.com/docs)",
+                    "",
+                    "<details><summary>More</summary>Safe details</details>",
+                ].join("\n"),
+            }),
+        );
+
+        expect(html).toContain("review-markdown");
+        expect(html).toContain("<h1>Review</h1>");
+        expect(html).toContain('type="checkbox"');
+        expect(html).toContain("<table");
+        expect(html).toContain("overflow-x-auto");
+        expect(html).toContain('href="#details"');
+        expect(html).not.toContain('href="#details" target=');
+        expect(html).toContain('target="_blank"');
+        expect(html).toContain('rel="noreferrer noopener"');
+        expect(html).toContain("<details>");
     });
 
     test("renders fenced diffs through the code-block component", () => {
@@ -74,5 +129,19 @@ describe("markdown helpers", () => {
         expect(html).toContain("aspect-video");
         expect(html).toContain("w-[36rem]");
         expect(html).toContain("Loading image: Diff preview");
+    });
+
+    test("supports aligned images without alternative text", () => {
+        const html = renderToStaticMarkup(
+            createElement(MarkdownRenderer, {
+                markdown: "![](https://example.com/diff.png)",
+                mediaAlignment: "right",
+            }),
+        );
+
+        expect(html).toContain("data-markdown-image-frame");
+        expect(html).toContain("Loading image");
+        expect(html).toContain("text-right");
+        expect(html).toContain("ml-auto");
     });
 });

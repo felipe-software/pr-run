@@ -11,6 +11,9 @@ const NOW = Date.parse("2026-07-11T12:00:00.000Z");
 describe("activity dates", () => {
     test("formats exact relative units", () => {
         expect(
+            formatActivityRelativeTime("2026-07-11T12:00:00.500Z", NOW),
+        ).toBe("now");
+        expect(
             formatActivityRelativeTime("2026-07-11T11:59:29.000Z", NOW),
         ).toBe("31 seconds ago");
         expect(
@@ -22,6 +25,12 @@ describe("activity dates", () => {
         expect(
             formatActivityRelativeTime("2026-07-03T12:00:00.000Z", NOW),
         ).toBe("8 days ago");
+        expect(
+            formatActivityRelativeTime("2026-01-11T12:00:00.000Z", NOW),
+        ).toBe("6 months ago");
+        expect(
+            formatActivityRelativeTime("2024-07-11T12:00:00.000Z", NOW),
+        ).toBe("2 years ago");
     });
 
     test("formats future activity and invalid values", () => {
@@ -38,6 +47,18 @@ describe("activity dates", () => {
                 "mm-dd-yyyy",
             ),
         ).toContain("07-11-2026");
+        expect(
+            formatActivityAbsoluteTime(
+                "2026-07-11T12:00:05.000Z",
+                "yyyy-mm-dd",
+            ),
+        ).toContain("2026-07-11");
+        expect(
+            formatActivityAbsoluteTime(
+                "2026-07-11T12:00:05.000Z",
+                "mm/dd/yyyy",
+            ),
+        ).toContain("07/11/2026");
     });
 
     test("schedules refreshes at meaningful boundaries", () => {
@@ -47,6 +68,12 @@ describe("activity dates", () => {
         expect(
             getActivityTimeRefreshDelay("2026-07-11T11:57:30.000Z", NOW),
         ).toBe(30_020);
+        expect(
+            getActivityTimeRefreshDelay("2026-07-11T09:30:00.000Z", NOW),
+        ).toBe(1_800_020);
+        expect(
+            getActivityTimeRefreshDelay("2026-07-09T00:00:00.000Z", NOW),
+        ).toBe(43_200_020);
         expect(getActivityTimeRefreshDelay("not-a-date", NOW)).toBeNull();
     });
 });

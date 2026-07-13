@@ -7,6 +7,7 @@ import {
     writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { effectTask } from "@/backend/runtime";
 
@@ -211,7 +212,7 @@ async function prepareTerminalCommand(
 
     await ensureScriptsDirectory();
     const filePath = await findScriptFile(scriptId);
-    const runnerPath = path.join(import.meta.dir, "runner.ts");
+    const runnerPath = fileURLToPath(new URL("./runner.ts", import.meta.url));
     const payloadPath = path.join(
         getScriptsDirectory(),
         `${SCRIPT_RUN_PAYLOAD_PREFIX}${crypto.randomUUID()}.json`,
@@ -395,7 +396,7 @@ async function runScriptProcess(payload: Record<string, unknown>) {
 }
 
 function createRunnerProcess(payload: Record<string, unknown>) {
-    const runnerPath = path.join(import.meta.dir, "runner.ts");
+    const runnerPath = fileURLToPath(new URL("./runner.ts", import.meta.url));
 
     return Bun.spawn(["bun", runnerPath], {
         cwd: process.cwd(),
