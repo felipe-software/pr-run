@@ -17,19 +17,22 @@ PR-run requires [Bun](https://bun.sh/docs/installation).
 ```bash
 bunx pr-run@latest
 ```
+
 This starts the local backend, serves the browser UI.
 
 ## Why?
 
 When reading diffs on github isn't enough, you may need to run a PR in your local machine. So you have to: <br>
+
 - Manually create a worktree.
 - Manually set up a .env
 - Manually start/stop docker containers.
-And when testing PRs e2e (like a web app pointing to an API) you have to make sure everything is working right.<br>
+  And when testing PRs e2e (like a web app pointing to an API) you have to make sure everything is working right.<br>
 
 I don't know if someone already solved this problem, but I lost so much time doing this manually that I decided to create my own solution.
 
 ## Dependencies
+
 GitHub CLI (`gh`), Docker, and editor CLIs are optional and are only needed for the workflows that use them.
 <br><br>
 
