@@ -68,7 +68,7 @@ function VirtualActivityList({
     projectId: string;
     repositoryUrl?: string;
 }) {
-    const listRef = useRef<HTMLDivElement>(null);
+    const listRef = useRef<HTMLUListElement>(null);
     const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
         null,
     );
@@ -116,10 +116,9 @@ function VirtualActivityList({
     }, []);
 
     return (
-        <div
-            className="relative w-full"
+        <ul
+            className="relative w-full list-none"
             ref={listRef}
-            role="list"
             style={{ height: virtualizer.getTotalSize() }}
         >
             {virtualizer.getVirtualItems().map((virtualRow) => {
@@ -132,12 +131,11 @@ function VirtualActivityList({
                 const side = resolveActivitySide(item, pullRequestAuthorLogin);
 
                 return (
-                    <div
+                    <li
                         className="absolute top-0 left-0 w-full pb-5"
                         data-index={virtualRow.index}
                         key={item.id}
                         ref={virtualizer.measureElement}
-                        role="listitem"
                         style={{
                             transform: `translateY(${virtualRow.start - scrollMargin}px)`,
                         }}
@@ -151,10 +149,10 @@ function VirtualActivityList({
                                 side={side}
                             />
                         </TimelineItem>
-                    </div>
+                    </li>
                 );
             })}
-        </div>
+        </ul>
     );
 }
 

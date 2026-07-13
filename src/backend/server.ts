@@ -3,6 +3,8 @@ import net from "node:net";
 import { createBackendApp } from "@/backend/http/app";
 import { terminalHandler } from "@/backend/handlers/terminal";
 import { logger } from "@/backend/logger";
+import { disposeBackendRuntime } from "@/backend/runtime";
+import { tryPromise } from "@/backend/handlers/error";
 
 const DEFAULT_BACKEND_PORT = 33134;
 const host = "127.0.0.1";
@@ -59,16 +61,15 @@ function isPortAvailable(portToCheck: number) {
     });
 }
 
-function disposeBackendResources() {
+async function disposeBackendResources() {
     terminalHandler.disposeAll();
+    await disposeBackendRuntime();
 }
 
 process.once("SIGINT", () => {
-    disposeBackendResources();
-    process.exit(0);
+    tryPromise(disposeBackendResources()).then(() => process.exit(0));
 });
 
 process.once("SIGTERM", () => {
-    disposeBackendResources();
-    process.exit(0);
+    tryPromise(disposeBackendResources()).then(() => process.exit(0));
 });

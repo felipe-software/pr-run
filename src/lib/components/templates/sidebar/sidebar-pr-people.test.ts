@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { getSidebarPullRequestPeople } from "@/lib/components/templates/sidebar/sidebar-pr-people";
 import type {

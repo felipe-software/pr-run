@@ -17,5 +17,10 @@
         "noFallthroughCasesInSwitch": true,
         "skipLibCheck": true
     },
-    "include": ["src/backend/**/*.ts", "src/types/**/*.ts"]
+    "include": [
+        "src/backend/**/*.ts",
+        "src/contracts/**/*.ts",
+        "src/runtime/**/*.ts",
+        "src/types/**/*.ts"
+    ]
 }

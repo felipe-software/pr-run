@@ -1,9 +1,19 @@
-import { getTerminalKey } from "@/lib/components/templates/global-terminal-panel";
-import type { useWorktreeTerminalStore } from "@/lib/hooks/store/use-worktree-terminal-store";
+import { getTerminalKey } from "@/lib/components/templates/global-terminal-panel/terminal-selection";
+import type {
+    WorktreeTerminalOwnerKey,
+    WorktreeTerminalOwnerState,
+} from "@/lib/hooks/store/use-worktree-terminal-store";
 
-type TerminalOwners = ReturnType<
-    typeof useWorktreeTerminalStore.getState
->["owners"];
+type TerminalOwners = Record<
+    WorktreeTerminalOwnerKey,
+    WorktreeTerminalOwnerState
+>;
+
+const TERMINAL_PANEL_DEFAULT_HEIGHT = 320;
+const TERMINAL_PANEL_MIN_HEIGHT = 180;
+const TERMINAL_PANEL_SIDEBAR_DEFAULT_WIDTH = 180;
+const TERMINAL_PANEL_SIDEBAR_MIN_WIDTH = 132;
+const TERMINAL_PANEL_SIDEBAR_MAX_WIDTH = 360;
 
 export function getPreferredGlobalTerminalKey(owners: TerminalOwners) {
     const fallback = getFirstTerminalKey(owners);
@@ -49,6 +59,35 @@ export function getActiveOwnerTerminalKey(
     return activeTab ? getTerminalKey(ownerKey, activeTab.id) : null;
 }
 
-export function clamp(value: number, min: number, max: number) {
+function clamp(value: number, min: number, max: number) {
     return Math.min(Math.max(value, min), max);
 }
+
+export const terminalPanelSize = {
+    initialHeight(storedHeight: number | null) {
+        return Math.max(
+            storedHeight ?? TERMINAL_PANEL_DEFAULT_HEIGHT,
+            TERMINAL_PANEL_MIN_HEIGHT,
+        );
+    },
+    initialSidebarWidth(storedWidth: number | null) {
+        return clamp(
+            storedWidth ?? TERMINAL_PANEL_SIDEBAR_DEFAULT_WIDTH,
+            TERMINAL_PANEL_SIDEBAR_MIN_WIDTH,
+            TERMINAL_PANEL_SIDEBAR_MAX_WIDTH,
+        );
+    },
+    resizeHeight(startHeight: number, startY: number, currentY: number) {
+        return Math.max(
+            startHeight + startY - currentY,
+            TERMINAL_PANEL_MIN_HEIGHT,
+        );
+    },
+    resizeSidebarWidth(startWidth: number, startX: number, currentX: number) {
+        return clamp(
+            startWidth + startX - currentX,
+            TERMINAL_PANEL_SIDEBAR_MIN_WIDTH,
+            TERMINAL_PANEL_SIDEBAR_MAX_WIDTH,
+        );
+    },
+};

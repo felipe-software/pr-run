@@ -1,6 +1,8 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { usePointerDrag } from "@/lib/hooks/use-pointer-drag";
+
 export type UseResizableSizeOptions = {
     axis: "horizontal" | "vertical";
     defaultSize: number;
@@ -24,6 +26,7 @@ export function useResizableSize({
     minSize,
     storageKey,
 }: UseResizableSizeOptions): UseResizableSizeResult {
+    const startPointerDrag = usePointerDrag();
     const getMax = useCallback(
         () => (typeof maxSize === "function" ? maxSize() : maxSize),
         [maxSize],
@@ -61,12 +64,6 @@ export function useResizableSize({
             const origin =
                 axis === "horizontal" ? event.clientX : event.clientY;
             const initial = sizeRef.current;
-            const previousCursor = document.body.style.cursor;
-            const previousUserSelect = document.body.style.userSelect;
-            document.body.style.cursor =
-                axis === "horizontal" ? "col-resize" : "row-resize";
-            document.body.style.userSelect = "none";
-
             function onPointerMove(moveEvent: PointerEvent) {
                 const point =
                     axis === "horizontal"
@@ -82,19 +79,12 @@ export function useResizableSize({
                 }
             }
 
-            function stop() {
-                document.body.style.cursor = previousCursor;
-                document.body.style.userSelect = previousUserSelect;
-                window.removeEventListener("pointermove", onPointerMove);
-                window.removeEventListener("pointerup", stop);
-                window.removeEventListener("pointercancel", stop);
-            }
-
-            window.addEventListener("pointermove", onPointerMove);
-            window.addEventListener("pointerup", stop);
-            window.addEventListener("pointercancel", stop);
+            startPointerDrag({
+                cursor: axis === "horizontal" ? "col-resize" : "row-resize",
+                onMove: onPointerMove,
+            });
         },
-        [axis, clamp, edge, storageKey],
+        [axis, clamp, edge, startPointerDrag, storageKey],
     );
 
     return { beginResize, setSize, size };

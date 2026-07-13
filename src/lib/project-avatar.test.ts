@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import {
     assignFolderAvatars,
@@ -11,7 +11,7 @@ describe("project avatars", () => {
         const second = assignFolderAvatars(["alpha", "beta"]);
 
         expect(first).toEqual(second);
-        expect(first.get("alpha")).toStartWith("data:image/svg+xml;utf8,");
+        expect(first.get("alpha")).toMatch(/^data:image\/svg\+xml;utf8,/);
         expect(first.get("alpha")).not.toBe(first.get("beta"));
     });
 

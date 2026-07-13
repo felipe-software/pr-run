@@ -54,6 +54,27 @@ export function getVisibleSidebarBranches(params: {
     };
 }
 
+export function getDisplayedSidebarBranches(params: {
+    busyOwnerKeys: Set<string>;
+    isExpanded: boolean;
+    projectId: string;
+    selectedBranchName?: string;
+    sortedBranches: BranchInfo[];
+    visibleBranches: BranchInfo[];
+}) {
+    if (params.isExpanded) {
+        return params.visibleBranches;
+    }
+
+    return params.sortedBranches.filter(
+        (branch) =>
+            branch.name === params.selectedBranchName ||
+            params.busyOwnerKeys.has(
+                getWorktreeOwnerKey(params.projectId, branch.name),
+            ),
+    );
+}
+
 function stableBusyFirst<T>(items: T[], isBusy: (item: T) => boolean) {
     const busyItems: T[] = [];
     const idleItems: T[] = [];

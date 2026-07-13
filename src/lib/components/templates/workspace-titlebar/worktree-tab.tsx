@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import type { KeyboardEvent, Ref } from "react";
 
 import { ProjectAvatar } from "@/lib/components/atoms/project-avatar";
 import { cn } from "@/lib/utils/cn";
@@ -8,7 +9,10 @@ type WorktreeTabProps = {
     isActive: boolean;
     tab: WorktreeTabData;
     projectAvatarUri?: string;
+    tabButtonRef?: Ref<HTMLButtonElement>;
+    tabIndex: number;
     onClose: () => void;
+    onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
     onSelect: () => void;
 };
 
@@ -16,7 +20,10 @@ export function WorktreeTab({
     isActive,
     tab,
     projectAvatarUri,
+    tabButtonRef,
+    tabIndex,
     onClose,
+    onKeyDown,
     onSelect,
 }: WorktreeTabProps) {
     return (
@@ -38,12 +45,15 @@ export function WorktreeTab({
             }}
         >
             <button
-                aria-selected={isActive}
-                className="flex min-w-0 flex-1 cursor-pointer items-center
-                    text-left outline-none focus-visible:ring-2"
-                role="tab"
+                aria-current={isActive ? "page" : undefined}
+                className="focus-visible:ring-ring flex min-w-0 flex-1
+                    cursor-pointer items-center rounded-sm text-left
+                    outline-none focus-visible:ring-2"
+                ref={tabButtonRef}
+                tabIndex={tabIndex}
                 type="button"
                 onClick={onSelect}
+                onKeyDown={onKeyDown}
             >
                 {projectAvatarUri ? (
                     <ProjectAvatar
@@ -61,8 +71,8 @@ export function WorktreeTab({
             <button
                 aria-label={`Close ${tab.branchName}`}
                 className="text-muted-foreground hover:text-foreground
-                    focus-visible:ring-ring grid size-5 shrink-0 cursor-pointer
-                    place-items-center bg-transparent outline-none
+                    focus-visible:ring-ring flex size-5 shrink-0 cursor-pointer
+                    items-center justify-center bg-transparent outline-none
                     focus-visible:ring-2"
                 type="button"
                 onClick={(event) => {

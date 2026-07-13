@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { getSidebarItemStatus } from "@/lib/components/templates/sidebar/sidebar-item-status";
 import type { BranchInfo, PullRequestState } from "@/types/pr-run";

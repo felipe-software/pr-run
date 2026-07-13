@@ -1,9 +1,11 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
+import { effectTask } from "@/backend/runtime";
+
 import { tryPromise } from "@/backend/handlers/error";
 import { exists } from "@/backend/handlers/git/helpers";
-import { requireWorktreePath } from "@/backend/handlers/git/worktree-inventory";
+import { getWorktreePathOrThrow } from "@/backend/handlers/git/worktree-inventory";
 import { logger } from "@/backend/logger";
 import {
     ApiError,
@@ -57,7 +59,7 @@ export async function getDockerOverview(
     project: ProjectConfig,
     branch: string,
 ): Promise<DockerOverviewResult> {
-    const worktreePath = await getWorktreePath(project, branch);
+    const worktreePath = await getWorktreePathOrThrow(project, branch);
     const composeFile = await findComposeFile(worktreePath);
 
     if (!composeFile) {
@@ -112,7 +114,7 @@ export async function prepareTerminalCommand(
     action: DockerTerminalCommandAction,
     service?: string,
 ): Promise<DockerTerminalCommandResult> {
-    const worktreePath = await getWorktreePath(project, branch);
+    const worktreePath = await getWorktreePathOrThrow(project, branch);
     const composeFile = await requireComposeFile(worktreePath);
     const composeCli = await resolveComposeCli(worktreePath);
 
@@ -151,20 +153,6 @@ export async function prepareTerminalCommand(
         }),
         serviceName: service,
     };
-}
-
-async function getWorktreePath(project: ProjectConfig, branch: string) {
-    const worktreePath = await requireWorktreePath(project, branch);
-
-    if (!worktreePath) {
-        throw new ApiError(
-            "WORKTREE_NOT_FOUND",
-            "No worktree exists for this branch yet.",
-            404,
-        );
-    }
-
-    return worktreePath;
 }
 
 async function requireComposeFile(worktreePath: string) {
@@ -581,6 +569,12 @@ function toPosixPath(value: string) {
 }
 
 export const dockerHandler = {
-    getDockerOverview,
-    prepareTerminalCommand,
+    getDockerOverview: effectTask(
+        "DockerCompose.getOverview",
+        getDockerOverview,
+    ),
+    prepareTerminalCommand: effectTask(
+        "DockerCompose.prepareTerminalCommand",
+        prepareTerminalCommand,
+    ),
 };

@@ -1,9 +1,14 @@
 import { FitAddon } from "@xterm/addon-fit";
+import { useQueryClient } from "@tanstack/react-query";
 import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef } from "react";
 
 import { prRunApi } from "@/lib/api";
 import { tryPromise } from "@/lib/error";
+import {
+    terminalSessionSnapshotQueryOptions,
+    useTerminalSessionMutations,
+} from "@/lib/hooks/query/use-terminal-session-mutations";
 import type {
     TerminalDataEvent,
     TerminalExitEvent,
@@ -35,6 +40,52 @@ export function useTerminalPane({
     sessionId,
 }: UseTerminalPaneParams) {
     const mountRef = useRef<HTMLDivElement>(null);
+    const queryClient = useQueryClient();
+    const terminalMutations = useTerminalSessionMutations();
+    const operationsRef = useRef({
+        loadSnapshot: () =>
+            queryClient.fetchQuery(
+                terminalSessionSnapshotQueryOptions(sessionId),
+            ),
+        resize: (cols: number, rows: number) =>
+            terminalMutations.resizeMutation.mutateAsync({
+                cols,
+                rows,
+                sessionId,
+            }),
+        write: (data: string) =>
+            terminalMutations.writeMutation.mutateAsync({
+                data,
+                options: { source: "keyboard" },
+                sessionId,
+            }),
+    });
+
+    useEffect(() => {
+        operationsRef.current = {
+            loadSnapshot: () =>
+                queryClient.fetchQuery(
+                    terminalSessionSnapshotQueryOptions(sessionId),
+                ),
+            resize: (cols, rows) =>
+                terminalMutations.resizeMutation.mutateAsync({
+                    cols,
+                    rows,
+                    sessionId,
+                }),
+            write: (data) =>
+                terminalMutations.writeMutation.mutateAsync({
+                    data,
+                    options: { source: "keyboard" },
+                    sessionId,
+                }),
+        };
+    }, [
+        queryClient,
+        sessionId,
+        terminalMutations.resizeMutation,
+        terminalMutations.writeMutation,
+    ]);
 
     useEffect(() => {
         const mount = mountRef.current;
@@ -87,10 +138,11 @@ export function useTerminalPane({
         function fitAndResizeTerminal() {
             fitTerminal(fitAddon).then(() => {
                 if (!lifecycle.disposed) {
-                    prRunApi.resizeTerminal(
-                        sessionId,
-                        terminal.cols,
-                        terminal.rows,
+                    tryPromise(
+                        operationsRef.current.resize(
+                            terminal.cols,
+                            terminal.rows,
+                        ),
                     );
                 }
             });
@@ -120,21 +172,16 @@ export function useTerminalPane({
 
         const dataDisposable = terminal.onData((data) => {
             onManualInput();
-            prRunApi.writeTerminalInput(sessionId, data, {
-                source: "keyboard",
-            });
+            tryPromise(operationsRef.current.write(data));
         });
-        let eventSource: EventSource | null = null;
+        let unsubscribeFromEvents: (() => void) | null = null;
 
-        connectTerminalEvents({
+        unsubscribeFromEvents = connectTerminalEvents({
             lifecycle,
             onExit,
             onUpdate,
             pendingEvents,
             sessionId,
-            setEventSource: (source) => {
-                eventSource = source;
-            },
             setLastSequence: (sequence) => {
                 lastSequence = sequence;
             },
@@ -148,10 +195,10 @@ export function useTerminalPane({
 
         hydrateTerminal({
             lifecycle,
+            loadSnapshot: () => operationsRef.current.loadSnapshot(),
             onSnapshot,
             onUpdate,
             pendingEvents,
-            sessionId,
             setLastSequence: (sequence) => {
                 lastSequence = sequence;
             },
@@ -168,7 +215,7 @@ export function useTerminalPane({
             }
             resizeObserver.disconnect();
             window.removeEventListener("resize", scheduleTerminalFit);
-            eventSource?.close();
+            unsubscribeFromEvents?.();
             dataDisposable.dispose();
             terminal.dispose();
         };
@@ -179,14 +226,15 @@ export function useTerminalPane({
 
 async function hydrateTerminal({
     lifecycle,
+    loadSnapshot,
     onSnapshot,
     onUpdate,
     pendingEvents,
-    sessionId,
     setLastSequence,
     terminal,
 }: {
     lifecycle: { disposed: boolean; hydrated: boolean };
+    loadSnapshot: () => Promise<TerminalSessionSnapshot>;
     onSnapshot: (snapshot: TerminalSessionSnapshot) => void;
     onUpdate: (
         snapshot: Pick<
@@ -195,13 +243,10 @@ async function hydrateTerminal({
         >,
     ) => void;
     pendingEvents: TerminalPaneEvent[];
-    sessionId: string;
     setLastSequence: (sequence: number) => void;
     terminal: Terminal;
 }) {
-    const [error, snapshot] = await tryPromise(
-        prRunApi.getTerminalSessionSnapshot(sessionId),
-    );
+    const [error, snapshot] = await tryPromise(loadSnapshot());
 
     if (lifecycle.disposed) {
         return;
@@ -244,14 +289,13 @@ async function hydrateTerminal({
     }
 }
 
-async function connectTerminalEvents({
+function connectTerminalEvents({
     getLastSequence,
     lifecycle,
     onExit,
     onUpdate,
     pendingEvents,
     sessionId,
-    setEventSource,
     setLastSequence,
     terminal,
 }: {
@@ -266,41 +310,37 @@ async function connectTerminalEvents({
     ) => void;
     pendingEvents: TerminalPaneEvent[];
     sessionId: string;
-    setEventSource: (eventSource: EventSource) => void;
     setLastSequence: (sequence: number) => void;
     terminal: Terminal;
 }) {
-    const [error, eventSource] = await tryPromise(
-        prRunApi.createTerminalEventSource(sessionId),
+    return prRunApi.subscribeTerminalEvents(
+        sessionId,
+        (message) => {
+            if (lifecycle.disposed) {
+                return;
+            }
+
+            handleTerminalMessage({
+                getLastSequence,
+                lifecycle,
+                message,
+                onExit,
+                onUpdate,
+                pendingEvents,
+                setLastSequence,
+                terminal,
+            });
+        },
+        (error) => {
+            if (!lifecycle.disposed) {
+                terminal.writeln(
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to connect terminal events.",
+                );
+            }
+        },
     );
-
-    if (lifecycle.disposed) {
-        eventSource?.close();
-        return;
-    }
-
-    if (error) {
-        terminal.writeln(
-            error instanceof Error
-                ? error.message
-                : "Failed to connect terminal events.",
-        );
-        return;
-    }
-
-    setEventSource(eventSource);
-    eventSource.onmessage = (message) => {
-        handleTerminalMessage({
-            getLastSequence,
-            lifecycle,
-            message,
-            onExit,
-            onUpdate,
-            pendingEvents,
-            setLastSequence,
-            terminal,
-        });
-    };
 }
 
 async function handleTerminalMessage({
@@ -315,7 +355,7 @@ async function handleTerminalMessage({
 }: {
     getLastSequence: () => number;
     lifecycle: { hydrated: boolean };
-    message: MessageEvent<string>;
+    message: string;
     onExit: () => void;
     onUpdate: (
         snapshot: Pick<
@@ -329,10 +369,7 @@ async function handleTerminalMessage({
 }) {
     const [error, event] = await tryPromise(
         Promise.resolve().then(
-            () =>
-                JSON.parse(message.data) as
-                    | TerminalPaneEvent
-                    | { type: string },
+            () => JSON.parse(message) as TerminalPaneEvent | { type: string },
         ),
     );
 

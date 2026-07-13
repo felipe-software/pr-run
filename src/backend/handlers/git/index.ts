@@ -28,6 +28,7 @@ import {
     type ProjectConfig,
     type ReviewEvent,
 } from "@/backend/types";
+import { effectTask } from "@/backend/runtime";
 
 async function requireGitHubRepository(project: ProjectConfig) {
     const repository = await findGitHubRepository(project);
@@ -96,21 +97,39 @@ async function discardPendingReview(
 }
 
 export const gitHandler = {
-    addGeneralComment,
-    addReviewComment,
-    checkoutBranch,
-    discardPendingReview,
-    getBranchDiff,
-    getBranchFileContent,
-    getCommitHistory,
-    getCommitDiff,
-    getGitHubMedia,
-    getOverviewSnapshot,
-    getWorktreeActivity,
-    listBranches,
-    removeWorktree,
-    submitReview,
-    updateProjectWorktrees,
-    updateWorktree,
-    validateProjectPath,
+    addGeneralComment: effectTask("Git.addGeneralComment", addGeneralComment),
+    addReviewComment: effectTask("Git.addReviewComment", addReviewComment),
+    checkoutBranch: effectTask("Git.checkoutBranch", checkoutBranch),
+    discardPendingReview: effectTask(
+        "Git.discardPendingReview",
+        discardPendingReview,
+    ),
+    getBranchDiff: effectTask("Git.getBranchDiff", getBranchDiff),
+    getBranchFileContent: effectTask(
+        "Git.getBranchFileContent",
+        getBranchFileContent,
+    ),
+    getCommitHistory: effectTask("Git.getCommitHistory", getCommitHistory),
+    getCommitDiff: effectTask("Git.getCommitDiff", getCommitDiff),
+    getGitHubMedia: effectTask("Git.getGitHubMedia", getGitHubMedia),
+    getOverviewSnapshot: effectTask(
+        "Git.getOverviewSnapshot",
+        getOverviewSnapshot,
+    ),
+    getWorktreeActivity: effectTask(
+        "Git.getWorktreeActivity",
+        getWorktreeActivity,
+    ),
+    listBranches: effectTask("Git.listBranches", listBranches),
+    removeWorktree: effectTask("Git.removeWorktree", removeWorktree),
+    submitReview: effectTask("Git.submitReview", submitReview),
+    updateProjectWorktrees: effectTask(
+        "Git.updateProjectWorktrees",
+        updateProjectWorktrees,
+    ),
+    updateWorktree: effectTask("Git.updateWorktree", updateWorktree),
+    validateProjectPath: effectTask(
+        "Git.validateProjectPath",
+        validateProjectPath,
+    ),
 };

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { resolveGitHubMarkdownUrl } from "@/lib/components/templates/main-panel/activity/github-markdown-url";
 

@@ -13,6 +13,7 @@ import {
     DialogTitle,
 } from "@/lib/components/ui/dialog";
 import { StatusPill } from "@/lib/components/atoms/status-pill";
+import type { SidebarBranchPendingAction } from "@/lib/components/templates/sidebar/sidebar-branch-action";
 import { formatBranchAge } from "@/lib/format";
 import {
     Tooltip,
@@ -31,9 +32,8 @@ type SidebarBranchItemProps = {
     branch: BranchInfo;
     isBusy: boolean;
     isCollapsedPreview?: boolean;
-    isCheckingOutWorktree: boolean;
-    isRemovingWorktree: boolean;
     isSelected: boolean;
+    pendingAction: SidebarBranchPendingAction;
     onCheckoutBranch: (branchName: string) => Promise<void>;
     onRemoveWorktree: (branchName: string) => Promise<void>;
     onSelectBranch: (branchName: string) => void;
@@ -43,9 +43,8 @@ export function SidebarBranchItem({
     branch,
     isBusy,
     isCollapsedPreview = false,
-    isCheckingOutWorktree,
-    isRemovingWorktree,
     isSelected,
+    pendingAction,
     onCheckoutBranch,
     onRemoveWorktree,
     onSelectBranch,
@@ -58,7 +57,9 @@ export function SidebarBranchItem({
         }
     }, [branch.hasWorktree]);
     const status = getSidebarItemStatus(branch);
-    const isActionPending = isCheckingOutWorktree || isRemovingWorktree;
+    const isCheckingOutWorktree = pendingAction.type === "checking-out";
+    const isRemovingWorktree = pendingAction.type === "removing";
+    const isActionPending = pendingAction.type !== "idle";
     const pullRequestAuthor = branch.pullRequest?.author;
     const branchAge = formatBranchAge(branch.lastCommitTimestamp);
     const accessibleLabel = [
@@ -74,7 +75,7 @@ export function SidebarBranchItem({
     const branchButton = (
         <button
             aria-label={accessibleLabel}
-            aria-selected={isSelected}
+            aria-current={isSelected ? "page" : undefined}
             className={cn(
                 `text-sidebar-foreground hover:bg-sidebar-accent
                 hover:text-sidebar-accent-foreground focus-visible:ring-ring

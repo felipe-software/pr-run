@@ -1,14 +1,10 @@
 import { create } from "zustand";
 
-import { prRunApi } from "@/lib/api";
-import { tryPromise } from "@/lib/error";
 import type {
     TerminalBusyState,
+    TerminalSession,
     TerminalSessionSnapshot,
 } from "@/types/pr-run";
-
-const DEFAULT_TERMINAL_COLS = 80;
-const DEFAULT_TERMINAL_ROWS = 24;
 
 export type WorktreeTerminalOwnerKey = string;
 
@@ -40,11 +36,11 @@ export type BusyTerminalSummary = {
     busyTerminalCount: number;
 };
 
-type CreateTerminalReason =
+export type CreateTerminalReason =
     | { type: "default" | "manual" }
     | { type: "script"; scriptTitle: string };
 
-type RunScriptCommandParams = {
+export type RunScriptCommandParams = {
     command: string;
     ownerKey: WorktreeTerminalOwnerKey;
     scriptTitle: string;
@@ -53,20 +49,12 @@ type RunScriptCommandParams = {
 
 type WorktreeTerminalStoreState = {
     owners: Record<WorktreeTerminalOwnerKey, WorktreeTerminalOwnerState>;
-    closeTab: (
-        ownerKey: WorktreeTerminalOwnerKey,
-        tabId: string,
-    ) => Promise<void>;
-    createTerminal: (
+    addSession: (
         ownerKey: WorktreeTerminalOwnerKey,
         worktreePath: string,
         reason: CreateTerminalReason,
-    ) => Promise<WorktreeTerminalTab>;
-    disposeOwner: (ownerKey: WorktreeTerminalOwnerKey) => Promise<void>;
-    ensureDefaultTerminal: (
-        ownerKey: WorktreeTerminalOwnerKey,
-        worktreePath: string,
-    ) => Promise<void>;
+        session: TerminalSession,
+    ) => WorktreeTerminalTab;
     ensureOwner: (
         ownerKey: WorktreeTerminalOwnerKey,
         worktreePath: string,
@@ -74,6 +62,19 @@ type WorktreeTerminalStoreState = {
     markManualInput: (
         ownerKey: WorktreeTerminalOwnerKey,
         tabId: string,
+    ) => void;
+    markScriptRunning: (
+        ownerKey: WorktreeTerminalOwnerKey,
+        tabId: string,
+        scriptTitle: string,
+    ) => void;
+    removeOwner: (ownerKey: WorktreeTerminalOwnerKey) => void;
+    removeTab: (ownerKey: WorktreeTerminalOwnerKey, tabId: string) => void;
+    setActiveTab: (ownerKey: WorktreeTerminalOwnerKey, tabId: string) => void;
+    setDefaultTerminalState: (
+        ownerKey: WorktreeTerminalOwnerKey,
+        worktreePath: string,
+        terminalState: WorktreeTerminalOwnerState["defaultTerminalState"],
     ) => void;
     syncTabSnapshot: (
         ownerKey: WorktreeTerminalOwnerKey,
@@ -83,8 +84,6 @@ type WorktreeTerminalStoreState = {
             "busyState" | "currentProcess" | "id" | "isAlive"
         >,
     ) => void;
-    runScriptCommand: (params: RunScriptCommandParams) => Promise<void>;
-    setActiveTab: (ownerKey: WorktreeTerminalOwnerKey, tabId: string) => void;
 };
 
 export function getWorktreeOwnerKey(projectId: string, branchName: string) {
@@ -203,104 +202,48 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
                 },
             }));
         },
-        async ensureDefaultTerminal(ownerKey, worktreePath) {
-            get().ensureOwner(ownerKey, worktreePath);
-            const owner = get().owners[ownerKey];
-
-            if (
-                !owner ||
-                owner.tabs.length > 0 ||
-                owner.defaultTerminalState !== "idle"
-            ) {
-                return;
-            }
-
+        setDefaultTerminalState(ownerKey, worktreePath, terminalState) {
             set((state) => ({
                 owners: {
                     ...state.owners,
                     [ownerKey]: state.owners[ownerKey]
                         ? {
                               ...state.owners[ownerKey],
-                              defaultTerminalState: "pending",
+                              defaultTerminalState: terminalState,
                           }
-                        : createWorktreeTerminalOwnerState(worktreePath),
+                        : {
+                              ...createWorktreeTerminalOwnerState(worktreePath),
+                              defaultTerminalState: terminalState,
+                          },
                 },
             }));
-
-            const [error] = await tryPromise(
-                get().createTerminal(ownerKey, worktreePath, {
-                    type: "default",
-                }),
-            );
-
-            set((state) => ({
-                owners: {
-                    ...state.owners,
-                    [ownerKey]: state.owners[ownerKey]
-                        ? {
-                              ...state.owners[ownerKey],
-                              defaultTerminalState: error ? "idle" : "done",
-                          }
-                        : createWorktreeTerminalOwnerState(worktreePath),
-                },
-            }));
-
-            if (error) {
-                throw error;
-            }
         },
-        async createTerminal(ownerKey, worktreePath, reason) {
+        addSession(ownerKey, worktreePath, reason, session) {
             get().ensureOwner(ownerKey, worktreePath);
-            const [error, session] = await tryPromise(
-                prRunApi.createTerminalSession({
-                    cwd: worktreePath,
-                    cols: DEFAULT_TERMINAL_COLS,
-                    rows: DEFAULT_TERMINAL_ROWS,
-                }),
-            );
+            const owner =
+                get().owners[ownerKey] ??
+                createWorktreeTerminalOwnerState(worktreePath);
+            const [nextOwner, label] = reserveTerminalLabel(owner, reason);
+            const tab: WorktreeTerminalTab = {
+                busyState: session.busyState,
+                hasManualInput: false,
+                id: session.id,
+                label,
+                scriptTitleOverride:
+                    reason.type === "script" ? reason.scriptTitle : undefined,
+                sessionId: session.id,
+                shellName: session.currentProcess,
+                status: session.isAlive ? "alive" : "exited",
+            };
 
-            if (error) {
-                throw error;
-            }
+            set((state) => ({
+                owners: {
+                    ...state.owners,
+                    [ownerKey]: appendWorktreeTerminalTab(nextOwner, tab),
+                },
+            }));
 
-            let createdTab: WorktreeTerminalTab | null = null;
-
-            set((state) => {
-                const owner =
-                    state.owners[ownerKey] ??
-                    createWorktreeTerminalOwnerState(worktreePath);
-                const [nextOwner, label] = reserveTerminalLabel(owner, reason);
-
-                createdTab = {
-                    id: session.id,
-                    label,
-                    sessionId: session.id,
-                    status: session.isAlive ? "alive" : "exited",
-                    busyState: session.busyState,
-                    hasManualInput: false,
-                    shellName: session.currentProcess,
-                    scriptTitleOverride:
-                        reason.type === "script"
-                            ? reason.scriptTitle
-                            : undefined,
-                };
-
-                return {
-                    owners: {
-                        ...state.owners,
-                        [ownerKey]: appendWorktreeTerminalTab(
-                            nextOwner,
-                            createdTab,
-                        ),
-                    },
-                };
-            });
-
-            if (!createdTab) {
-                throw new Error("Failed to create terminal tab.");
-            }
-
-            return createdTab;
+            return tab;
         },
         setActiveTab(ownerKey, tabId) {
             set((state) => {
@@ -322,209 +265,59 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
             });
         },
         markManualInput(ownerKey, tabId) {
-            set((state) => {
-                const owner = state.owners[ownerKey];
-
-                if (!owner) {
-                    return state;
-                }
-
-                return {
-                    owners: {
-                        ...state.owners,
-                        [ownerKey]: {
-                            ...owner,
-                            tabs: owner.tabs.map((tab) =>
-                                tab.id === tabId
-                                    ? {
-                                          ...tab,
-                                          hasManualInput: true,
-                                          scriptTitleOverride: undefined,
-                                      }
-                                    : tab,
-                            ),
-                        },
-                    },
-                };
-            });
-        },
-        syncTabSnapshot(ownerKey, sessionId, snapshot) {
-            set((state) => {
-                const owner = state.owners[ownerKey];
-
-                if (!owner) {
-                    return state;
-                }
-
-                return {
-                    owners: {
-                        ...state.owners,
-                        [ownerKey]: {
-                            ...owner,
-                            tabs: owner.tabs.map((tab) =>
-                                tab.sessionId === sessionId
-                                    ? syncWorktreeTerminalTab(tab, snapshot)
-                                    : tab,
-                            ),
-                        },
-                    },
-                };
-            });
-        },
-        async runScriptCommand({
-            command,
-            ownerKey,
-            scriptTitle,
-            worktreePath,
-        }) {
-            get().ensureOwner(ownerKey, worktreePath);
-            const owner = get().owners[ownerKey];
-            const activeTab = owner?.tabs.find(
-                (tab) => tab.id === owner.activeTabId,
-            );
-
-            let activeSessionState:
-                | Pick<
-                      TerminalSessionSnapshot,
-                      | "busyState"
-                      | "currentProcess"
-                      | "id"
-                      | "isAlive"
-                      | "sequence"
-                  >
-                | undefined;
-
-            if (activeTab) {
-                const [stateError, sessionState] = await tryPromise(
-                    prRunApi.getTerminalSessionState(activeTab.sessionId),
-                );
-
-                if (!stateError) {
-                    activeSessionState = sessionState;
-                    get().syncTabSnapshot(
-                        ownerKey,
-                        activeTab.sessionId,
-                        sessionState,
-                    );
-                }
-            }
-
-            const executionMode = resolveScriptExecutionMode({
-                activeTab,
-                activeSessionState,
-            });
-            const targetTab =
-                executionMode === "reuse" && activeTab
-                    ? activeTab
-                    : await get().createTerminal(ownerKey, worktreePath, {
-                          type: "script",
-                          scriptTitle,
-                      });
-
-            if (executionMode === "reuse") {
-                set((state) => {
-                    const owner = state.owners[ownerKey];
-
-                    if (!owner) {
-                        return state;
-                    }
-
-                    return {
-                        owners: {
-                            ...state.owners,
-                            [ownerKey]: {
-                                ...owner,
-                                tabs: owner.tabs.map((tab) =>
-                                    tab.id === targetTab.id
-                                        ? {
-                                              ...tab,
-                                              busyState: "busy",
-                                              hasManualInput: false,
-                                              label: scriptTitle,
-                                              scriptTitleOverride: scriptTitle,
-                                          }
-                                        : tab,
-                                ),
-                            },
-                        },
-                    };
-                });
-            } else {
-                set((state) => {
-                    const owner = state.owners[ownerKey];
-
-                    if (!owner) {
-                        return state;
-                    }
-
-                    return {
-                        owners: {
-                            ...state.owners,
-                            [ownerKey]: {
-                                ...owner,
-                                tabs: owner.tabs.map((tab) =>
-                                    tab.id === targetTab.id
-                                        ? {
-                                              ...tab,
-                                              busyState: "busy",
-                                          }
-                                        : tab,
-                                ),
-                            },
-                        },
-                    };
-                });
-            }
-
-            const [writeError] = await tryPromise(
-                prRunApi.writeTerminalInput(
-                    targetTab.sessionId,
-                    `${command.replace(/[\r\n]+$/, "")}\r`,
-                    {
-                        source: "script",
-                    },
+            set((state) =>
+                updateOwnerTabs(state, ownerKey, (tab) =>
+                    tab.id === tabId
+                        ? {
+                              ...tab,
+                              hasManualInput: true,
+                              scriptTitleOverride: undefined,
+                          }
+                        : tab,
                 ),
             );
-
-            if (writeError) {
-                throw writeError;
-            }
         },
-        async closeTab(ownerKey, tabId) {
-            const owner = get().owners[ownerKey];
-            const tab = owner?.tabs.find((item) => item.id === tabId);
-
-            if (!tab) {
-                return;
-            }
-
-            set((state) => ({
-                owners: {
-                    ...state.owners,
-                    [ownerKey]: state.owners[ownerKey]
-                        ? removeWorktreeTerminalTab(
-                              state.owners[ownerKey],
-                              tabId,
-                          )
-                        : owner,
-                },
-            }));
-
-            await tryPromise(prRunApi.disposeTerminalSession(tab.sessionId));
+        markScriptRunning(ownerKey, tabId, scriptTitle) {
+            set((state) =>
+                updateOwnerTabs(state, ownerKey, (tab) =>
+                    tab.id === tabId
+                        ? {
+                              ...tab,
+                              busyState: "busy",
+                              hasManualInput: false,
+                              label: scriptTitle,
+                              scriptTitleOverride: scriptTitle,
+                          }
+                        : tab,
+                ),
+            );
         },
-        async disposeOwner(ownerKey) {
-            const owner = get().owners[ownerKey];
+        syncTabSnapshot(ownerKey, sessionId, snapshot) {
+            set((state) =>
+                updateOwnerTabs(state, ownerKey, (tab) =>
+                    tab.sessionId === sessionId
+                        ? syncWorktreeTerminalTab(tab, snapshot)
+                        : tab,
+                ),
+            );
+        },
+        removeTab(ownerKey, tabId) {
+            set((state) => {
+                const owner = state.owners[ownerKey];
 
-            if (!owner) {
-                return;
-            }
+                if (!owner) {
+                    return state;
+                }
 
-            for (const tab of owner.tabs) {
-                await tryPromise(
-                    prRunApi.disposeTerminalSession(tab.sessionId),
-                );
-            }
-
+                return {
+                    owners: {
+                        ...state.owners,
+                        [ownerKey]: removeWorktreeTerminalTab(owner, tabId),
+                    },
+                };
+            });
+        },
+        removeOwner(ownerKey) {
             set((state) => {
                 const owners = { ...state.owners };
                 delete owners[ownerKey];
@@ -533,6 +326,39 @@ export const useWorktreeTerminalStore = create<WorktreeTerminalStoreState>(
         },
     }),
 );
+
+function updateOwnerTabs(
+    state: WorktreeTerminalStoreState,
+    ownerKey: string,
+    updateTab: (tab: WorktreeTerminalTab) => WorktreeTerminalTab,
+) {
+    const owner = state.owners[ownerKey];
+
+    if (!owner) {
+        return state;
+    }
+
+    let hasChanges = false;
+    const tabs = owner.tabs.map((tab) => {
+        const nextTab = updateTab(tab);
+        hasChanges ||= nextTab !== tab;
+        return nextTab;
+    });
+
+    if (!hasChanges) {
+        return state;
+    }
+
+    return {
+        owners: {
+            ...state.owners,
+            [ownerKey]: {
+                ...owner,
+                tabs,
+            },
+        },
+    };
+}
 
 function reserveTerminalLabel(
     owner: WorktreeTerminalOwnerState,
@@ -573,32 +399,45 @@ function syncWorktreeTerminalTab(
         "busyState" | "currentProcess" | "id" | "isAlive"
     >,
 ): WorktreeTerminalTab {
-    const nextTab: WorktreeTerminalTab = {
-        ...tab,
-        busyState:
-            snapshot.isAlive && snapshot.busyState === "unknown"
-                ? tab.busyState
-                : snapshot.busyState,
-        status: snapshot.isAlive ? "alive" : "exited",
-    };
+    const busyState =
+        snapshot.isAlive && snapshot.busyState === "unknown"
+            ? tab.busyState
+            : snapshot.busyState;
+    const status = snapshot.isAlive ? "alive" : "exited";
+    let label = tab.label;
+    let scriptTitleOverride = tab.scriptTitleOverride;
 
     if (tab.scriptTitleOverride) {
         if (
             snapshot.currentProcess === tab.scriptTitleOverride ||
             snapshot.currentProcess !== tab.shellName
         ) {
-            return {
-                ...nextTab,
-                label: tab.scriptTitleOverride,
-            };
+            label = tab.scriptTitleOverride;
+        } else {
+            scriptTitleOverride = undefined;
+
+            if (snapshot.currentProcess) {
+                label = snapshot.currentProcess;
+            }
         }
-
-        nextTab.scriptTitleOverride = undefined;
+    } else if (snapshot.currentProcess) {
+        label = snapshot.currentProcess;
     }
 
-    if (snapshot.currentProcess) {
-        nextTab.label = snapshot.currentProcess;
+    if (
+        busyState === tab.busyState &&
+        status === tab.status &&
+        label === tab.label &&
+        scriptTitleOverride === tab.scriptTitleOverride
+    ) {
+        return tab;
     }
 
-    return nextTab;
+    return {
+        ...tab,
+        busyState,
+        label,
+        scriptTitleOverride,
+        status,
+    };
 }

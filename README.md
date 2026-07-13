@@ -38,3 +38,10 @@ GitHub CLI (`gh`), Docker, and editor CLIs are optional and are only needed for 
 
 This project copies a lot of things from [t3code](https://github.com/pingdotgg/t3code)<br>
 Feel free to open PRs, issues or suggest features. This is my first serious open source project :)
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Effect integration architecture and migration](docs/effect-migration.md)
+- [Code quality audit](docs/code-quality.md)
+- [Custom scripts](docs/scripts.md)

@@ -2,7 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { tryPromise } from "@/backend/handlers/error";
-import { requireWorktreePath } from "@/backend/handlers/git/worktree-inventory";
+import { getWorktreePathOrThrow } from "@/backend/handlers/git/worktree-inventory";
 import {
     ApiError,
     type PackageManager,
@@ -34,15 +34,11 @@ export async function getPackageScriptCatalog(
     project: ProjectConfig,
     branch: string,
 ): Promise<PackageScriptCatalog> {
-    const worktreePath = await requireWorktreePath(project, branch);
-
-    if (!worktreePath) {
-        throw new ApiError(
-            "WORKTREE_NOT_FOUND",
-            "Create the worktree before reading package scripts.",
-            404,
-        );
-    }
+    const worktreePath = await getWorktreePathOrThrow(
+        project,
+        branch,
+        "Create the worktree before reading package scripts.",
+    );
 
     const [error, catalog] = await tryPromise(readCatalog(worktreePath));
 
@@ -64,15 +60,11 @@ export async function preparePackageScriptTerminalCommand(
     packagePath: string,
     scriptName: string,
 ): Promise<PackageScriptTerminalCommandResult> {
-    const worktreePath = await requireWorktreePath(project, branch);
-
-    if (!worktreePath) {
-        throw new ApiError(
-            "WORKTREE_NOT_FOUND",
-            "Create the worktree before reading package scripts.",
-            404,
-        );
-    }
+    const worktreePath = await getWorktreePathOrThrow(
+        project,
+        branch,
+        "Create the worktree before reading package scripts.",
+    );
 
     const catalog = await readCatalog(worktreePath);
     const script = catalog.packages

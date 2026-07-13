@@ -1,6 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+import { effectTask } from "@/backend/runtime";
+
 import { tryPromise } from "@/backend/handlers/error";
 import {
     ApiError,
@@ -353,11 +355,14 @@ function publish(id: string, event: TerminalStreamEvent) {
 
 export const terminalHandler = {
     createEventStream,
-    createSession,
+    createSession: effectTask("TerminalSessions.create", createSession),
     disposeAll,
     disposeSession,
-    getSessionSnapshot,
-    getSessionState,
+    getSessionSnapshot: effectTask(
+        "TerminalSessions.getSnapshot",
+        getSessionSnapshot,
+    ),
+    getSessionState: effectTask("TerminalSessions.getState", getSessionState),
     resizeSession,
     writeInput,
 };

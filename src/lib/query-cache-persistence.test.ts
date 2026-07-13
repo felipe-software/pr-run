@@ -1,4 +1,4 @@
-import { describe, expect, spyOn, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 import { QueryClient, dehydrate } from "@tanstack/react-query";
 import {
     persistQueryClientRestore,
@@ -30,7 +30,7 @@ describe("shouldPersistQuery", () => {
         ];
 
         for (const queryKey of allowedKeys) {
-            expect(shouldPersistQuery(queryKey)).toBeTrue();
+            expect(shouldPersistQuery(queryKey)).toBe(true);
         }
     });
 
@@ -44,7 +44,7 @@ describe("shouldPersistQuery", () => {
         ];
 
         for (const queryKey of rejectedKeys) {
-            expect(shouldPersistQuery(queryKey)).toBeFalse();
+            expect(shouldPersistQuery(queryKey)).toBe(false);
         }
     });
 
@@ -85,11 +85,11 @@ describe("shouldPersistQuery", () => {
 
         expect(
             successfulQuery && shouldDehydratePrRunQuery(successfulQuery),
-        ).toBeTrue();
-        expect(errorQuery && shouldDehydratePrRunQuery(errorQuery)).toBeFalse();
-        expect(
-            pendingQuery && shouldDehydratePrRunQuery(pendingQuery),
-        ).toBeFalse();
+        ).toBe(true);
+        expect(errorQuery && shouldDehydratePrRunQuery(errorQuery)).toBe(false);
+        expect(pendingQuery && shouldDehydratePrRunQuery(pendingQuery)).toBe(
+            false,
+        );
     });
 });
 
@@ -113,9 +113,9 @@ describe("query cache persister", () => {
     });
 
     test("ignores corrupt and unavailable storage", async () => {
-        const warning = spyOn(console, "warn").mockImplementation(
-            () => undefined,
-        );
+        const warning = vi
+            .spyOn(console, "warn")
+            .mockImplementation(() => undefined);
         const corruptPersister = createQueryCachePersister({
             delete: async () => undefined,
             get: async () => ({ timestamp: "invalid" }),
@@ -169,7 +169,7 @@ describe("query cache persister", () => {
                 queryClient,
             });
 
-            expect(wasRemoved).toBeTrue();
+            expect(wasRemoved).toBe(true);
         }
     });
 });
@@ -192,13 +192,13 @@ describe("restored query behavior", () => {
         const query = queryClient.getQueryCache().find({ queryKey });
 
         expect(queryClient.getQueryData(queryKey)).toEqual(["cached"]);
-        expect(query && isRefreshingCachedQuery(query)).toBeTrue();
+        expect(query && isRefreshingCachedQuery(query)).toBe(true);
 
         resolveFetch(["fresh"]);
         await fetch;
 
         expect(queryClient.getQueryData(queryKey)).toEqual(["fresh"]);
-        expect(query && isRefreshingCachedQuery(query)).toBeFalse();
+        expect(query && isRefreshingCachedQuery(query)).toBe(false);
     });
 
     test("keeps cached data when a background refresh fails", async () => {
@@ -248,10 +248,10 @@ describe("restored query behavior", () => {
             queryKey: dockerKey,
         });
 
-        expect(
-            uncachedQuery && isRefreshingCachedQuery(uncachedQuery),
-        ).toBeFalse();
-        expect(dockerQuery && isRefreshingCachedQuery(dockerQuery)).toBeFalse();
+        expect(uncachedQuery && isRefreshingCachedQuery(uncachedQuery)).toBe(
+            false,
+        );
+        expect(dockerQuery && isRefreshingCachedQuery(dockerQuery)).toBe(false);
     });
 });
 

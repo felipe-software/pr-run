@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { parseStoredNumber } from "@/lib/utils/parse-stored-number";
 

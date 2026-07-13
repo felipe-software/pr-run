@@ -50,15 +50,11 @@ jobs:
             released: ${{ steps.outputs.outputs.released }}
             version: ${{ steps.outputs.outputs.version }}
 
-        env:
-            RELEASE_TOKEN: ${{ secrets.SEMANTIC_RELEASE_GH_TOKEN }}
-
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
-                  token: ${{ env.RELEASE_TOKEN }}
 
             - name: Setup Node
               uses: actions/setup-node@v4
@@ -131,8 +127,8 @@ jobs:
             - name: Run semantic-release
               if: ${{ !inputs.bootstrap_current_version }}
               env:
-                  GITHUB_TOKEN: ${{ env.RELEASE_TOKEN }}
-                  GH_TOKEN: ${{ env.RELEASE_TOKEN }}
+                  GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_GH_TOKEN }}
+                  GH_TOKEN: ${{ secrets.SEMANTIC_RELEASE_GH_TOKEN }}
               run: |
                   if [ "${{ inputs.dry_run }}" = "true" ]; then
                     bun run release:dry-run

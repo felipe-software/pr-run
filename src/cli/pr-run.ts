@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { tryPromise } from "@/backend/handlers/error";
 import { terminalHandler } from "@/backend/handlers/terminal";
 import { createBackendApp } from "@/backend/http/app";
+import { disposeBackendRuntime } from "@/backend/runtime";
 
 type CliOptions = {
     backendPort: number;
@@ -91,6 +92,7 @@ async function main() {
 
         isShuttingDown = true;
         terminalHandler.disposeAll();
+        await disposeBackendRuntime();
         await tryPromise(
             Promise.resolve().then(() => backendApp.server?.stop(true)),
         );

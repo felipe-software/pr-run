@@ -1,9 +1,9 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import {
     selectGlobalTerminal,
     type TerminalTreeTab,
-} from "@/lib/components/templates/global-terminal-panel";
+} from "@/lib/components/templates/global-terminal-panel/terminal-selection";
 
 function terminal(ownerKey: string, id: string): TerminalTreeTab {
     return {

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { normalizeOverviewSnapshot } from "@/lib/hooks/query/use-overview-query";
 import type { OverviewSnapshot } from "@/types/overview";

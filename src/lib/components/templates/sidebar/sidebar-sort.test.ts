@@ -1,8 +1,9 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
 import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 
 import {
+    getDisplayedSidebarBranches,
     getVisibleSidebarBranches,
     sortBranchesByLastCommit,
     sortProjectsByBusyState,
@@ -104,6 +105,44 @@ describe("getVisibleSidebarBranches", () => {
         expect(
             expandedResult.visibleBranches.map((branch) => branch.name),
         ).toEqual(["recent", "stale"]);
+    });
+});
+
+describe("getDisplayedSidebarBranches", () => {
+    it("uses the visibility result while the project is expanded", () => {
+        const sortedBranches = [
+            createBranch("recent", 300),
+            createBranch("hidden", 200),
+        ];
+
+        expect(
+            getDisplayedSidebarBranches({
+                busyOwnerKeys: new Set(),
+                isExpanded: true,
+                projectId: "project-one",
+                sortedBranches,
+                visibleBranches: [sortedBranches[0]],
+            }).map((branch) => branch.name),
+        ).toEqual(["recent"]);
+    });
+
+    it("keeps selected and busy branches visible while collapsed", () => {
+        const sortedBranches = [
+            createBranch("selected", 300),
+            createBranch("hidden", 200),
+            createBranch("busy", 100),
+        ];
+
+        expect(
+            getDisplayedSidebarBranches({
+                busyOwnerKeys: new Set(["project-one:busy"]),
+                isExpanded: false,
+                projectId: "project-one",
+                selectedBranchName: "selected",
+                sortedBranches,
+                visibleBranches: [],
+            }).map((branch) => branch.name),
+        ).toEqual(["selected", "busy"]);
     });
 });
 

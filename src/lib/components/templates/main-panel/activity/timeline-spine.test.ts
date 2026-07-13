@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { buildTimelineSpinePath } from "@/lib/components/templates/main-panel/activity/timeline-spine";
 
@@ -29,7 +29,7 @@ describe("buildTimelineSpinePath", () => {
         ]);
 
         expect(path.match(/M/g)).toHaveLength(1);
-        expect(path).toEndWith("V212");
+        expect(path).toMatch(/V212$/);
     });
 
     test("does not draw a line until two activity nodes exist", () => {

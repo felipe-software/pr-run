@@ -10,8 +10,8 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import net from "node:net";
 import path from "node:path";
 
-import { TerminalSessionManager } from "./terminal-session-manager.js";
-import type { TerminalCreateOptions, TerminalInputOptions } from "./types.js";
+import { isAllowedExternalUrl } from "./external-link.js";
+import { tryPromise } from "./try-promise.js";
 import {
     getWindowChromeBackground,
     getWindowChromeOptions,
@@ -22,7 +22,6 @@ const projectRoot = path.join(__dirname, "..");
 
 let backendProcess: ChildProcessWithoutNullStreams | null = null;
 let backendUrl: string | null = null;
-const terminalSessionManager = new TerminalSessionManager();
 
 function getAvailablePort() {
     return new Promise<number>((resolve, reject) => {
@@ -262,7 +261,10 @@ async function createWindow() {
     );
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        void shell.openExternal(url);
+        if (isAllowedExternalUrl(url)) {
+            tryPromise(shell.openExternal(url));
+        }
+
         return { action: "deny" };
     });
 
@@ -366,55 +368,6 @@ app.whenReady()
             },
         );
 
-        ipcMain.handle(
-            "terminal:create",
-            (event, options: TerminalCreateOptions) => {
-                return terminalSessionManager.createSession(
-                    event.sender,
-                    options,
-                );
-            },
-        );
-        ipcMain.handle("terminal:getSnapshot", (event, id: string) => {
-            return terminalSessionManager.getSessionSnapshot(event.sender, id);
-        });
-        ipcMain.handle("terminal:getState", (event, id: string) => {
-            return terminalSessionManager.getSessionState(event.sender, id);
-        });
-
-        ipcMain.handle(
-            "terminal:input",
-            (
-                event,
-                id: string,
-                data: string,
-                options?: TerminalInputOptions,
-            ) => {
-                terminalSessionManager.writeInput(
-                    event.sender,
-                    id,
-                    data,
-                    options,
-                );
-            },
-        );
-
-        ipcMain.handle(
-            "terminal:resize",
-            (event, id: string, cols: number, rows: number) => {
-                terminalSessionManager.resizeSession(
-                    event.sender,
-                    id,
-                    cols,
-                    rows,
-                );
-            },
-        );
-
-        ipcMain.handle("terminal:dispose", (event, id: string) => {
-            terminalSessionManager.disposeSession(event.sender, id);
-        });
-
         await createWindow();
 
         app.on("activate", () => {
@@ -439,6 +392,5 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-    terminalSessionManager.disposeAll();
     stopBackend();
 });

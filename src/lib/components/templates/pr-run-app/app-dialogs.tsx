@@ -1,29 +1,29 @@
 import { AddProjectDialog } from "@/lib/components/templates/add-project-dialog";
 import { CreateScriptDialog } from "@/lib/components/templates/create-script-dialog";
 import { SshPassphraseDialog } from "@/lib/components/templates/ssh-passphrase-dialog";
-import type { usePrRunAppState } from "@/lib/components/templates/pr-run-app/use-pr-run-app-state";
 
 type AppDialogsProps = {
-    state: ReturnType<typeof usePrRunAppState>;
+    addProject: {
+        error?: string;
+        isOpen: boolean;
+        isSubmitting: boolean;
+        onClose: () => void;
+        onSubmit: (projectPath: string) => Promise<void>;
+    };
+    createScript: {
+        error?: string;
+        isOpen: boolean;
+        isSubmitting: boolean;
+        onClose: () => void;
+        onSubmit: (title: string) => Promise<void>;
+    };
 };
 
-export function AppDialogs({ state }: AppDialogsProps) {
+export function AppDialogs({ addProject, createScript }: AppDialogsProps) {
     return (
         <>
-            <AddProjectDialog
-                error={state.addProjectError}
-                isOpen={state.isAddProjectOpen}
-                isSubmitting={state.isAddingProject}
-                onClose={state.closeAddProject}
-                onSubmit={state.submitAddProject}
-            />
-            <CreateScriptDialog
-                error={state.createScriptError}
-                isOpen={state.isCreateScriptOpen}
-                isSubmitting={state.isCreatingScript}
-                onClose={state.closeCreateScript}
-                onSubmit={state.createScript}
-            />
+            <AddProjectDialog {...addProject} />
+            <CreateScriptDialog {...createScript} />
             <SshPassphraseDialog />
         </>
     );

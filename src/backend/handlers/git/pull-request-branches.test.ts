@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import type { GitHubPullRequest } from "@/backend/handlers/git/github";
 import { pullRequestBranchHandler } from "@/backend/handlers/git/pull-request-branches";

@@ -3,6 +3,9 @@ export const prRunQueryKeys = {
     overview: (projectId?: string) =>
         ["pr-run", "overview", projectId ?? "all"] as const,
     scripts: ["pr-run", "scripts"] as const,
+    terminal: (sessionId: string) => ["pr-run", "terminal", sessionId] as const,
+    terminalState: (sessionId: string) =>
+        [...prRunQueryKeys.terminal(sessionId), "state"] as const,
     scriptSource: (scriptId: string) =>
         [...prRunQueryKeys.scripts, scriptId, "source"] as const,
     project: (projectId: string) => ["pr-run", "project", projectId] as const,

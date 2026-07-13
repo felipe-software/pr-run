@@ -1,9 +1,11 @@
 import { toast } from "@/lib/components/ui/toast";
 import { useCallback, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
-import { prRunApi } from "@/lib/api";
 import { tryPromise } from "@/lib/error";
+import { terminalSessionStateQueryOptions } from "@/lib/hooks/query/use-terminal-session-mutations";
 import { useWorktreeTerminalStore } from "@/lib/hooks/store/use-worktree-terminal-store";
+import { useWorktreeTerminalActions } from "@/lib/hooks/use-worktree-terminal-actions";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 type UseWorktreeTerminalOwnerParams = {
@@ -23,13 +25,9 @@ export function useWorktreeTerminalOwner({
         ownerKey ? state.owners[ownerKey] : undefined,
     );
     const ensureOwner = useWorktreeTerminalStore((state) => state.ensureOwner);
-    const ensureDefaultTerminal = useWorktreeTerminalStore(
-        (state) => state.ensureDefaultTerminal,
-    );
-    const createTerminal = useWorktreeTerminalStore(
-        (state) => state.createTerminal,
-    );
-    const closeTab = useWorktreeTerminalStore((state) => state.closeTab);
+    const { closeTab, createTerminal, ensureDefaultTerminal } =
+        useWorktreeTerminalActions();
+    const queryClient = useQueryClient();
     const setActiveTab = useWorktreeTerminalStore(
         (state) => state.setActiveTab,
     );
@@ -78,7 +76,9 @@ export function useWorktreeTerminalOwner({
             await Promise.all(
                 aliveTabs.map(async (tab) => {
                     const [error, sessionState] = await tryPromise(
-                        prRunApi.getTerminalSessionState(tab.sessionId),
+                        queryClient.fetchQuery(
+                            terminalSessionStateQueryOptions(tab.sessionId),
+                        ),
                     );
 
                     if (error || disposed) {
@@ -99,7 +99,7 @@ export function useWorktreeTerminalOwner({
             disposed = true;
             window.clearInterval(intervalId);
         };
-    }, [enabled, ownerKey, syncEnabled, syncTabSnapshot]);
+    }, [enabled, ownerKey, queryClient, syncEnabled, syncTabSnapshot]);
 
     const createManualTerminal = useCallback(async () => {
         const [error] = await tryPromise(

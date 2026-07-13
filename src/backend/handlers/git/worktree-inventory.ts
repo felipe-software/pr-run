@@ -7,6 +7,7 @@ import {
 } from "@/backend/handlers/git/helpers";
 import type { ProjectConfig } from "@/backend/types";
 import { tryPromise } from "@/backend/handlers/error";
+import { ApiError } from "@/backend/types";
 
 export type WorktreeInventory = {
     byBranch: Map<string, WorktreeRecord>;
@@ -58,4 +59,18 @@ export async function requireWorktreePath(
     }
 
     return worktree.path;
+}
+
+export async function getWorktreePathOrThrow(
+    project: ProjectConfig,
+    branch: string,
+    message = "No worktree exists for this branch yet.",
+) {
+    const worktreePath = await requireWorktreePath(project, branch);
+
+    if (!worktreePath) {
+        throw new ApiError("WORKTREE_NOT_FOUND", message, 404);
+    }
+
+    return worktreePath;
 }

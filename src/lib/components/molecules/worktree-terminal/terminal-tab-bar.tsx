@@ -60,8 +60,10 @@ export function TerminalTabBar({
                                     }
                                 >
                                     <button
-                                        className="flex min-w-0 flex-1
-                                            items-center gap-2 text-left"
+                                        className="focus-visible:ring-ring flex
+                                            min-w-0 flex-1 items-center gap-2
+                                            rounded-sm text-left outline-none
+                                            focus-visible:ring-2"
                                         type="button"
                                         onClick={() => onSelectTab(tab.id)}
                                     >
@@ -95,7 +97,10 @@ export function TerminalTabBar({
                                             isActive
                                                 ? "opacity-100"
                                                 : `opacity-0
+                                                    group-focus-within:opacity-100
                                                     group-hover:opacity-100`,
+                                            `focus-visible:ring-ring
+                                            outline-none focus-visible:ring-2`,
                                         )}
                                         type="button"
                                         onClick={(event) => {

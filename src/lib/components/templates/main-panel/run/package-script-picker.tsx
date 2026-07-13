@@ -11,6 +11,7 @@ import {
 } from "@/lib/components/ui/dialog";
 import { Input } from "@/lib/components/ui/input";
 import { Button } from "@/lib/components/ui/button";
+import { filterPackageScriptGroups } from "@/lib/components/templates/main-panel/run/run-script-derivations";
 import { getPackageScriptKey } from "@/lib/hooks/store/use-package-script-favorites-store";
 import type { PackageScriptCatalog, PackageScriptInfo } from "@/types/pr-run";
 
@@ -32,20 +33,9 @@ export function PackageScriptPicker({
     open,
 }: PackageScriptPickerProps) {
     const [search, setSearch] = useState("");
-    const normalizedSearch = search.trim().toLowerCase();
     const groups = useMemo(
-        () =>
-            catalog.packages
-                .map((group) => ({
-                    ...group,
-                    scripts: group.scripts.filter((script) =>
-                        `${script.name} ${script.command} ${script.packageName}`
-                            .toLowerCase()
-                            .includes(normalizedSearch),
-                    ),
-                }))
-                .filter((group) => group.scripts.length > 0),
-        [catalog.packages, normalizedSearch],
+        () => filterPackageScriptGroups(catalog.packages, search),
+        [catalog.packages, search],
     );
 
     return (

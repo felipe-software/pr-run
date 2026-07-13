@@ -1,10 +1,5 @@
 import type { ProjectConfig } from "@/types/pr-run";
 
-export type SelectedBranchState = {
-    branchName: string;
-    projectId: string;
-};
-
 export type BranchPageTab = "activity" | "run" | "changes" | "docker" | "env";
 
 export type SelectedBranchView = {
@@ -20,7 +15,3 @@ export type SettingsSection =
     | "scripts"
     | "ssh"
     | "diagnostics";
-
-export type WorkspaceView =
-    | { type: "branch" }
-    | { section: SettingsSection; type: "settings" };

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { parseReviewDiff } from "@/lib/components/templates/main-panel/activity/review-diff";
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
     appendWorktreeTerminalTab,
@@ -6,7 +6,12 @@ import {
     getBusyTerminalSummary,
     removeWorktreeTerminalTab,
     resolveScriptExecutionMode,
+    useWorktreeTerminalStore,
 } from "./use-worktree-terminal-store";
+
+beforeEach(() => {
+    useWorktreeTerminalStore.setState({ owners: {} });
+});
 
 describe("resolveScriptExecutionMode", () => {
     it("reuses the active tab when the session is idle", () => {
@@ -169,6 +174,102 @@ describe("getBusyTerminalSummary", () => {
         expect(summary.busyTerminalCount).toBe(1);
         expect([...summary.busyOwnerKeys]).toEqual(["project-two:feature-b"]);
         expect([...summary.busyProjectIds]).toEqual(["project-two"]);
+    });
+});
+
+describe("terminal snapshot synchronization", () => {
+    it("preserves every store reference for a semantic no-op", () => {
+        const store = useWorktreeTerminalStore.getState();
+        store.addSession(
+            "project:branch",
+            "/tmp/project",
+            { type: "manual" },
+            {
+                busyState: "idle",
+                currentProcess: "zsh",
+                cwd: "/tmp/project",
+                id: "session-1",
+                isAlive: true,
+                sequence: 0,
+                shell: "zsh",
+            },
+        );
+        store.syncTabSnapshot("project:branch", "session-1", {
+            busyState: "idle",
+            currentProcess: "zsh",
+            id: "session-1",
+            isAlive: true,
+        });
+        const previousState = useWorktreeTerminalStore.getState();
+        const previousOwners = previousState.owners;
+        const previousOwner = previousOwners["project:branch"];
+        const previousTabs = previousOwner?.tabs;
+        const previousTab = previousTabs?.[0];
+
+        previousState.syncTabSnapshot("project:branch", "session-1", {
+            busyState: "idle",
+            currentProcess: "zsh",
+            id: "session-1",
+            isAlive: true,
+        });
+
+        const nextState = useWorktreeTerminalStore.getState();
+        expect(nextState).toBe(previousState);
+        expect(nextState.owners).toBe(previousOwners);
+        expect(nextState.owners["project:branch"]).toBe(previousOwner);
+        expect(nextState.owners["project:branch"]?.tabs).toBe(previousTabs);
+        expect(nextState.owners["project:branch"]?.tabs[0]).toBe(previousTab);
+    });
+
+    it("changes only the synchronized owner when snapshot state changes", () => {
+        const store = useWorktreeTerminalStore.getState();
+        store.addSession(
+            "project:first",
+            "/tmp/first",
+            { type: "manual" },
+            {
+                busyState: "idle",
+                currentProcess: "zsh",
+                cwd: "/tmp/first",
+                id: "session-1",
+                isAlive: true,
+                sequence: 0,
+                shell: "zsh",
+            },
+        );
+        store.addSession(
+            "project:second",
+            "/tmp/second",
+            { type: "manual" },
+            {
+                busyState: "idle",
+                currentProcess: "zsh",
+                cwd: "/tmp/second",
+                id: "session-2",
+                isAlive: true,
+                sequence: 0,
+                shell: "zsh",
+            },
+        );
+        const previousState = useWorktreeTerminalStore.getState();
+        const previousFirstOwner = previousState.owners["project:first"];
+        const previousSecondOwner = previousState.owners["project:second"];
+
+        previousState.syncTabSnapshot("project:first", "session-1", {
+            busyState: "busy",
+            currentProcess: "bun",
+            id: "session-1",
+            isAlive: true,
+        });
+
+        const nextState = useWorktreeTerminalStore.getState();
+        expect(nextState).not.toBe(previousState);
+        expect(nextState.owners["project:first"]).not.toBe(previousFirstOwner);
+        expect(nextState.owners["project:second"]).toBe(previousSecondOwner);
+        expect(nextState.owners["project:first"]?.tabs[0]).toMatchObject({
+            busyState: "busy",
+            label: "bun",
+        });
     });
 });
 

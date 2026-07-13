@@ -1,24 +1,17 @@
 import { autoAnimate } from "@formkit/auto-animate";
-import { ChevronDown, ChevronRight, Eye, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { isHandledSshPromptError } from "@/lib/api";
-import { BusyIcon } from "@/lib/components/atoms/busy-icon";
-import { ProjectAvatar } from "@/lib/components/atoms/project-avatar";
-import { Button } from "@/lib/components/ui/button";
-import { Skeleton } from "@/lib/components/atoms/skeleton";
-import { Surface } from "@/lib/components/atoms/surface";
-import { SidebarBranchItem } from "@/lib/components/templates/sidebar/sidebar-branch-item";
+import { SidebarProjectBranches } from "@/lib/components/templates/sidebar/sidebar-project-branches";
+import { SidebarProjectHeader } from "@/lib/components/templates/sidebar/sidebar-project-header";
 import {
+    getDisplayedSidebarBranches,
     getVisibleSidebarBranches,
     sortBranchesByLastCommit,
 } from "@/lib/components/templates/sidebar/sidebar-sort";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useProjectBranchesQuery } from "@/lib/hooks/query/use-project-branches-query";
 import { useSshPassphraseStore } from "@/lib/hooks/store/use-ssh-passphrase-store";
-import { getWorktreeOwnerKey } from "@/lib/hooks/store/use-worktree-terminal-store";
-import { shortenPath } from "@/lib/format";
-import { cn } from "@/lib/utils/cn";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 
 type SidebarProjectItemProps = {
@@ -105,6 +98,25 @@ export function SidebarProjectItem({
             sortedBranches,
         ],
     );
+    const displayedBranches = useMemo(
+        () =>
+            getDisplayedSidebarBranches({
+                busyOwnerKeys,
+                isExpanded,
+                projectId: project.id,
+                selectedBranchName,
+                sortedBranches,
+                visibleBranches,
+            }),
+        [
+            busyOwnerKeys,
+            isExpanded,
+            project.id,
+            selectedBranchName,
+            sortedBranches,
+            visibleBranches,
+        ],
+    );
 
     useEffect(() => {
         if (!isAwaitingSshPassphrase) {
@@ -120,289 +132,57 @@ export function SidebarProjectItem({
             useSshPassphraseStore
                 .getState()
                 .setRetryAction(`sidebar:${project.id}:branches`, null);
-    }, [branchesQuery, isAwaitingSshPassphrase]);
-    const isActionVisible = isUpdatingProject;
-    const displayedBranches = isExpanded
-        ? visibleBranches
-        : sortedBranches.filter(
-              (branch) =>
-                  branch.name === selectedBranchName ||
-                  busyOwnerKeys.has(
-                      getWorktreeOwnerKey(project.id, branch.name),
-                  ),
-          );
+    }, [branchesQuery, isAwaitingSshPassphrase, project.id]);
+
+    const canShowMoreRecentBranches =
+        isExpanded &&
+        !areAllRecentBranchesVisible &&
+        hiddenRecentBranchCount > 0;
+    const canShowStaleBranches =
+        isExpanded &&
+        (areAllRecentBranchesVisible || hiddenRecentBranchCount === 0) &&
+        !areStaleBranchesVisible &&
+        staleBranches.length > 0;
 
     return (
         <div ref={attachItemAnimation} className="group/menu-item relative">
-            <div
-                className="bg-sidebar sticky top-0 isolate z-10 flex h-8
-                    items-stretch py-0.5"
-            >
-                <div
-                    className={cn(
-                        `group hover:bg-sidebar-accent relative flex min-w-0
-                        flex-1 items-stretch rounded-md transition-colors`,
-                        isSelected && "text-sidebar-accent-foreground",
-                    )}
-                    style={
-                        isSelected
-                            ? { backgroundColor: "rgba(255, 255, 255, 0.07)" }
-                            : undefined
-                    }
-                >
-                    <button
-                        aria-expanded={isExpanded}
-                        data-active={isSelected}
-                        className={cn(
-                            `text-sidebar-foreground
-                            hover:text-sidebar-accent-foreground
-                            focus-visible:ring-ring flex min-w-0 flex-1
-                            cursor-pointer items-center overflow-hidden
-                            rounded-md px-1.5 text-left outline-none
-                            focus-visible:ring-2`,
-                            isSelected && "text-sidebar-accent-foreground",
-                        )}
-                        type="button"
-                        onClick={() => onToggleProject(project.id)}
-                    >
-                        {isExpanded ? (
-                            <ChevronDown
-                                className="text-muted-foreground/70 mr-1 size-3
-                                    shrink-0"
-                            />
-                        ) : (
-                            <ChevronRight
-                                className="text-muted-foreground/70 mr-1 size-3
-                                    shrink-0"
-                            />
-                        )}
-                        <span
-                            className="relative grid h-5 w-5 flex-none
-                                place-items-center"
-                        >
-                            {projectAvatarUri ? (
-                                <ProjectAvatar
-                                    className="size-5"
-                                    src={projectAvatarUri}
-                                />
-                            ) : null}
-                            {isBusy ? (
-                                <BusyIcon
-                                    className="absolute -right-1 -bottom-1"
-                                    size="sm"
-                                />
-                            ) : null}
-                        </span>
-                        <div
-                            className="ml-2 flex min-w-0 flex-1 justify-between"
-                        >
-                            <span
-                                className="block truncate text-xs leading-4
-                                    font-medium tracking-tight"
-                            >
-                                {project.name}
-                            </span>
-                            <span
-                                className={cn(
-                                    `text-muted-foreground/65
-                                    pointer-events-none block truncate
-                                    text-[10px] leading-4 transition-opacity
-                                    duration-150
-                                    group-focus-within/menu-item:opacity-0
-                                    group-hover/menu-item:opacity-0`,
-                                    isActionVisible && "opacity-0",
-                                )}
-                            >
-                                {shortenPath(project.path)}
-                            </span>
-                        </div>
-                    </button>
-                    <div
-                        className={cn(
-                            `pointer-events-none absolute inset-y-0 right-0 flex
-                            items-center px-1 opacity-0 transition-opacity
-                            duration-150
-                            group-focus-within/menu-item:pointer-events-auto
-                            group-focus-within/menu-item:opacity-100
-                            group-hover/menu-item:pointer-events-auto
-                            group-hover/menu-item:opacity-100`,
-                            isActionVisible &&
-                                "pointer-events-auto opacity-100",
-                        )}
-                    >
-                        <Button
-                            aria-label={`Open ${project.name} overview`}
-                            className="text-muted-foreground/65"
-                            size="icon-xs"
-                            type="button"
-                            variant="ghost"
-                            onClick={() => onOpenProject(project.id)}
-                        >
-                            <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                            aria-label={`Reload ${project.name} worktrees`}
-                            className="text-muted-foreground/65"
-                            disabled={isUpdatingProject}
-                            size="icon-xs"
-                            type="button"
-                            variant="ghost"
-                            onClick={() => {
-                                onUpdateProject(project);
-                            }}
-                        >
-                            <RefreshCw
-                                className={[
-                                    "h-3.5 w-3.5",
-                                    isUpdatingProject ? "animate-spin" : "",
-                                ].join(" ")}
-                            />
-                        </Button>
-                    </div>
-                </div>
-            </div>
+            <SidebarProjectHeader
+                isBusy={isBusy}
+                isExpanded={isExpanded}
+                isSelected={isSelected}
+                isUpdatingProject={isUpdatingProject}
+                project={project}
+                projectAvatarUri={projectAvatarUri}
+                onOpenProject={onOpenProject}
+                onToggleProject={onToggleProject}
+                onUpdateProject={onUpdateProject}
+            />
 
             {isExpanded || isBusy ? (
-                <div
-                    className={cn(
-                        `relative mt-0.5 ml-2 flex min-w-0 flex-col gap-0.5
-                            py-0.5 pl-4`,
-                        !isExpanded && "opacity-90",
-                    )}
-                >
-                    {branchesQuery.isPending && isExpanded ? (
-                        <div className="grid gap-1 px-1.5 py-1">
-                            <Skeleton className="h-5 w-11/12" />
-                            <Skeleton className="h-5 w-9/12" />
-                            <Skeleton className="h-5 w-10/12" />
-                        </div>
-                    ) : null}
-
-                    {!branchesQuery.isPending &&
-                    isExpanded &&
-                    isAwaitingSshPassphrase ? (
-                        <Surface
-                            className="text-muted-foreground/70 border-0
-                                bg-transparent px-2 py-1.5 text-[11px]
-                                leading-5"
-                            variant="plain"
-                        >
-                            Waiting for SSH passphrase...
-                        </Surface>
-                    ) : null}
-
-                    {!branchesQuery.isPending &&
-                    isExpanded &&
-                    !isAwaitingSshPassphrase &&
-                    branchError ? (
-                        <Surface
-                            className="px-2 py-1.5 text-[11px] leading-5"
-                            variant="danger"
-                        >
-                            {branchError}
-                        </Surface>
-                    ) : null}
-
-                    {!branchesQuery.isPending &&
-                    isExpanded &&
-                    !branchError &&
-                    (branchesQuery.data?.length ?? 0) === 0 ? (
-                        <div
-                            className="text-muted-foreground/70 px-2 py-1.5
-                                text-[11px] leading-5"
-                        >
-                            No remote branches.
-                        </div>
-                    ) : null}
-
-                    {displayedBranches.length > 0 ? (
-                        <div
-                            className="before:bg-sidebar-border/80 relative flex
-                                min-w-0 flex-col gap-0.5 before:absolute
-                                before:top-[-0.25rem] before:bottom-[22.5px]
-                                before:-left-4 before:w-px before:rounded-full
-                                before:content-['']"
-                        >
-                            {displayedBranches.map((branch) => {
-                                const isBranchBusy = busyOwnerKeys.has(
-                                    getWorktreeOwnerKey(
-                                        project.id,
-                                        branch.name,
-                                    ),
-                                );
-
-                                return (
-                                    <SidebarBranchItem
-                                        branch={branch}
-                                        isBusy={isBranchBusy}
-                                        isCollapsedPreview={!isExpanded}
-                                        isCheckingOutWorktree={
-                                            pendingWorktreeCheckoutKey ===
-                                            `${project.id}:${branch.name}`
-                                        }
-                                        isRemovingWorktree={
-                                            pendingWorktreeRemovalKey ===
-                                            `${project.id}:${branch.name}`
-                                        }
-                                        isSelected={
-                                            selectedBranchName === branch.name
-                                        }
-                                        key={branch.remoteName}
-                                        onCheckoutBranch={(branchName) =>
-                                            onCheckoutBranch(
-                                                project.id,
-                                                branchName,
-                                            )
-                                        }
-                                        onRemoveWorktree={(branchName) =>
-                                            onRemoveWorktree(
-                                                project.id,
-                                                branchName,
-                                            )
-                                        }
-                                        onSelectBranch={() =>
-                                            onSelectBranch(project, branch)
-                                        }
-                                    />
-                                );
-                            })}
-                        </div>
-                    ) : null}
-
-                    {isExpanded &&
-                    !areAllRecentBranchesVisible &&
-                    hiddenRecentBranchCount > 0 ? (
-                        <Button
-                            className="text-muted-foreground
-                                hover:text-sidebar-accent-foreground h-7
-                                justify-start rounded-md px-2 text-[11px]"
-                            size="xs"
-                            type="button"
-                            variant="ghost"
-                            onClick={() => setAreAllRecentBranchesVisible(true)}
-                        >
-                            Show more ({hiddenRecentBranchCount})
-                        </Button>
-                    ) : null}
-
-                    {isExpanded &&
-                    (areAllRecentBranchesVisible ||
-                        hiddenRecentBranchCount === 0) &&
-                    !areStaleBranchesVisible &&
-                    staleBranches.length > 0 ? (
-                        <Button
-                            className="text-muted-foreground
-                                hover:text-sidebar-accent-foreground h-7
-                                justify-start rounded-md px-2 text-[11px]"
-                            size="xs"
-                            type="button"
-                            variant="ghost"
-                            onClick={() => setAreStaleBranchesVisible(true)}
-                        >
-                            Show stale ({staleBranches.length})
-                        </Button>
-                    ) : null}
-                </div>
+                <SidebarProjectBranches
+                    branchCount={branchesQuery.data?.length ?? 0}
+                    branchError={branchError}
+                    branches={displayedBranches}
+                    busyOwnerKeys={busyOwnerKeys}
+                    canShowMoreRecentBranches={canShowMoreRecentBranches}
+                    canShowStaleBranches={canShowStaleBranches}
+                    hiddenRecentBranchCount={hiddenRecentBranchCount}
+                    isAwaitingSshPassphrase={isAwaitingSshPassphrase}
+                    isExpanded={isExpanded}
+                    isPending={branchesQuery.isPending}
+                    pendingWorktreeCheckoutKey={pendingWorktreeCheckoutKey}
+                    pendingWorktreeRemovalKey={pendingWorktreeRemovalKey}
+                    project={project}
+                    selectedBranchName={selectedBranchName}
+                    staleBranchCount={staleBranches.length}
+                    onCheckoutBranch={onCheckoutBranch}
+                    onRemoveWorktree={onRemoveWorktree}
+                    onSelectBranch={onSelectBranch}
+                    onShowMoreRecentBranches={() =>
+                        setAreAllRecentBranchesVisible(true)
+                    }
+                    onShowStaleBranches={() => setAreStaleBranchesVisible(true)}
+                />
             ) : null}
         </div>
     );

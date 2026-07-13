@@ -1,155 +1,195 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
+import type { SettingsSection } from "@/lib/components/templates/pr-run-app/types";
 import { usePreloadProjects } from "@/lib/hooks/query/use-preload-projects";
+import {
+    useWorkspaceNavigationStore,
+    workspaceViewFromRoute,
+    type WorkspaceView,
+} from "@/lib/hooks/store/use-workspace-navigation-store";
 import {
     getWorktreeTabId,
     useWorkspaceTabsStore,
 } from "@/lib/hooks/store/use-workspace-tabs-store";
-import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 import { navigateToAppRoute, readAppRoute } from "@/lib/navigation";
+import type { BranchInfo, ProjectConfig } from "@/types/pr-run";
 
-import type {
-    SelectedBranchState,
-    SelectedBranchView,
-} from "@/lib/components/templates/pr-run-app/types";
+import type { SelectedBranchView } from "@/lib/components/templates/pr-run-app/types";
 
 type WorkspaceStateOptions = {
-    onLeaveSettings: () => void;
+    isProjectListReady: boolean;
     projects: ProjectConfig[];
 };
 
+type ContentWorkspaceView = Exclude<WorkspaceView, { type: "settings" }>;
+
 export function useWorkspaceState({
-    onLeaveSettings,
+    isProjectListReady,
     projects,
 }: WorkspaceStateOptions) {
-    const initialRouteRef = useRef(readAppRoute());
-    const [selectedBranch, setSelectedBranch] =
-        useState<SelectedBranchState | null>(() => {
-            const route = initialRouteRef.current;
+    const workspaceView = useWorkspaceNavigationStore(
+        (state) => state.workspaceView,
+    );
+    const lastContentViewRef = useRef<ContentWorkspaceView>(
+        workspaceView.type === "settings"
+            ? { type: "overview" }
+            : workspaceView,
+    );
+    const restoredTabIdsRef = useRef<Set<string> | null>(null);
 
-            return route.type === "branch"
-                ? {
-                      branchName: route.branchName,
-                      projectId: route.projectId,
-                  }
-                : null;
-        });
-    const [isOverviewOpen, setIsOverviewOpen] = useState(
-        () => initialRouteRef.current.type !== "branch",
-    );
-    const [overviewProjectId, setOverviewProjectId] = useState<
-        string | undefined
-    >(() =>
-        initialRouteRef.current.type === "overview"
-            ? initialRouteRef.current.projectId
-            : undefined,
-    );
-    const restoredTabIdsRef = useRef(
-        new Set(useWorkspaceTabsStore.getState().tabs.map((tab) => tab.id)),
-    );
+    if (restoredTabIdsRef.current === null) {
+        restoredTabIdsRef.current = new Set(
+            useWorkspaceTabsStore.getState().tabs.map((tab) => tab.id),
+        );
+    }
+
+    const restoredTabIds = restoredTabIdsRef.current;
     const restoredProjectBranchesRef = useRef(new Map<string, BranchInfo[]>());
+    const selectedProjectId =
+        workspaceView.type === "branch" ? workspaceView.projectId : null;
     const selectedProject = useMemo(
         () =>
-            projects.find(
-                (project) => project.id === selectedBranch?.projectId,
-            ) ?? null,
-        [projects, selectedBranch?.projectId],
+            projects.find((project) => project.id === selectedProjectId) ??
+            null,
+        [projects, selectedProjectId],
     );
     const selectedBranchView: SelectedBranchView = {
-        branchName: selectedBranch?.branchName ?? null,
+        branchName:
+            workspaceView.type === "branch" ? workspaceView.branchName : null,
         project: selectedProject,
     };
+    const transitionToBranch = useCallback(
+        (projectId: string, branchName: string) => {
+            const nextView: ContentWorkspaceView = {
+                branchName,
+                projectId,
+                type: "branch",
+            };
+
+            lastContentViewRef.current = nextView;
+            useWorkspaceNavigationStore
+                .getState()
+                .openBranch(projectId, branchName);
+            synchronizeActiveWorkspaceTab(nextView);
+            navigateToAppRoute({ branchName, projectId, type: "branch" });
+        },
+        [],
+    );
+    const transitionToOverview = useCallback(
+        (projectId?: string, replace = false) => {
+            const nextView: ContentWorkspaceView = {
+                projectId,
+                type: "overview",
+            };
+
+            lastContentViewRef.current = nextView;
+            useWorkspaceNavigationStore.getState().openOverview(projectId);
+            navigateToAppRoute({ projectId, type: "overview" }, replace);
+        },
+        [],
+    );
 
     usePreloadProjects(projects, (projectId, branches) => {
         restoredProjectBranchesRef.current.set(projectId, branches);
-        const store = useWorkspaceTabsStore.getState();
-        const validTabIds = new Set(
-            store.tabs
-                .filter((tab) => {
-                    if (!restoredTabIdsRef.current.has(tab.id)) {
-                        return true;
-                    }
+        const tabStore = useWorkspaceTabsStore.getState();
+        const validTabIds = new Set<string>();
 
-                    const projectBranches =
-                        restoredProjectBranchesRef.current.get(tab.projectId);
+        for (const tab of tabStore.tabs) {
+            if (!restoredTabIds.has(tab.id)) {
+                validTabIds.add(tab.id);
+                continue;
+            }
 
-                    if (!projectBranches) {
-                        return true;
-                    }
+            const projectBranches = restoredProjectBranchesRef.current.get(
+                tab.projectId,
+            );
 
-                    return projectBranches.some(
-                        (branch) =>
-                            branch.name === tab.branchName &&
-                            branch.hasWorktree,
-                    );
-                })
-                .map((tab) => tab.id),
-        );
-        const selectedTabId = selectedBranch
-            ? getWorktreeTabId(
-                  selectedBranch.projectId,
-                  selectedBranch.branchName,
-              )
-            : null;
+            if (
+                !projectBranches ||
+                projectBranches.some(
+                    (branch) =>
+                        branch.name === tab.branchName && branch.hasWorktree,
+                )
+            ) {
+                validTabIds.add(tab.id);
+            }
+        }
+        const selectedContentView =
+            workspaceView.type === "settings"
+                ? lastContentViewRef.current
+                : workspaceView;
+        const selectedTabId =
+            selectedContentView.type === "branch"
+                ? getWorktreeTabId(
+                      selectedContentView.projectId,
+                      selectedContentView.branchName,
+                  )
+                : null;
 
-        store.pruneTabs(validTabIds);
+        tabStore.pruneTabs(validTabIds);
 
         if (
             selectedTabId &&
-            restoredTabIdsRef.current.has(selectedTabId) &&
+            restoredTabIds.has(selectedTabId) &&
             !validTabIds.has(selectedTabId)
         ) {
-            setSelectedBranch(null);
-            setIsOverviewOpen(true);
+            if (workspaceView.type === "settings") {
+                lastContentViewRef.current = { type: "overview" };
+                return;
+            }
+
+            transitionToOverview(undefined, true);
         }
     });
 
     useEffect(() => {
-        function handlePopState() {
+        function hydrateFromLocation() {
             const route = readAppRoute();
+            const nextView = workspaceViewFromRoute(route);
+            const currentView =
+                useWorkspaceNavigationStore.getState().workspaceView;
 
-            if (route.type === "branch") {
-                setSelectedBranch({
-                    branchName: route.branchName,
-                    projectId: route.projectId,
-                });
-                setIsOverviewOpen(false);
-                return;
+            if (
+                nextView.type === "settings" &&
+                currentView.type !== "settings"
+            ) {
+                lastContentViewRef.current = currentView;
+            } else if (nextView.type !== "settings") {
+                lastContentViewRef.current = nextView;
             }
 
-            if (route.type === "overview") {
-                setOverviewProjectId(route.projectId);
-                setIsOverviewOpen(true);
-            }
+            useWorkspaceNavigationStore.getState().hydrateFromHistory(route);
+            synchronizeActiveWorkspaceTab(nextView);
         }
 
-        window.addEventListener("popstate", handlePopState);
-        return () => window.removeEventListener("popstate", handlePopState);
+        hydrateFromLocation();
+        window.addEventListener("popstate", hydrateFromLocation);
+        return () =>
+            window.removeEventListener("popstate", hydrateFromLocation);
     }, []);
 
     useEffect(() => {
-        if (!selectedBranch || selectedProject || projects.length === 0) {
+        synchronizeActiveWorkspaceTab(workspaceView);
+    }, [workspaceView]);
+
+    useEffect(() => {
+        if (
+            !isProjectListReady ||
+            workspaceView.type !== "branch" ||
+            selectedProject
+        ) {
             return;
         }
 
-        setSelectedBranch(null);
-        setIsOverviewOpen(true);
-        navigateToAppRoute({ type: "overview" }, true);
-    }, [selectedBranch, selectedProject]);
+        transitionToOverview(undefined, true);
+    }, [
+        isProjectListReady,
+        selectedProject,
+        transitionToOverview,
+        workspaceView,
+    ]);
 
     function selectBranch(project: ProjectConfig, branch: BranchInfo) {
-        onLeaveSettings();
-        navigateToAppRoute({
-            branchName: branch.name,
-            projectId: project.id,
-            type: "branch",
-        });
-        setSelectedBranch({
-            branchName: branch.name,
-            projectId: project.id,
-        });
-        setIsOverviewOpen(false);
-
         if (branch.hasWorktree) {
             useWorkspaceTabsStore.getState().openTab({
                 branchName: branch.name,
@@ -157,6 +197,8 @@ export function useWorkspaceState({
                 projectName: project.name,
             });
         }
+
+        transitionToBranch(project.id, branch.name);
     }
 
     function openCreatedWorktree(projectId: string, branchName: string) {
@@ -166,55 +208,63 @@ export function useWorkspaceState({
             return;
         }
 
-        onLeaveSettings();
-        navigateToAppRoute({ branchName, projectId, type: "branch" });
         useWorkspaceTabsStore.getState().openTab({
             branchName,
             projectId,
             projectName: project.name,
         });
-        setSelectedBranch({ branchName, projectId });
-        setIsOverviewOpen(false);
+        transitionToBranch(projectId, branchName);
     }
 
-    function openOverview(projectId?: string) {
-        onLeaveSettings();
-        navigateToAppRoute({ projectId, type: "overview" });
-        setOverviewProjectId(projectId);
-        setIsOverviewOpen(true);
+    function openSettings(section: SettingsSection = "general") {
+        const currentView =
+            useWorkspaceNavigationStore.getState().workspaceView;
+
+        if (currentView.type !== "settings") {
+            lastContentViewRef.current = currentView;
+        }
+
+        useWorkspaceNavigationStore.getState().openSettings(section);
+        navigateToAppRoute({ section, type: "settings" });
+    }
+
+    function closeSettings() {
+        const returnView = lastContentViewRef.current;
+
+        if (returnView.type === "branch") {
+            transitionToBranch(returnView.projectId, returnView.branchName);
+            return;
+        }
+
+        transitionToOverview(returnView.projectId);
     }
 
     function selectWorktreeTab(tabId: string) {
-        const tab = useWorkspaceTabsStore
-            .getState()
-            .tabs.find((item) => item.id === tabId);
+        const tabStore = useWorkspaceTabsStore.getState();
+        const tab = tabStore.tabs.find((item) => item.id === tabId);
 
         if (!tab) {
             return;
         }
 
-        useWorkspaceTabsStore.getState().activateTab(tabId);
-        onLeaveSettings();
-        navigateToAppRoute({
-            branchName: tab.branchName,
-            projectId: tab.projectId,
-            type: "branch",
-        });
-        setSelectedBranch({
-            branchName: tab.branchName,
-            projectId: tab.projectId,
-        });
-        setIsOverviewOpen(false);
+        tabStore.activateTab(tabId);
+        transitionToBranch(tab.projectId, tab.branchName);
     }
 
     function closeWorktreeTab(tabId: string) {
+        const selectedContentView =
+            workspaceView.type === "settings"
+                ? lastContentViewRef.current
+                : workspaceView;
         const wasSelected =
-            selectedBranch !== null &&
+            selectedContentView.type === "branch" &&
             getWorktreeTabId(
-                selectedBranch.projectId,
-                selectedBranch.branchName,
+                selectedContentView.projectId,
+                selectedContentView.branchName,
             ) === tabId;
-        useWorkspaceTabsStore.getState().closeTab(tabId);
+        const tabStore = useWorkspaceTabsStore.getState();
+
+        tabStore.closeTab(tabId);
 
         if (!wasSelected) {
             return;
@@ -225,34 +275,53 @@ export function useWorkspaceState({
             .getState()
             .tabs.find((tab) => tab.id === nextTabId);
 
-        if (!nextTab) {
-            setSelectedBranch(null);
-            setIsOverviewOpen(true);
-            navigateToAppRoute({ type: "overview" });
+        const nextView: ContentWorkspaceView = nextTab
+            ? {
+                  branchName: nextTab.branchName,
+                  projectId: nextTab.projectId,
+                  type: "branch",
+              }
+            : { type: "overview" };
+
+        if (workspaceView.type === "settings") {
+            lastContentViewRef.current = nextView;
             return;
         }
 
-        setSelectedBranch({
-            branchName: nextTab.branchName,
-            projectId: nextTab.projectId,
-        });
-        setIsOverviewOpen(false);
-        navigateToAppRoute({
-            branchName: nextTab.branchName,
-            projectId: nextTab.projectId,
-            type: "branch",
-        });
+        if (nextView.type === "branch") {
+            transitionToBranch(nextView.projectId, nextView.branchName);
+            return;
+        }
+
+        transitionToOverview();
     }
 
     return {
+        closeSettings,
         closeWorktreeTab,
-        isOverviewOpen,
         openCreatedWorktree,
-        openOverview,
-        overviewProjectId,
+        openOverview: transitionToOverview,
+        openSettings,
         selectBranch,
-        selectedBranch,
         selectedBranchView,
         selectWorktreeTab,
+        setSettingsSection: openSettings,
+        workspaceView,
     };
+}
+
+function synchronizeActiveWorkspaceTab(workspaceView: WorkspaceView) {
+    if (workspaceView.type !== "branch") {
+        return;
+    }
+
+    const tabStore = useWorkspaceTabsStore.getState();
+    const tabId = getWorktreeTabId(
+        workspaceView.projectId,
+        workspaceView.branchName,
+    );
+
+    if (tabStore.tabs.some((tab) => tab.id === tabId)) {
+        tabStore.activateTab(tabId);
+    }
 }

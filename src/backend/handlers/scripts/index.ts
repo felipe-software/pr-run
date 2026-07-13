@@ -8,9 +8,11 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
+import { effectTask } from "@/backend/runtime";
+
 import { tryPromise } from "@/backend/handlers/error";
 import { externalLauncherHandler } from "@/backend/handlers/external-launcher";
-import { requireWorktreePath } from "@/backend/handlers/git/worktree-inventory";
+import { getWorktreePathOrThrow } from "@/backend/handlers/git/worktree-inventory";
 import { logger } from "@/backend/logger";
 import {
     ApiError,
@@ -92,22 +94,7 @@ async function createScript(title: string): Promise<ScriptInfo> {
 }
 
 async function listScripts(): Promise<ScriptInfo[]> {
-    const scriptsDirectory = getScriptsDirectory();
-    const [error, entries] = await tryPromise(
-        (async () => {
-            await ensureScriptsDirectory();
-            return await readdir(scriptsDirectory, { withFileTypes: true });
-        })(),
-    );
-
-    if (error) {
-        throw new ApiError(
-            "SCRIPT_LOAD_FAILED",
-            "Failed to read the scripts directory.",
-            500,
-            error.message,
-        );
-    }
+    const { entries, scriptsDirectory } = await readScriptDirectory();
 
     const scripts: ScriptInfo[] = [];
     const scriptEntries = entries
@@ -220,15 +207,7 @@ async function prepareTerminalCommand(
     branch: string,
     scriptId: string,
 ): Promise<ScriptTerminalCommandResult> {
-    const worktreePath = await requireWorktreePath(project, branch);
-
-    if (!worktreePath) {
-        throw new ApiError(
-            "WORKTREE_NOT_FOUND",
-            "No worktree exists for this branch yet.",
-            404,
-        );
-    }
+    const worktreePath = await getWorktreePathOrThrow(project, branch);
 
     await ensureScriptsDirectory();
     const filePath = await findScriptFile(scriptId);
@@ -267,15 +246,7 @@ async function runScript(
     branch: string,
     scriptId: string,
 ): Promise<ScriptRunResult> {
-    const worktreePath = await requireWorktreePath(project, branch);
-
-    if (!worktreePath) {
-        throw new ApiError(
-            "WORKTREE_NOT_FOUND",
-            "No worktree exists for this branch yet.",
-            404,
-        );
-    }
+    const worktreePath = await getWorktreePathOrThrow(project, branch);
 
     const filePath = await findScriptFile(scriptId);
     const [executionError, result] = await tryPromise(
@@ -317,15 +288,7 @@ async function streamScript(
     branch: string,
     scriptId: string,
 ) {
-    const worktreePath = await requireWorktreePath(project, branch);
-
-    if (!worktreePath) {
-        throw new ApiError(
-            "WORKTREE_NOT_FOUND",
-            "No worktree exists for this branch yet.",
-            404,
-        );
-    }
+    const worktreePath = await getWorktreePathOrThrow(project, branch);
 
     const filePath = await findScriptFile(scriptId);
     const childProcess = createRunnerProcess({
@@ -360,6 +323,20 @@ async function streamScript(
 }
 
 async function findScriptFile(scriptId: string) {
+    const { entries, scriptsDirectory } = await readScriptDirectory();
+    const entry = entries.find(
+        (item) =>
+            isScriptEntry(item) && scriptIdFromFileName(item.name) === scriptId,
+    );
+
+    if (!entry) {
+        throw new ApiError("SCRIPT_NOT_FOUND", "Script not found.", 404);
+    }
+
+    return path.join(scriptsDirectory, entry.name);
+}
+
+async function readScriptDirectory() {
     const scriptsDirectory = getScriptsDirectory();
     const [error, entries] = await tryPromise(
         (async () => {
@@ -377,16 +354,7 @@ async function findScriptFile(scriptId: string) {
         );
     }
 
-    const entry = entries.find(
-        (item) =>
-            isScriptEntry(item) && scriptIdFromFileName(item.name) === scriptId,
-    );
-
-    if (!entry) {
-        throw new ApiError("SCRIPT_NOT_FOUND", "Script not found.", 404);
-    }
-
-    return path.join(scriptsDirectory, entry.name);
+    return { entries, scriptsDirectory };
 }
 
 function processEnv() {
@@ -573,15 +541,24 @@ function fallbackScriptInfo(filePath: string, loadError: string): ScriptInfo {
 }
 
 export const scriptsHandler = {
-    createScript,
-    deleteScript,
-    getScriptSource,
-    getPackageScriptCatalog,
-    listScripts,
-    openScript,
-    prepareTerminalCommand,
-    preparePackageScriptTerminalCommand,
-    runScript,
-    streamScript,
-    updateScriptSource,
+    createScript: effectTask("Scripts.create", createScript),
+    deleteScript: effectTask("Scripts.delete", deleteScript),
+    getScriptSource: effectTask("Scripts.getSource", getScriptSource),
+    getPackageScriptCatalog: effectTask(
+        "Scripts.getPackageCatalog",
+        getPackageScriptCatalog,
+    ),
+    listScripts: effectTask("Scripts.list", listScripts),
+    openScript: effectTask("Scripts.open", openScript),
+    prepareTerminalCommand: effectTask(
+        "Scripts.prepareTerminalCommand",
+        prepareTerminalCommand,
+    ),
+    preparePackageScriptTerminalCommand: effectTask(
+        "Scripts.preparePackageTerminalCommand",
+        preparePackageScriptTerminalCommand,
+    ),
+    runScript: effectTask("Scripts.run", runScript),
+    streamScript: effectTask("Scripts.stream", streamScript),
+    updateScriptSource: effectTask("Scripts.updateSource", updateScriptSource),
 };

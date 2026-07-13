@@ -1,19 +1,8 @@
-export type ProjectGroup = {
-    id: string;
-    name: string;
-    collapsed: boolean;
-    projects: ProjectConfig[];
-};
-
-export type ProjectConfig = {
-    id: string;
-    name: string;
-    path: string;
-};
-
-export type ProjectsConfig = {
-    groups: ProjectGroup[];
-};
+export type {
+    ProjectConfig,
+    ProjectGroup,
+    ProjectsConfig,
+} from "@/contracts/project";
 
 export type BranchInfo = {
     name: string;

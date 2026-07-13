@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 
 import { validateReviewSubmission } from "@/backend/handlers/git/github-review";
 
